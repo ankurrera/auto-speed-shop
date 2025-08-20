@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,12 +18,11 @@ const Account = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
-  // Mock user data
   const [userInfo, setUserInfo] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@email.com",
-    phone: "(555) 123-4567"
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: ""
   });
 
   const [addresses, setAddresses] = useState([
@@ -73,9 +72,42 @@ const Account = () => {
     }
   ];
 
+  const fetchUserProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("first_name, last_name, email, phone")
+      .eq("user_id", userId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching user profile:", error.message);
+    } else if (data) {
+      setUserInfo({
+        firstName: data.first_name || "",
+        lastName: data.last_name || "",
+        email: data.email || "",
+        phone: data.phone || ""
+      });
+    }
+  };
+
+  useEffect(() => {
+    const checkUserSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setIsLoggedIn(true);
+        fetchUserProfile(session.user.id);
+      } else {
+        setIsLoggedIn(false);
+        setUserInfo({ firstName: "", lastName: "", email: "", phone: "" });
+      }
+    };
+    checkUserSession();
+  }, []); // Run only on component mount to check initial session
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -83,10 +115,10 @@ const Account = () => {
     if (error) {
       console.error("Login failed:", error.message);
       alert("Login failed: " + error.message);
-      setIsLoggedIn(false);
     } else {
       console.log("Login successful!");
       setIsLoggedIn(true);
+      fetchUserProfile(data.user.id);
     }
   };
 
@@ -105,19 +137,20 @@ const Account = () => {
 
     if (error) {
       console.error('Signup error:', error.message);
-      // Handle signup error (e.g., show an error message to the user)
+      alert("Signup failed: " + error.message);
     } else {
       console.log('Signup successful, user:', data.user);
-      // Handle successful signup (e.g., show a success message, redirect to login)
       setIsLoginView(true);
       alert("Please check your email to confirm your account!");
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setIsLoggedIn(false);
   };
-
+  
+  // The rest of the component remains the same for both login and signup views
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-background">
@@ -269,7 +302,6 @@ const Account = () => {
   }
 
   return (
-    // Rest of the Account component (already exists in the original file)
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
@@ -293,7 +325,6 @@ const Account = () => {
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
-          {/* Profile Tab */}
           <TabsContent value="profile">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -365,7 +396,6 @@ const Account = () => {
             </Card>
           </TabsContent>
 
-          {/* Addresses Tab */}
           <TabsContent value="addresses">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -406,7 +436,6 @@ const Account = () => {
             </div>
           </TabsContent>
 
-          {/* Orders Tab */}
           <TabsContent value="orders">
             <Card>
               <CardHeader>
@@ -451,7 +480,6 @@ const Account = () => {
             </Card>
           </TabsContent>
 
-          {/* Security Tab */}
           <TabsContent value="security">
             <Card>
               <CardHeader>
