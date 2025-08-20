@@ -7,17 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import PasswordResetForm from "@/components/PasswordResetForm"; // Import the new component
+import PasswordResetForm from "@/components/PasswordResetForm";
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [view, setView] = useState("login"); // New state for managing views
+  const [view, setView] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
 
   const [userInfo, setUserInfo] = useState({
     firstName: "",
@@ -26,28 +27,21 @@ const Account = () => {
     phone: ""
   });
 
-  const [addresses, setAddresses] = useState([
-    {
-      id: "1",
-      type: "Shipping",
-      name: "John Doe",
-      street: "123 Main Street",
-      city: "Detroit",
-      state: "MI",
-      zip: "48201",
-      isDefault: true
-    },
-    {
-      id: "2",
-      type: "Billing",
-      name: "John Doe",
-      street: "123 Main Street",
-      city: "Detroit",
-      state: "MI",
-      zip: "48201",
-      isDefault: false
-    }
-  ]);
+  const [addresses, setAddresses] = useState([]);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [formAddress, setFormAddress] = useState({
+    first_name: "",
+    last_name: "",
+    address_line_1: "",
+    address_line_2: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    country: "US",
+    phone: "",
+    type: "shipping"
+  });
 
   const orders = [
     {
@@ -92,15 +86,31 @@ const Account = () => {
     }
   };
 
+  const fetchUserAddresses = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("addresses")
+      .select("*")
+      .eq("user_id", userId)
+      .order("is_default", { ascending: false });
+      
+    if (error) {
+      console.error("Error fetching addresses:", error.message);
+    } else {
+      setAddresses(data);
+    }
+  };
+
   useEffect(() => {
     const checkUserSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setIsLoggedIn(true);
         fetchUserProfile(session.user.id);
+        fetchUserAddresses(session.user.id);
       } else {
         setIsLoggedIn(false);
         setUserInfo({ firstName: "", lastName: "", email: "", phone: "" });
+        setAddresses([]);
       }
     };
     checkUserSession();
@@ -120,6 +130,7 @@ const Account = () => {
       console.log("Login successful!");
       setIsLoggedIn(true);
       fetchUserProfile(data.user.id);
+      fetchUserAddresses(data.user.id);
     }
   };
 
@@ -132,6 +143,7 @@ const Account = () => {
         data: {
           first_name: firstName,
           last_name: lastName,
+          phone: phone,
         },
       },
     });
@@ -151,6 +163,65 @@ const Account = () => {
     setIsLoggedIn(false);
   };
   
+  const handleEditAddress = (address) => {
+    setEditingAddressId(address.id);
+    setFormAddress(address);
+    setShowAddressForm(true);
+  };
+
+  const handleDeleteAddress = async (addressId) => {
+    const { error } = await supabase
+      .from("addresses")
+      .delete()
+      .eq("id", addressId);
+
+    if (error) {
+      console.error("Error deleting address:", error.message);
+      alert("Failed to delete address.");
+    } else {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        fetchUserAddresses(session.user.id);
+      }
+    }
+  };
+
+  const handleAddressFormSubmit = async (e) => {
+    e.preventDefault();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    if (editingAddressId) {
+      const { error } = await supabase
+        .from("addresses")
+        .update(formAddress)
+        .eq("id", editingAddressId);
+      
+      if (error) {
+        console.error("Error updating address:", error.message);
+        alert("Failed to update address.");
+      }
+    } else {
+      const { error } = await supabase
+        .from("addresses")
+        .insert([{ ...formAddress, user_id: session.user.id }]);
+
+      if (error) {
+        console.error("Error adding address:", error.message);
+        alert("Failed to add new address.");
+      }
+    }
+
+    // Reset form state and refetch addresses
+    setShowAddressForm(false);
+    setEditingAddressId(null);
+    setFormAddress({
+      first_name: "", last_name: "", address_line_1: "", address_line_2: "",
+      city: "", state: "", postal_code: "", country: "US", phone: "", type: "shipping"
+    });
+    fetchUserAddresses(session.user.id);
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-background">
@@ -403,36 +474,131 @@ const Account = () => {
                   <MapPin className="h-5 w-5 mr-2" />
                   Saved Addresses
                 </h2>
-                <Button>Add New Address</Button>
+                <Button onClick={() => {
+                  setShowAddressForm(true);
+                  setEditingAddressId(null);
+                }}>
+                  Add New Address
+                </Button>
               </div>
               
-              <div className="grid md:grid-cols-2 gap-6">
-                {addresses.map((address) => (
-                  <Card key={address.id}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{address.type} Address</CardTitle>
-                        {address.isDefault && (
-                          <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
-                            Default
-                          </span>
-                        )}
+              {showAddressForm ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{editingAddressId ? "Edit Address" : "Add New Address"}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleAddressFormSubmit} className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="address-first-name">First Name</Label>
+                          <Input
+                            id="address-first-name"
+                            value={formAddress.first_name}
+                            onChange={(e) => setFormAddress({...formAddress, first_name: e.target.value})}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="address-last-name">Last Name</Label>
+                          <Input
+                            id="address-last-name"
+                            value={formAddress.last_name}
+                            onChange={(e) => setFormAddress({...formAddress, last_name: e.target.value})}
+                            required
+                          />
+                        </div>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-1 text-sm">
-                        <p className="font-medium">{address.name}</p>
-                        <p>{address.street}</p>
-                        <p>{address.city}, {address.state} {address.zip}</p>
+                      <div className="space-y-2">
+                        <Label htmlFor="address-line-1">Address Line 1</Label>
+                        <Input
+                          id="address-line-1"
+                          value={formAddress.address_line_1}
+                          onChange={(e) => setFormAddress({...formAddress, address_line_1: e.target.value})}
+                          required
+                        />
                       </div>
-                      <div className="flex space-x-2 mt-4">
-                        <Button variant="outline" size="sm">Edit</Button>
-                        <Button variant="outline" size="sm">Delete</Button>
+                      <div className="space-y-2">
+                        <Label htmlFor="address-line-2">Address Line 2</Label>
+                        <Input
+                          id="address-line-2"
+                          value={formAddress.address_line_2}
+                          onChange={(e) => setFormAddress({...formAddress, address_line_2: e.target.value})}
+                        />
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="city">City</Label>
+                          <Input
+                            id="city"
+                            value={formAddress.city}
+                            onChange={(e) => setFormAddress({...formAddress, city: e.target.value})}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="state">State</Label>
+                          <Input
+                            id="state"
+                            value={formAddress.state}
+                            onChange={(e) => setFormAddress({...formAddress, state: e.target.value})}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="postal-code">Postal Code</Label>
+                          <Input
+                            id="postal-code"
+                            value={formAddress.postal_code}
+                            onChange={(e) => setFormAddress({...formAddress, postal_code: e.target.value})}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end space-x-2">
+                        <Button type="button" variant="outline" onClick={() => setShowAddressForm(false)}>Cancel</Button>
+                        <Button type="submit">{editingAddressId ? "Save Changes" : "Add Address"}</Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-6">
+                  {addresses.length > 0 ? (
+                    addresses.map((address) => (
+                      <Card key={address.id}>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg">{address.type} Address</CardTitle>
+                            {address.is_default && (
+                              <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
+                                Default
+                              </span>
+                            )}
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-1 text-sm">
+                            <p className="font-medium">{address.first_name} {address.last_name}</p>
+                            <p>{address.address_line_1}</p>
+                            {address.address_line_2 && <p>{address.address_line_2}</p>}
+                            <p>{address.city}, {address.state} {address.postal_code}</p>
+                            <p>{address.country}</p>
+                          </div>
+                          <div className="flex space-x-2 mt-4">
+                            <Button variant="outline" size="sm" onClick={() => handleEditAddress(address)}>Edit</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteAddress(address.id)}>Delete</Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="col-span-2 text-center text-muted-foreground py-8">
+                      No saved addresses. Add a new one to get started.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </TabsContent>
 
