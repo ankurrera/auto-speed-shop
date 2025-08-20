@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import PasswordResetForm from "@/components/PasswordResetForm"; // Import the new component
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoginView, setIsLoginView] = useState(true);
+  const [view, setView] = useState("login"); // New state for managing views
   const [showPassword, setShowPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [email, setEmail] = useState("");
@@ -103,7 +104,7 @@ const Account = () => {
       }
     };
     checkUserSession();
-  }, []); // Run only on component mount to check initial session
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +141,7 @@ const Account = () => {
       alert("Signup failed: " + error.message);
     } else {
       console.log('Signup successful, user:', data.user);
-      setIsLoginView(true);
+      setView("login");
       alert("Please check your email to confirm your account!");
     }
   };
@@ -150,7 +151,6 @@ const Account = () => {
     setIsLoggedIn(false);
   };
   
-  // The rest of the component remains the same for both login and signup views
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-background">
@@ -159,140 +159,140 @@ const Account = () => {
             <Card>
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">
-                  {isLoginView ? "Login to Your Account" : "Create a New Account"}
+                  {view === "login" && "Login to Your Account"}
+                  {view === "signup" && "Create a New Account"}
+                  {view === "reset" && "Reset Your Password"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {isLoginView ? (
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <div className="relative">
+                {view === "login" ? (
+                  <>
+                    <form onSubmit={handleLogin} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
                         <Input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
+                          id="email"
+                          type="email"
+                          placeholder="Enter your email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                           required
                         />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      <Button type="submit" className="w-full">
+                        Login
+                      </Button>
+                    </form>
+                    
+                    <div className="mt-6 text-center space-y-2">
+                      <Button variant="link" className="text-sm" onClick={() => setView("reset")}>
+                        Forgot your password?
+                      </Button>
+                      <p className="text-sm text-muted-foreground">
+                        Don't have an account?{" "}
+                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
+                          Sign up here
+                        </Button>
+                      </p>
                     </div>
-                    <Button type="submit" className="w-full">
-                      Login
-                    </Button>
-                  </form>
+                  </>
+                ) : view === "signup" ? (
+                  <>
+                    <form onSubmit={handleSignup} className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-first-name">First Name</Label>
+                          <Input
+                            id="signup-first-name"
+                            placeholder="Enter your first name"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-last-name">Last Name</Label>
+                          <Input
+                            id="signup-last-name"
+                            placeholder="Enter your last name"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email">Email</Label>
+                        <Input
+                          id="signup-email"
+                          type="email"
+                          placeholder="Enter your email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password">Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="signup-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Create a password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      <Button type="submit" className="w-full">
+                        Sign Up
+                      </Button>
+                    </form>
+                    
+                    <div className="mt-6 text-center space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Already have an account?{" "}
+                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
+                          Login here
+                        </Button>
+                      </p>
+                    </div>
+                  </>
                 ) : (
-                  <form onSubmit={handleSignup} className="space-y-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-first-name">First Name</Label>
-                        <Input
-                          id="signup-first-name"
-                          placeholder="Enter your first name"
-                          value={firstName}
-                          onChange={(e) => setFirstName(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-last-name">Last Name</Label>
-                        <Input
-                          id="signup-last-name"
-                          placeholder="Enter your last name"
-                          value={lastName}
-                          onChange={(e) => setLastName(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email</Label>
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="signup-password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Create a password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                    <Button type="submit" className="w-full">
-                      Sign Up
-                    </Button>
-                  </form>
+                  <PasswordResetForm onBackToLogin={() => setView("login")} />
                 )}
-                
-                <div className="mt-6 text-center space-y-2">
-                  {isLoginView ? (
-                    <p className="text-sm text-muted-foreground">
-                      Don't have an account?{" "}
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-primary"
-                        onClick={() => setIsLoginView(false)}
-                      >
-                        Sign up here
-                      </Button>
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Already have an account?{" "}
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-primary"
-                        onClick={() => setIsLoginView(true)}
-                      >
-                        Login here
-                      </Button>
-                    </p>
-                  )}
-                  <Button variant="link" className="text-sm">
-                    Forgot your password?
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </div>
