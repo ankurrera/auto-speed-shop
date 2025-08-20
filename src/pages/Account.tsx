@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff } from "lucide-react";
+import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,10 @@ const Account = () => {
     email: "",
     phone: ""
   });
+
+  // State for security settings
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [addresses, setAddresses] = useState([]);
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -122,6 +126,50 @@ const Account = () => {
     } else {
       console.log("Profile updated successfully!");
       setIsEditing(false);
+    }
+  };
+
+  // New function to handle password change
+  const handlePasswordChange = async () => {
+    if (newPassword !== confirmPassword) {
+      alert("New passwords do not match.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      alert("Password must be at least 6 characters long.");
+      return;
+    }
+    
+    // Supabase client-side function to update password
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      console.error("Error updating password:", error.message);
+      alert("Failed to update password. " + error.message);
+    } else {
+      alert("Your password has been updated successfully!");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+  };
+
+  // New function to send a password reset email
+  const handleSendPasswordResetEmail = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      alert("You must be logged in to send a reset email.");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(session.user.email);
+
+    if (error) {
+      console.error("Error sending reset email:", error.message);
+      alert("Failed to send password reset email. Please try again later.");
+    } else {
+      alert("A password reset email has been sent to your email address.");
     }
   };
 
@@ -239,7 +287,6 @@ const Account = () => {
       }
     }
 
-    // Reset form state and refetch addresses
     setShowAddressForm(false);
     setEditingAddressId(null);
     setFormAddress({
@@ -696,25 +743,34 @@ const Account = () => {
           <TabsContent value="security">
             <Card>
               <CardHeader>
-                <CardTitle>Security Settings</CardTitle>
+                <CardTitle className="flex items-center">
+                  <Lock className="h-5 w-5 mr-2" />
+                  Security Settings
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Change Password</h3>
                   <div className="space-y-4 max-w-md">
                     <div className="space-y-2">
-                      <Label htmlFor="currentPassword">Current Password</Label>
-                      <Input id="currentPassword" type="password" />
-                    </div>
-                    <div className="space-y-2">
                       <Label htmlFor="newPassword">New Password</Label>
-                      <Input id="newPassword" type="password" />
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                      <Input id="confirmPassword" type="password" />
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
                     </div>
-                    <Button>Update Password</Button>
+                    <Button onClick={handlePasswordChange}>Update Password</Button>
                   </div>
                 </div>
                 <Separator />
@@ -723,7 +779,7 @@ const Account = () => {
                   <p className="text-muted-foreground mb-4">
                     Forgot your password? We'll send a reset link to your email.
                   </p>
-                  <Button variant="outline">Send Password Reset Email</Button>
+                  <Button variant="outline" onClick={handleSendPasswordResetEmail}>Send Password Reset Email</Button>
                 </div>
               </CardContent>
             </Card>
