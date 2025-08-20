@@ -27,7 +27,6 @@ const Account = () => {
     phone: ""
   });
 
-  // State for security settings
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -47,29 +46,28 @@ const Account = () => {
     type: "shipping"
   });
 
-  const orders = [
-    {
-      id: "#ORD-001",
-      date: "Dec 15, 2024",
-      status: "Delivered",
-      total: 189.98,
-      items: 3
-    },
-    {
-      id: "#ORD-002",
-      date: "Dec 10, 2024",
-      status: "Shipped",
-      total: 67.99,
-      items: 2
-    },
-    {
-      id: "#ORD-003",
-      date: "Dec 5, 2024",
-      status: "Processing",
-      total: 124.50,
-      items: 1
+  const [orders, setOrders] = useState([]);
+
+  // Function to fetch user orders
+  const fetchUserOrders = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, created_at, order_number, status, total_amount")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching orders:", error.message);
+    } else {
+      setOrders(data.map(order => ({
+        id: order.id,
+        date: new Date(order.created_at).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' }),
+        orderNumber: order.order_number,
+        status: order.status,
+        total: order.total_amount
+      })));
     }
-  ];
+  };
 
   const fetchUserProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -129,7 +127,6 @@ const Account = () => {
     }
   };
 
-  // New function to handle password change
   const handlePasswordChange = async () => {
     if (newPassword !== confirmPassword) {
       alert("New passwords do not match.");
@@ -141,7 +138,6 @@ const Account = () => {
       return;
     }
     
-    // Supabase client-side function to update password
     const { data, error } = await supabase.auth.updateUser({
       password: newPassword,
     });
@@ -156,7 +152,6 @@ const Account = () => {
     }
   };
 
-  // New function to send a password reset email
   const handleSendPasswordResetEmail = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -180,10 +175,12 @@ const Account = () => {
         setIsLoggedIn(true);
         fetchUserProfile(session.user.id);
         fetchUserAddresses(session.user.id);
+        fetchUserOrders(session.user.id);
       } else {
         setIsLoggedIn(false);
         setUserInfo({ firstName: "", lastName: "", email: "", phone: "" });
         setAddresses([]);
+        setOrders([]);
       }
     };
     checkUserSession();
@@ -204,6 +201,7 @@ const Account = () => {
       setIsLoggedIn(true);
       fetchUserProfile(data.user.id);
       fetchUserAddresses(data.user.id);
+      fetchUserOrders(data.user.id);
     }
   };
 
@@ -273,7 +271,7 @@ const Account = () => {
         .eq("id", editingAddressId);
       
       if (error) {
-        console.error("Error updating address:", error.message);
+      console.error("Error updating address:", error.message);
         alert("Failed to update address.");
       }
     } else {
@@ -706,35 +704,38 @@ const Account = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {orders.map((order, index) => (
-                    <div key={order.id}>
-                      <div className="flex items-center justify-between py-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center space-x-4">
-                            <span className="font-medium">{order.id}</span>
-                            <span className="text-sm text-muted-foreground">{order.date}</span>
-                            <span className={`text-xs px-2 py-1 rounded ${
-                              order.status === 'Delivered' ? 'bg-success text-success-foreground' :
-                              order.status === 'Shipped' ? 'bg-primary text-primary-foreground' :
-                              'bg-warning text-warning-foreground'
-                            }`}>
-                              {order.status}
-                            </span>
+                  {orders.length > 0 ? (
+                    orders.map((order, index) => (
+                      <div key={order.id}>
+                        <div className="flex items-center justify-between py-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-4">
+                              <span className="font-medium">{order.orderNumber}</span>
+                              <span className="text-sm text-muted-foreground">{order.date}</span>
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                order.status === 'delivered' ? 'bg-success text-success-foreground' :
+                                order.status === 'shipped' ? 'bg-primary text-primary-foreground' :
+                                'bg-warning text-warning-foreground'
+                              }`}>
+                                {order.status}
+                              </span>
+                            </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {order.items} item{order.items !== 1 ? 's' : ''}
-                          </p>
+                          <div className="text-right">
+                            <p className="font-semibold">${order.total.toFixed(2)}</p>
+                            <Button variant="outline" size="sm" className="mt-2">
+                              View Details
+                            </Button>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold">${order.total.toFixed(2)}</p>
-                          <Button variant="outline" size="sm" className="mt-2">
-                            View Details
-                          </Button>
-                        </div>
+                        {index < orders.length - 1 && <Separator />}
                       </div>
-                      {index < orders.length - 1 && <Separator />}
+                    ))
+                  ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                      You have no orders yet.
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
