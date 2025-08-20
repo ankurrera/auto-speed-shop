@@ -73,10 +73,21 @@ const Account = () => {
     }
   ];
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Your login logic here
-    setIsLoggedIn(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+  
+    if (error) {
+      console.error("Login failed:", error.message);
+      alert("Login failed: " + error.message);
+      setIsLoggedIn(false);
+    } else {
+      console.log("Login successful!");
+      setIsLoggedIn(true);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
