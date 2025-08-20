@@ -328,6 +328,16 @@ const Account = () => {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="signup-phone">Phone Number</Label>
+                        <Input
+                          id="signup-phone"
+                          type="tel"
+                          placeholder="e.g., +15551234567"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="signup-password">Password</Label>
                         <div className="relative">
                           <Input
@@ -564,6 +574,7 @@ const Account = () => {
                           type="tel"
                           value={formAddress.phone}
                           onChange={(e) => setFormAddress({...formAddress, phone: e.target.value})}
+                          required
                         />
                       </div>
                       <div className="flex justify-end space-x-2">
