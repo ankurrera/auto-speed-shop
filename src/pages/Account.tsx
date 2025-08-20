@@ -191,10 +191,12 @@ const Account = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
+    const addressToSave = { ...formAddress, user_id: session.user.id };
+
     if (editingAddressId) {
       const { error } = await supabase
         .from("addresses")
-        .update(formAddress)
+        .update(addressToSave)
         .eq("id", editingAddressId);
       
       if (error) {
@@ -204,7 +206,7 @@ const Account = () => {
     } else {
       const { error } = await supabase
         .from("addresses")
-        .insert([{ ...formAddress, user_id: session.user.id }]);
+        .insert([addressToSave]);
 
       if (error) {
         console.error("Error adding address:", error.message);
@@ -555,6 +557,15 @@ const Account = () => {
                           />
                         </div>
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="address-phone">Phone Number</Label>
+                        <Input
+                          id="address-phone"
+                          type="tel"
+                          value={formAddress.phone}
+                          onChange={(e) => setFormAddress({...formAddress, phone: e.target.value})}
+                        />
+                      </div>
                       <div className="flex justify-end space-x-2">
                         <Button type="button" variant="outline" onClick={() => setShowAddressForm(false)}>Cancel</Button>
                         <Button type="submit">{editingAddressId ? "Save Changes" : "Add Address"}</Button>
@@ -584,6 +595,7 @@ const Account = () => {
                             {address.address_line_2 && <p>{address.address_line_2}</p>}
                             <p>{address.city}, {address.state} {address.postal_code}</p>
                             <p>{address.country}</p>
+                            {address.phone && <p className="mt-2 text-muted-foreground">{address.phone}</p>}
                           </div>
                           <div className="flex space-x-2 mt-4">
                             <Button variant="outline" size="sm" onClick={() => handleEditAddress(address)}>Edit</Button>
