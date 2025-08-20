@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Core background and text colors */
+    --background: 0 0% 100%;
+    --foreground: 220 15% 25%;
+
+    /* Card and surface colors */
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 25%;
+
+    /* Popover colors */
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 25%;
+
+    /* Primary brand color - Professional Blue */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 91% 55%;
+
+    /* Secondary colors - Light Gray */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 15% 25%;
+
+    /* Muted colors for subtle elements */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    /* Accent colors for highlights */
+    --accent: 220 14% 96%;
+    --accent-foreground: 220 15% 25%;
+
+    /* Destructive colors for errors */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border and input colors */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 60%;
+
+    /* Success color for positive actions */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning color */
+    --warning: 48 96% 53%;
+    --warning-foreground: 220 15% 25%;
+
+    /* Auto parts specific colors */
+    --automotive-red: 0 84% 60%;
+    --automotive-dark: 220 26% 14%;
+    --automotive-light: 220 14% 98%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(217 91% 45%));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--automotive-dark)), hsl(220 20% 20%));
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(220 13% 91% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(220 13% 91% / 0.1), 0 2px 4px -1px hsl(220 13% 91% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(220 13% 91% / 0.1), 0 4px 6px -2px hsl(220 13% 91% / 0.05);
+    --shadow-primary: 0 4px 14px 0 hsl(var(--primary) / 0.15);
+
+    /* Border radius */
+    --radius: 0.5rem;
+    --radius-lg: 0.75rem;
+
+    /* Sidebar colors */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 26% 14%;
+    --foreground: 220 14% 95%;
+
+    --card: 220 26% 14%;
+    --card-foreground: 220 14% 95%;
+
+    --popover: 220 26% 14%;
+    --popover-foreground: 220 14% 95%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 220 26% 14%;
+    --primary-hover: 217 91% 65%;
+
+    --secondary: 220 17% 20%;
+    --secondary-foreground: 220 14% 95%;
+
+    --muted: 220 17% 20%;
+    --muted-foreground: 220 9% 65%;
+
+    --accent: 220 17% 20%;
+    --accent-foreground: 220 14% 95%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 220 14% 95%;
+
+    --border: 220 17% 20%;
+    --input: 220 17% 20%;
+    --ring: 217 91% 60%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 220 14% 95%;
+
+    --warning: 48 96% 53%;
+    --warning-foreground: 220 26% 14%;
+
+    --automotive-red: 0 84% 60%;
+    --automotive-dark: 220 14% 95%;
+    --automotive-light: 220 26% 14%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(217 91% 70%));
+    --gradient-hero: linear-gradient(135deg, hsl(220 26% 14%), hsl(220 20% 18%));
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
