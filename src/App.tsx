@@ -12,7 +12,7 @@ import Contact from "./pages/Contact";
 import Cart from "./pages/Cart";
 import Wishlist from "./pages/Wishlist";
 import Account from "./pages/Account";
-import ResetPassword from "./pages/ResetPassword"; // Import the new component
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +34,7 @@ const App = () => (
               <Route path="/cart" element={<Cart />} />
               <Route path="/wishlist" element={<Wishlist />} />
               <Route path="/account" element={<Account />} />
+              {/* This route correctly points to the ResetPassword component */}
               <Route path="/account/reset-password" element={<ResetPassword />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
