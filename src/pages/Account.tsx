@@ -100,6 +100,31 @@ const Account = () => {
     }
   };
 
+  const handleSaveProfile = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error("No active session found.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        first_name: userInfo.firstName,
+        last_name: userInfo.lastName,
+        phone: userInfo.phone,
+      })
+      .eq("user_id", session.user.id);
+
+    if (error) {
+      console.error("Error updating profile:", error.message);
+      alert("Failed to update profile.");
+    } else {
+      console.log("Profile updated successfully!");
+      setIsEditing(false);
+    }
+  };
+
   useEffect(() => {
     const checkUserSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -451,8 +476,7 @@ const Account = () => {
                     <Input
                       id="email"
                       value={userInfo.email}
-                      disabled={!isEditing}
-                      onChange={(e) => setUserInfo({...userInfo, email: e.target.value})}
+                      disabled
                     />
                   </div>
                   <div className="space-y-2">
@@ -467,7 +491,7 @@ const Account = () => {
                 </div>
                 {isEditing && (
                   <div className="flex space-x-4">
-                    <Button onClick={() => setIsEditing(false)}>
+                    <Button onClick={handleSaveProfile}>
                       Save Changes
                     </Button>
                     <Button variant="outline" onClick={() => setIsEditing(false)}>
