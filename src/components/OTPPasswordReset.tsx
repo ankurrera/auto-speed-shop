@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 interface OTPPasswordResetProps {
   onBackToLogin?: () => void;
   email?: string;
-  onSuccess?: () => void;
+  onSuccess?: (email: string, password: string) => void;
 }
 
 const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTPPasswordResetProps) => {
@@ -52,7 +52,6 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
       setStep('otp');
       setCountdown(300); // 5 minutes countdown
       
-      // Start countdown
       const interval = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
@@ -131,35 +130,23 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
         return;
       }
 
-      // ✅ FIX: Sign in the user automatically after the password reset succeeds
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password: newPassword,
+      // ✅ FIX: Call onSuccess with the email and new password
+      if (onSuccess) {
+        onSuccess(email, newPassword);
+      }
+      
+      toast({
+        title: "Success",
+        description: "Your password has been reset successfully!",
       });
 
-      if (signInError) {
-        console.error('Error logging in after password reset:', signInError);
-        toast({
-          title: "Login Error",
-          description: "Password reset successful, but failed to log you in. Please try logging in manually.",
-          variant: "destructive"
-        });
-        
-        // Return to login page if we fail to log in
-        if (onBackToLogin) onBackToLogin();
-      } else {
-        toast({
-          title: "Success",
-          description: "Your password has been reset successfully!",
-        });
-        
-        // This onSuccess prop will trigger the parent component to update its state
-        if (onSuccess) {
-          onSuccess();
-        } else if (onBackToLogin) {
-          onBackToLogin();
-        }
-      }
+      // Reset form state
+      setStep('email');
+      setEmail('');
+      setOTP('');
+      setNewPassword('');
+      setConfirmPassword('');
+
     } catch (error) {
       console.error('Error:', error);
       toast({
