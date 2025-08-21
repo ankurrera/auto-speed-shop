@@ -21,9 +21,16 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Correctly configure the client with auth options for server-side use
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
     );
 
     const { email, type }: SendOTPRequest = await req.json();
@@ -45,7 +52,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Generated OTP for", email, ":", otpCode);
 
-    // Check if user exists
+    // Check if user exists using the correctly configured admin client
     const { data: existingUser, error: userError } = await supabaseClient.auth.admin.getUserByEmail(email);
     
     if (userError || !existingUser.user) {
