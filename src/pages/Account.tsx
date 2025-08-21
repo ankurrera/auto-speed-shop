@@ -393,16 +393,6 @@ const Account = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="signup-phone">Phone Number</Label>
-                        <Input
-                          id="signup-phone"
-                          type="tel"
-                          placeholder="e.g., +15551234567"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
                         <Label htmlFor="signup-password">Password</Label>
                         <div className="relative">
                           <Input
@@ -687,7 +677,7 @@ const Account = () => {
                     ))
                   ) : (
                     <div className="col-span-2 text-center text-muted-foreground py-8">
-                      No saved addresses. Add a new one to get started.
+                      You have no orders yet.
                     </div>
                   )}
                 </div>
