@@ -21,10 +21,6 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // ❌ OLD CODE: You were using a single client for all operations.
-    // const supabaseClient = createClient(...)
-
-    // ✅ NEW CODE: Initialize a separate client with the service role key for admin functions.
     const supabaseServiceRoleClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -55,10 +51,36 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Generated OTP for", email, ":", otpCode);
 
-    // ✅ Use the new service role client to access auth.admin methods.
-    const { data: existingUser, error: userError } = await supabaseServiceRoleClient.auth.admin.getUserByEmail(email);
+    // ✅ New code to make a direct API call to get the user by email
+    const { data: existingUser, error: userError } = await (async () => {
+        try {
+            const response = await fetch(
+                `${Deno.env.get("SUPABASE_URL")}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "apikey": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+                        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                return { data: null, error: new Error(`API Error: ${response.statusText}`) };
+            }
+
+            const data = await response.json();
+            // The API returns a `users` array, so we extract the first user
+            const user = data.users.length > 0 ? data.users[0] : null;
+
+            return { data: { user }, error: null };
+        } catch (err) {
+            return { data: null, error: err };
+        }
+    })();
     
-    if (userError || !existingUser.user) {
+    if (userError || !existingUser?.user) {
       console.error("User not found:", email);
       return new Response(
         JSON.stringify({ error: "User not found" }),
