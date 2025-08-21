@@ -21,8 +21,11 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Correctly configure the client with auth options for server-side use
-    const supabaseClient = createClient(
+    // ❌ OLD CODE: You were using a single client for all operations.
+    // const supabaseClient = createClient(...)
+
+    // ✅ NEW CODE: Initialize a separate client with the service role key for admin functions.
+    const supabaseServiceRoleClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       {
@@ -52,8 +55,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Generated OTP for", email, ":", otpCode);
 
-    // Check if user exists using the correctly configured admin client
-    const { data: existingUser, error: userError } = await supabaseClient.auth.admin.getUserByEmail(email);
+    // ✅ Use the new service role client to access auth.admin methods.
+    const { data: existingUser, error: userError } = await supabaseServiceRoleClient.auth.admin.getUserByEmail(email);
     
     if (userError || !existingUser.user) {
       console.error("User not found:", email);
@@ -67,7 +70,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Delete any existing OTP codes for this user
-    const { error: deleteError } = await supabaseClient
+    const { error: deleteError } = await supabaseServiceRoleClient
       .from("otp_codes")
       .delete()
       .eq("user_id", existingUser.user.id);
@@ -77,7 +80,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Store OTP in database
-    const { error: insertError } = await supabaseClient
+    const { error: insertError } = await supabaseServiceRoleClient
       .from("otp_codes")
       .insert([{
         user_id: existingUser.user.id,
