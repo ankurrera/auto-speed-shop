@@ -122,7 +122,23 @@ const Account = () => {
     }
   };
   
+  // ✅ New useEffect hook to handle the official password recovery flow
   useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        const newPassword = prompt("Please enter a new password for your account.");
+        if (newPassword && newPassword.length >= 6) {
+          supabase.auth.updateUser({ password: newPassword }).then(({ error }) => {
+            if (error) {
+              alert("Failed to update password. Please try again.");
+            } else {
+              alert("Password updated successfully! You can now log in.");
+            }
+          });
+        }
+      }
+    });
+
     const checkUserSession = async () => {
       const { data: { session } = {} } = await supabase.auth.getSession();
       if (session) {
@@ -138,6 +154,10 @@ const Account = () => {
       }
     };
     checkUserSession();
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -316,7 +336,8 @@ const Account = () => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                           supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: 'https://auto-speed-shop-qsal-7twe8zhg3-ankurrera-1515s-projects.vercel.app/update-password',
+                            // ✅ FIX: The redirectTo URL must match your router path
+                            redirectTo: 'https://auto-speed-shop-qsal-7twe8zhg3-ankurrera-1515s-projects.vercel.app/account/reset-password',
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
@@ -656,7 +677,7 @@ const Account = () => {
                     ))
                   ) : (
                     <div className="col-span-2 text-center text-muted-foreground py-8">
-                      No saved addresses. Add a new one to get started.
+                      You have no orders yet.
                     </div>
                   )}
                 </div>
@@ -729,7 +750,7 @@ const Account = () => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                           supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: 'https://auto-speed-shop-qsal-7twe8zhg3-ankurrera-1515s-projects.vercel.app/update-password',
+                            redirectTo: 'https://auto-speed-shop-qsal-7twe8zhg3-ankurrera-1515s-projects.vercel.app/account/reset-password',
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
