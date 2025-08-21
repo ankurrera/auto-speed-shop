@@ -113,7 +113,7 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('verify-otp-and-reset-password', {
+      const { data: updateData, error: updateError } = await supabase.functions.invoke('verify-otp-and-reset-password', {
         body: { 
           email, 
           otp, 
@@ -121,8 +121,8 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
         }
       });
 
-      if (error) {
-        console.error('Error resetting password:', error);
+      if (updateError) {
+        console.error('Error resetting password:', updateError);
         toast({
           title: "Error",
           description: "Failed to reset password. Please try again.",
@@ -131,22 +131,34 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
         return;
       }
 
-      toast({
-        title: "Success",
-        description: "Your password has been reset successfully!",
+      // ✅ FIX: Sign in the user automatically after the password reset succeeds
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: newPassword,
       });
 
-      // Reset form
-      setStep('email');
-      setEmail('');
-      setOTP('');
-      setNewPassword('');
-      setConfirmPassword('');
-      
-      if (onSuccess) {
-        onSuccess();
-      } else if (onBackToLogin) {
-        onBackToLogin();
+      if (signInError) {
+        console.error('Error logging in after password reset:', signInError);
+        toast({
+          title: "Login Error",
+          description: "Password reset successful, but failed to log you in. Please try logging in manually.",
+          variant: "destructive"
+        });
+        
+        // Return to login page if we fail to log in
+        if (onBackToLogin) onBackToLogin();
+      } else {
+        toast({
+          title: "Success",
+          description: "Your password has been reset successfully!",
+        });
+        
+        // This onSuccess prop will trigger the parent component to update its state
+        if (onSuccess) {
+          onSuccess();
+        } else if (onBackToLogin) {
+          onBackToLogin();
+        }
       }
     } catch (error) {
       console.error('Error:', error);
