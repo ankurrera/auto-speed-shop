@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 interface OTPPasswordResetProps {
   onBackToLogin?: () => void;
   email?: string;
-  onSuccess?: (email: string, password: string) => void;
+  onSuccess?: () => void;
 }
 
 const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTPPasswordResetProps) => {
@@ -27,7 +27,7 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-otp-email', {
+      const { error } = await supabase.functions.invoke('send-otp-email', {
         body: { 
           email, 
           type: 'password_reset' 
@@ -112,7 +112,8 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
     setLoading(true);
 
     try {
-      const { data: updateData, error: updateError } = await supabase.functions.invoke('verify-otp-and-reset-password', {
+      // ✅ FIX: The serverless function now returns the session data
+      const { data, error } = await supabase.functions.invoke('verify-otp-and-reset-password', {
         body: { 
           email, 
           otp, 
@@ -120,8 +121,8 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
         }
       });
 
-      if (updateError) {
-        console.error('Error resetting password:', updateError);
+      if (error || !data || !data.session) {
+        console.error('Error resetting password or no session returned:', error);
         toast({
           title: "Error",
           description: "Failed to reset password. Please try again.",
@@ -129,24 +130,31 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
         });
         return;
       }
-
-      // ✅ FIX: Call onSuccess with the email and new password
-      if (onSuccess) {
-        onSuccess(email, newPassword);
-      }
       
-      toast({
-        title: "Success",
-        description: "Your password has been reset successfully!",
-      });
+      // ✅ FIX: Set the session directly from the data returned by the serverless function
+      const { error: setSessionError } = await supabase.auth.setSession(data.session);
 
-      // Reset form state
-      setStep('email');
-      setEmail('');
-      setOTP('');
-      setNewPassword('');
-      setConfirmPassword('');
-
+      if (setSessionError) {
+        console.error('Error setting session:', setSessionError);
+        toast({
+          title: "Login Error",
+          description: "Password reset successful, but failed to log you in. Please try logging in manually.",
+          variant: "destructive"
+        });
+        
+        if (onBackToLogin) onBackToLogin();
+      } else {
+        toast({
+          title: "Success",
+          description: "Your password has been reset successfully!",
+        });
+        
+        if (onSuccess) {
+          onSuccess();
+        } else if (onBackToLogin) {
+          onBackToLogin();
+        }
+      }
     } catch (error) {
       console.error('Error:', error);
       toast({
