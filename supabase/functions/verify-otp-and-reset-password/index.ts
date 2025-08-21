@@ -19,7 +19,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const supabaseClient = createClient(
+    const supabaseServiceRoleClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       {
@@ -33,7 +33,6 @@ const handler = async (req: Request): Promise<Response> => {
     const { email, otp, newPassword }: VerifyOTPAndResetRequest = await req.json();
 
     if (!email || !otp || !newPassword) {
-      console.error("Missing required fields:", { email, otp: !!otp, newPassword: !!newPassword });
       return new Response(
         JSON.stringify({ error: "Email, OTP, and new password are required" }),
         {
@@ -43,7 +42,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Corrected code: Use a direct API call to get the user by email
+    // Get user by email
     const { data: existingUser, error: userError } = await (async () => {
         try {
             const response = await fetch(
@@ -63,7 +62,6 @@ const handler = async (req: Request): Promise<Response> => {
             }
 
             const data = await response.json();
-            // The API returns a `users` array, so we extract the first user
             const user = data.users.length > 0 ? data.users[0] : null;
 
             return { data: { user }, error: null };
@@ -73,7 +71,6 @@ const handler = async (req: Request): Promise<Response> => {
     })();
     
     if (userError || !existingUser?.user) {
-      console.error("User not found:", email);
       return new Response(
         JSON.stringify({ error: "User not found" }),
         {
@@ -84,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Verify OTP
-    const { data: otpData, error: otpError } = await supabaseClient
+    const { data: otpData, error: otpError } = await supabaseServiceRoleClient
       .from("otp_codes")
       .select("*")
       .eq("user_id", existingUser.user.id)
@@ -93,7 +90,6 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (otpError || !otpData) {
-      console.error("Invalid or expired OTP:", otp);
       return new Response(
         JSON.stringify({ error: "Invalid or expired OTP code" }),
         {
@@ -104,13 +100,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Reset password using admin API
-    const { error: resetError } = await supabaseClient.auth.admin.updateUserById(
+    const { error: resetError } = await supabaseServiceRoleClient.auth.admin.updateUserById(
       existingUser.user.id,
       { password: newPassword }
     );
 
     if (resetError) {
-      console.error("Error resetting password:", resetError);
       return new Response(
         JSON.stringify({ error: "Failed to reset password" }),
         {
@@ -120,22 +115,32 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // ✅ FIX: Create a new session after a successful password reset
+    const { data: sessionData, error: sessionError } = await supabaseServiceRoleClient.auth.signInWithPassword({
+        email,
+        password: newPassword
+    });
+
+    if (sessionError) {
+        return new Response(
+            JSON.stringify({ error: "Password reset successful but failed to create a new session." }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            }
+        );
+    }
+
     // Delete the used OTP
-    const { error: deleteError } = await supabaseClient
+    await supabaseServiceRoleClient
       .from("otp_codes")
       .delete()
       .eq("user_id", existingUser.user.id);
+      
+    console.log("Password reset and login successful for user:", email);
 
-    if (deleteError) {
-      console.error("Error deleting OTP code:", deleteError);
-    }
-
-    console.log("Password reset successfully for user:", email);
-
-    return new Response(JSON.stringify({ 
-      success: true, 
-      message: "Password reset successfully" 
-    }), {
+    // ✅ Return the session data to the client
+    return new Response(JSON.stringify(sessionData), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
