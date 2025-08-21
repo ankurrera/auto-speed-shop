@@ -150,10 +150,13 @@ const Account = () => {
       console.error("Error signing out:", signOutError.message);
     }
     
+    // Log the exact credentials being used for debugging
+    console.log("Attempting login with email:", email, "and password:", password);
+    
     // Attempt to sign in with the new password
     const { error, data } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password: password.trim(),
+      email,
+      password,
     });
   
     if (error) {
@@ -255,6 +258,25 @@ const Account = () => {
       city: "", state: "", postal_code: "", country: "US", phone: "", type: "shipping"
     });
     fetchUserAddresses(session.user.id);
+  };
+  
+  // ✅ FIX: This function will be called from OTPPasswordReset
+  const handleSuccessfulReset = async (newEmail: string, newPasswordVal: string) => {
+    const { error, data } = await supabase.auth.signInWithPassword({
+      email: newEmail,
+      password: newPasswordVal,
+    });
+    
+    if (error) {
+      console.error("Login after reset failed:", error.message);
+      alert("Password reset successful, but failed to log you in. Please try logging in manually.");
+    } else {
+      console.log("Login after reset successful!");
+      setIsLoggedIn(true);
+      fetchUserProfile(data.user.id);
+      fetchUserAddresses(data.user.id);
+      fetchUserOrders(data.user.id);
+    }
   };
 
   if (!isLoggedIn) {
@@ -407,7 +429,7 @@ const Account = () => {
                     </div>
                   </>
                 ) : (
-                  <OTPPasswordReset onBackToLogin={() => setView("login")} />
+                  <OTPPasswordReset onBackToLogin={() => setView("login")} onSuccess={handleSuccessfulReset} />
                 )}
               </CardContent>
             </Card>
@@ -438,7 +460,6 @@ const Account = () => {
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="orders">Order History</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
@@ -720,9 +741,7 @@ const Account = () => {
                     </p>
                     <OTPPasswordReset 
                       email={userInfo.email}
-                      onSuccess={() => {
-                        // Optional: Show success message or redirect
-                      }}
+                      onSuccess={handleSuccessfulReset}
                     />
                   </div>
                 </CardContent>
