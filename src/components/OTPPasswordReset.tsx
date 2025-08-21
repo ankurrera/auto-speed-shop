@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 interface OTPPasswordResetProps {
   onBackToLogin?: () => void;
   email?: string;
-  onSuccess?: () => void;
+  onSuccess?: (email: string, password: string) => void;
 }
 
 const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTPPasswordResetProps) => {
@@ -27,7 +27,7 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
     setLoading(true);
 
     try {
-      const { error } = await supabase.functions.invoke('send-otp-email', {
+      const { data, error } = await supabase.functions.invoke('send-otp-email', {
         body: { 
           email, 
           type: 'password_reset' 
@@ -112,8 +112,7 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
     setLoading(true);
 
     try {
-      // ✅ FIX: The serverless function now returns the session data
-      const { data, error } = await supabase.functions.invoke('verify-otp-and-reset-password', {
+      const { data: updateData, error: updateError } = await supabase.functions.invoke('verify-otp-and-reset-password', {
         body: { 
           email, 
           otp, 
@@ -121,8 +120,8 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
         }
       });
 
-      if (error || !data || !data.session) {
-        console.error('Error resetting password or no session returned:', error);
+      if (updateError) {
+        console.error('Error resetting password:', updateError);
         toast({
           title: "Error",
           description: "Failed to reset password. Please try again.",
@@ -130,31 +129,24 @@ const OTPPasswordReset = ({ onBackToLogin, email: initialEmail, onSuccess }: OTP
         });
         return;
       }
-      
-      // ✅ FIX: Set the session directly from the data returned by the serverless function
-      const { error: setSessionError } = await supabase.auth.setSession(data.session);
 
-      if (setSessionError) {
-        console.error('Error setting session:', setSessionError);
-        toast({
-          title: "Login Error",
-          description: "Password reset successful, but failed to log you in. Please try logging in manually.",
-          variant: "destructive"
-        });
-        
-        if (onBackToLogin) onBackToLogin();
-      } else {
-        toast({
-          title: "Success",
-          description: "Your password has been reset successfully!",
-        });
-        
-        if (onSuccess) {
-          onSuccess();
-        } else if (onBackToLogin) {
-          onBackToLogin();
-        }
+      toast({
+        title: "Success",
+        description: "Your password has been reset successfully!",
+      });
+      
+      // ✅ FIX: Call onSuccess with the email and new password
+      if (onSuccess) {
+        onSuccess(email, newPassword);
       }
+      
+      // Reset form state
+      setStep('email');
+      setEmail('');
+      setOTP('');
+      setNewPassword('');
+      setConfirmPassword('');
+
     } catch (error) {
       console.error('Error:', error);
       toast({
