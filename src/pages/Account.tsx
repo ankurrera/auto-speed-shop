@@ -122,23 +122,7 @@ const Account = () => {
     }
   };
   
-  // ✅ New useEffect hook to handle the official password recovery flow
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        const newPassword = prompt("Please enter a new password for your account.");
-        if (newPassword && newPassword.length >= 6) {
-          supabase.auth.updateUser({ password: newPassword }).then(({ error }) => {
-            if (error) {
-              alert("Failed to update password. Please try again.");
-            } else {
-              alert("Password updated successfully! You can now log in.");
-            }
-          });
-        }
-      }
-    });
-
     const checkUserSession = async () => {
       const { data: { session } = {} } = await supabase.auth.getSession();
       if (session) {
@@ -154,10 +138,6 @@ const Account = () => {
       }
     };
     checkUserSession();
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -336,7 +316,7 @@ const Account = () => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                           supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: window.location.href,
+                            redirectTo: 'https://auto-speed-shop-qsal-7twe8zhg3-ankurrera-1515s-projects.vercel.app/update-password',
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
@@ -429,7 +409,6 @@ const Account = () => {
                     </div>
                   </>
                 ) : (
-                  // ✅ Removed custom OTPPasswordReset component from the main flow
                   <div className="text-center">
                     <p className="text-lg">Please check your email for a password reset link.</p>
                     <Button onClick={() => setView("login")} className="mt-4">
@@ -677,7 +656,7 @@ const Account = () => {
                     ))
                   ) : (
                     <div className="col-span-2 text-center text-muted-foreground py-8">
-                      You have no orders yet.
+                      No saved addresses. Add a new one to get started.
                     </div>
                   )}
                 </div>
@@ -750,7 +729,7 @@ const Account = () => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                           supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: window.location.href,
+                            redirectTo: 'https://auto-speed-shop-qsal-7twe8zhg3-ankurrera-1515s-projects.vercel.app/update-password',
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
