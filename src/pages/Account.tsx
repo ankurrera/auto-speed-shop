@@ -150,9 +150,6 @@ const Account = () => {
       console.error("Error signing out:", signOutError.message);
     }
     
-    // Log the exact credentials being used for debugging
-    console.log("Attempting login with email:", email, "and password:", password);
-    
     // Attempt to sign in with the new password
     const { error, data } = await supabase.auth.signInWithPassword({
       email,
@@ -761,4 +758,4 @@ const Account = () => {
   );
 };
 
-export default Account; 
+export default Account;
