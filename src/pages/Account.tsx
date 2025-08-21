@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import OTPPasswordReset from "@/components/OTPPasswordReset";
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -123,7 +122,23 @@ const Account = () => {
     }
   };
   
+  // ✅ New useEffect hook to handle the official password recovery flow
   useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        const newPassword = prompt("Please enter a new password for your account.");
+        if (newPassword && newPassword.length >= 6) {
+          supabase.auth.updateUser({ password: newPassword }).then(({ error }) => {
+            if (error) {
+              alert("Failed to update password. Please try again.");
+            } else {
+              alert("Password updated successfully! You can now log in.");
+            }
+          });
+        }
+      }
+    });
+
     const checkUserSession = async () => {
       const { data: { session } = {} } = await supabase.auth.getSession();
       if (session) {
@@ -139,6 +154,10 @@ const Account = () => {
       }
     };
     checkUserSession();
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -256,26 +275,6 @@ const Account = () => {
     });
     fetchUserAddresses(session.user.id);
   };
-  
-  const handleSuccessfulReset = async (newEmail: string, newPasswordVal: string) => {
-    // This function is now responsible for logging the user in
-    const { error, data } = await supabase.auth.signInWithPassword({
-      email: newEmail,
-      password: newPasswordVal,
-    });
-    
-    if (error) {
-      console.error("Login after reset failed:", error.message);
-      alert("Password reset successful, but failed to log you in. Please try logging in manually.");
-    } else {
-      console.log("Login after reset successful!");
-      setIsLoggedIn(true);
-      fetchUserProfile(data.user.id);
-      fetchUserAddresses(data.user.id);
-      fetchUserOrders(data.user.id);
-      setView("profile"); // Redirect to the profile page
-    }
-  };
 
   if (!isLoggedIn) {
     return (
@@ -333,7 +332,20 @@ const Account = () => {
                     </form>
                     
                     <div className="mt-6 text-center space-y-2">
-                      <Button variant="link" className="text-sm" onClick={() => setView("reset")}>
+                      <Button variant="link" className="text-sm" onClick={() => {
+                        const emailInput = prompt("Please enter your email address to reset your password:");
+                        if (emailInput) {
+                          supabase.auth.resetPasswordForEmail(emailInput, {
+                            redirectTo: window.location.href,
+                          }).then(({ error }) => {
+                            if (error) {
+                              alert("Error sending password reset email: " + error.message);
+                            } else {
+                              alert("Password reset email sent. Please check your inbox!");
+                            }
+                          });
+                        }
+                      }}>
                         Forgot your password?
                       </Button>
                       <p className="text-sm text-muted-foreground">
@@ -427,7 +439,13 @@ const Account = () => {
                     </div>
                   </>
                 ) : (
-                  <OTPPasswordReset onBackToLogin={() => setView("login")} onSuccess={handleSuccessfulReset} />
+                  // ✅ Removed custom OTPPasswordReset component from the main flow
+                  <div className="text-center">
+                    <p className="text-lg">Please check your email for a password reset link.</p>
+                    <Button onClick={() => setView("login")} className="mt-4">
+                      Back to Login
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -736,12 +754,24 @@ const Account = () => {
                 <CardContent>
                   <div className="space-y-4">
                     <p className="text-muted-foreground">
-                      Reset your password using a secure OTP verification process sent to your email.
+                      Reset your password using a secure password reset link sent to your email.
                     </p>
-                    <OTPPasswordReset 
-                      email={userInfo.email}
-                      onSuccess={handleSuccessfulReset}
-                    />
+                    <Button onClick={() => {
+                        const emailInput = prompt("Please enter your email address to reset your password:");
+                        if (emailInput) {
+                          supabase.auth.resetPasswordForEmail(emailInput, {
+                            redirectTo: window.location.href,
+                          }).then(({ error }) => {
+                            if (error) {
+                              alert("Error sending password reset email: " + error.message);
+                            } else {
+                              alert("Password reset email sent. Please check your inbox!");
+                            }
+                          });
+                        }
+                      }}>
+                        Send Password Reset Link
+                      </Button>
                   </div>
                 </CardContent>
               </Card>
