@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Search, Wrench, Truck, Shield, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProductCard from "@/components/ProductCard";
+import Image from "next/image";
 import heroImage from "@/assets/hero-auto-parts.jpg";
 
 const Home = () => {
@@ -25,7 +26,7 @@ const Home = () => {
       rating: 4.8,
       reviews: 124,
       inStock: true,
-      isOnSale: true
+      isOnSale: true,
     },
     {
       id: "2",
@@ -35,7 +36,7 @@ const Home = () => {
       image: "/placeholder.svg",
       rating: 4.9,
       reviews: 89,
-      inStock: true
+      inStock: true,
     },
     {
       id: "3",
@@ -47,7 +48,7 @@ const Home = () => {
       rating: 4.7,
       reviews: 67,
       inStock: true,
-      isOnSale: true
+      isOnSale: true,
     },
     {
       id: "4",
@@ -57,8 +58,8 @@ const Home = () => {
       image: "/placeholder.svg",
       rating: 4.6,
       reviews: 156,
-      inStock: true
-    }
+      inStock: true,
+    },
   ];
 
   const categories = [
@@ -69,7 +70,7 @@ const Home = () => {
     { name: "Cooling", icon: "❄️" },
     { name: "Exhaust", icon: "💨" },
     { name: "Filters", icon: "🌪️" },
-    { name: "Tools", icon: "🔧" }
+    { name: "Tools", icon: "🔧" },
   ];
 
   const years = Array.from({ length: 30 }, (_, i) => 2024 - i);
@@ -81,10 +82,12 @@ const Home = () => {
       {/* Hero Section */}
       <section className="relative h-[600px] bg-gradient-hero overflow-hidden">
         <div className="absolute inset-0">
-          <img
+          <Image
             src={heroImage}
             alt="Auto Parts Hero"
-            className="w-full h-full object-cover opacity-20"
+            className="object-cover opacity-20"
+            fill
+            priority
           />
         </div>
         <div className="relative container mx-auto px-4 h-full flex items-center">
@@ -97,7 +100,7 @@ const Home = () => {
             <p className="text-xl mb-8 text-gray-200 leading-relaxed">
               Quality parts, competitive prices, and expert support for professionals and enthusiasts.
             </p>
-            
+
             {/* Vehicle Search */}
             <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-lg">
               <CardContent className="p-6">
@@ -110,40 +113,40 @@ const Home = () => {
                       <SelectValue placeholder="Year" />
                     </SelectTrigger>
                     <SelectContent>
-                      {years.map(year => (
+                      {years.map((year) => (
                         <SelectItem key={year} value={year.toString()}>
                           {year}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  
+
                   <Select value={selectedMake} onValueChange={setSelectedMake}>
                     <SelectTrigger>
                       <SelectValue placeholder="Make" />
                     </SelectTrigger>
                     <SelectContent>
-                      {makes.map(make => (
+                      {makes.map((make) => (
                         <SelectItem key={make} value={make}>
                           {make}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  
+
                   <Select value={selectedModel} onValueChange={setSelectedModel}>
                     <SelectTrigger>
                       <SelectValue placeholder="Model" />
                     </SelectTrigger>
                     <SelectContent>
-                      {models.map(model => (
+                      {models.map((model) => (
                         <SelectItem key={model} value={model}>
                           {model}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  
+
                   <Button size="lg" className="h-10">
                     <Search className="h-4 w-4 mr-2" />
                     Search Parts
@@ -200,7 +203,7 @@ const Home = () => {
               Find the exact parts you need with our organized categories
             </p>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
             {categories.map((category) => (
               <Card key={category.name} className="hover:shadow-md transition-all cursor-pointer group">
@@ -225,13 +228,13 @@ const Home = () => {
               Top-rated parts chosen by our experts
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {featuredProducts.map((product) => (
               <ProductCard key={product.id} {...product} />
             ))}
           </div>
-          
+
           <div className="text-center mt-12">
             <Button size="lg" variant="outline">
               View All Products
