@@ -1,1 +1,7 @@
 project_id = "dkopohqiihhxmbjhzark"
+
+[functions.send-otp-email]
+verify_jwt = false
+
+[functions.verify-otp-and-reset-password]
+verify_jwt = false
