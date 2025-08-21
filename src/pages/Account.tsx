@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/lib/supabase";
-import PasswordResetForm from "@/components/PasswordResetForm";
+import { supabase } from "@/integrations/supabase/client";
+import OTPPasswordReset from "@/components/OTPPasswordReset";
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -399,7 +399,7 @@ const Account = () => {
                     </div>
                   </>
                 ) : (
-                  <PasswordResetForm onBackToLogin={() => setView("login")} />
+                  <OTPPasswordReset onBackToLogin={() => setView("login")} />
                 )}
               </CardContent>
             </Card>
@@ -697,24 +697,52 @@ const Account = () => {
           </TabsContent>
 
           <TabsContent value="security">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Lock className="h-5 w-5 mr-2" />
-                  Security Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Change Password</h3>
-                  <div className="space-y-4 max-w-md">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Lock className="h-5 w-5 mr-2" />
+                    Password Reset
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
                     <p className="text-muted-foreground">
-                      This function is not available. Please use the "Forgot Password" link on the login page.
+                      Reset your password using a secure OTP verification process sent to your email.
+                    </p>
+                    <OTPPasswordReset 
+                      email={userInfo.email}
+                      onSuccess={() => {
+                        // Optional: Show success message or redirect
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Lock className="h-5 w-5 mr-2" />
+                    Account Security
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Email Address</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Your account is secured with: {userInfo.email}
                     </p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Login Method</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Email and password authentication
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
