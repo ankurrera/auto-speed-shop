@@ -152,8 +152,8 @@ const Account = () => {
     
     // Attempt to sign in with the new password
     const { error, data } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password: password.trim(),
+      email,
+      password,
     });
   
     if (error) {
@@ -256,6 +256,68 @@ const Account = () => {
     });
     fetchUserAddresses(session.user.id);
   };
+  
+  const handleSuccessfulReset = async (newEmail: string, newPasswordVal: string) => {
+    // This function is now responsible for logging the user in
+    const { error, data } = await supabase.auth.signInWithPassword({
+      email: newEmail,
+      password: newPasswordVal,
+    });
+    
+    if (error) {
+      console.error("Login after reset failed:", error.message);
+      alert("Password reset successful, but failed to log you in. Please try logging in manually.");
+    } else {
+      console.log("Login after reset successful!");
+      setIsLoggedIn(true);
+      fetchUserProfile(data.user.id);
+      fetchUserAddresses(data.user.id);
+      fetchUserOrders(data.user.id);
+      setView("profile"); // Redirect to the profile page
+    }
+  };
+  
+  // Use a useEffect hook to handle password reset redirects
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        const newPassword = prompt("Please enter a new password for your account.");
+        if (newPassword && newPassword.length >= 6) {
+          supabase.auth.updateUser({ password: newPassword }).then(({ error }) => {
+            if (error) {
+              alert("Failed to update password. Please try again.");
+            } else {
+              alert("Password updated successfully! You can now log in.");
+              // After a successful update, we should force a re-check of the session
+              // The session state should now be in a logged-in state
+              // This will trigger the main useEffect to fetch user data
+            }
+          });
+        }
+      }
+    });
+
+    const checkUserSession = async () => {
+      const { data: { session } = {} } = await supabase.auth.getSession();
+      if (session) {
+        setIsLoggedIn(true);
+        fetchUserProfile(session.user.id);
+        fetchUserAddresses(session.user.id);
+        fetchUserOrders(session.user.id);
+      } else {
+        setIsLoggedIn(false);
+        setUserInfo({ firstName: "", lastName: "", email: "", phone: "" });
+        setAddresses([]);
+        setOrders([]);
+      }
+    };
+    checkUserSession();
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
 
   if (!isLoggedIn) {
     return (
@@ -313,7 +375,21 @@ const Account = () => {
                     </form>
                     
                     <div className="mt-6 text-center space-y-2">
-                      <Button variant="link" className="text-sm" onClick={() => setView("reset")}>
+                      <Button variant="link" className="text-sm" onClick={() => {
+                        // The user needs to enter an email to receive the password reset link
+                        const emailInput = prompt("Please enter your email address to reset your password:");
+                        if (emailInput) {
+                          supabase.auth.resetPasswordForEmail(emailInput, {
+                            redirectTo: window.location.href, // Redirect back to this page
+                          }).then(({ error }) => {
+                            if (error) {
+                              alert("Error sending password reset email: " + error.message);
+                            } else {
+                              alert("Password reset email sent. Please check your inbox!");
+                            }
+                          });
+                        }
+                      }}>
                         Forgot your password?
                       </Button>
                       <p className="text-sm text-muted-foreground">
@@ -720,9 +796,7 @@ const Account = () => {
                     </p>
                     <OTPPasswordReset 
                       email={userInfo.email}
-                      onSuccess={() => {
-                        // Optional: Show success message or redirect
-                      }}
+                      onSuccess={handleSuccessfulReset}
                     />
                   </div>
                 </CardContent>
