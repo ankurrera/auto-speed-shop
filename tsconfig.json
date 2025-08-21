@@ -1,19 +1,9 @@
 {
-  "files": [],
-  "references": [
-    {
-      "path": "./tsconfig.app.json"
-    },
-    {
-      "path": "./tsconfig.node.json"
-    }
-  ],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
+      "@/assets/*": ["./assets/*"]
     },
     "noImplicitAny": false,
     "noUnusedParameters": false,
@@ -21,11 +11,7 @@
     "allowJs": true,
     "noUnusedLocals": false,
     "strictNullChecks": false,
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "strict": false,
     "noEmit": true,
     "incremental": true,
@@ -37,13 +23,10 @@
     "jsx": "preserve"
   },
   "include": [
-  "next-env.d.ts",
-  "declarations.d.ts",
-  "**/*.ts",
-  "**/*.tsx"
+    "next-env.d.ts",
+    "declarations.d.ts",
+    "**/*.ts",
+    "**/*.tsx"
   ],
-  
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }
