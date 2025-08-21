@@ -336,7 +336,6 @@ const Account = () => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                           supabase.auth.resetPasswordForEmail(emailInput, {
-                            // ✅ FIX: The redirectTo URL must match your router path
                             redirectTo: 'https://auto-speed-shop-qsal-7twe8zhg3-ankurrera-1515s-projects.vercel.app/account/reset-password',
                           }).then(({ error }) => {
                             if (error) {
