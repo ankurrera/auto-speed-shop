@@ -150,9 +150,6 @@ const Account = () => {
       console.error("Error signing out:", signOutError.message);
     }
     
-    // Log the exact credentials being used for debugging
-    console.log("Attempting login with email:", email, "and password:", password);
-    
     // Attempt to sign in with the new password
     const { error, data } = await supabase.auth.signInWithPassword({
       email,
@@ -259,9 +256,18 @@ const Account = () => {
     });
     fetchUserAddresses(session.user.id);
   };
-  
+
   // ✅ FIX: This function will be called from OTPPasswordReset
   const handleSuccessfulReset = async (newEmail: string, newPasswordVal: string) => {
+    // A sign out is not necessary here because the new session is set directly
+    // const { error: signOutError } = await supabase.auth.signOut();
+    // if (signOutError) {
+    //   console.error("Error signing out:", signOutError.message);
+    // }
+    
+    // Log the exact credentials being used for debugging
+    console.log("Attempting login after reset with email:", newEmail, "and password:", newPasswordVal);
+
     const { error, data } = await supabase.auth.signInWithPassword({
       email: newEmail,
       password: newPasswordVal,
@@ -276,6 +282,7 @@ const Account = () => {
       fetchUserProfile(data.user.id);
       fetchUserAddresses(data.user.id);
       fetchUserOrders(data.user.id);
+      setView("profile");
     }
   };
 
@@ -460,6 +467,7 @@ const Account = () => {
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="orders">Order History</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
@@ -741,7 +749,9 @@ const Account = () => {
                     </p>
                     <OTPPasswordReset 
                       email={userInfo.email}
-                      onSuccess={handleSuccessfulReset}
+                      onSuccess={() => {
+                        // Optional: Show success message or redirect
+                      }}
                     />
                   </div>
                 </CardContent>
