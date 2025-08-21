@@ -152,8 +152,8 @@ const Account = () => {
     
     // Attempt to sign in with the new password
     const { error, data } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      email: email.trim(),
+      password: password.trim(),
     });
   
     if (error) {
