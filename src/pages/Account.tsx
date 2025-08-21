@@ -143,6 +143,14 @@ const Account = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Explicitly sign out to clear any old session state
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      console.error("Error signing out:", signOutError.message);
+    }
+    
+    // Attempt to sign in with the new password
     const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
