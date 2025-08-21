@@ -21,7 +21,13 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
     );
 
     const { email, otp, newPassword }: VerifyOTPAndResetRequest = await req.json();
@@ -37,10 +43,36 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get user by email
-    const { data: existingUser, error: userError } = await supabaseClient.auth.admin.getUserByEmail(email);
+    // Corrected code: Use a direct API call to get the user by email
+    const { data: existingUser, error: userError } = await (async () => {
+        try {
+            const response = await fetch(
+                `${Deno.env.get("SUPABASE_URL")}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "apikey": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+                        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                return { data: null, error: new Error(`API Error: ${response.statusText}`) };
+            }
+
+            const data = await response.json();
+            // The API returns a `users` array, so we extract the first user
+            const user = data.users.length > 0 ? data.users[0] : null;
+
+            return { data: { user }, error: null };
+        } catch (err: any) {
+            return { data: null, error: err };
+        }
+    })();
     
-    if (userError || !existingUser.user) {
+    if (userError || !existingUser?.user) {
       console.error("User not found:", email);
       return new Response(
         JSON.stringify({ error: "User not found" }),
