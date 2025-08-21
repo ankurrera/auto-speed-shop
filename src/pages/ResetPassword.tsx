@@ -84,7 +84,6 @@ const ResetPassword = () => {
         <div className="container mx-auto px-4 py-16 max-w-md">
             <h2>Set New Password</h2>
             {error && <p className="text-red-500">{error}</p>}
-            <p className="text-muted-foreground">{statusMessage}</p>
             <div className="space-y-4">
                 <Input 
                     type="password"
