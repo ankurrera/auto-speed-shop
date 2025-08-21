@@ -319,6 +319,35 @@ const Account = () => {
   }, []);
 
 
+  // ✅ FIX: This function will be called from OTPPasswordReset
+  const handleSuccessfulReset = async (newEmail: string, newPasswordVal: string) => {
+    // A sign out is not necessary here because the new session is set directly
+    // const { error: signOutError } = await supabase.auth.signOut();
+    // if (signOutError) {
+    //   console.error("Error signing out:", signOutError.message);
+    // }
+    
+    // Log the exact credentials being used for debugging
+    console.log("Attempting login after reset with email:", newEmail, "and password:", newPasswordVal);
+
+    const { error, data } = await supabase.auth.signInWithPassword({
+      email: newEmail,
+      password: newPasswordVal,
+    });
+    
+    if (error) {
+      console.error("Login after reset failed:", error.message);
+      alert("Password reset successful, but failed to log you in. Please try logging in manually.");
+    } else {
+      console.log("Login after reset successful!");
+      setIsLoggedIn(true);
+      fetchUserProfile(data.user.id);
+      fetchUserAddresses(data.user.id);
+      fetchUserOrders(data.user.id);
+      setView("profile");
+    }
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-background">
@@ -483,7 +512,7 @@ const Account = () => {
                     </div>
                   </>
                 ) : (
-                  <OTPPasswordReset onBackToLogin={() => setView("login")} />
+                  <OTPPasswordReset onBackToLogin={() => setView("login")} onSuccess={handleSuccessfulReset} />
                 )}
               </CardContent>
             </Card>
