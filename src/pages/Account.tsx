@@ -335,8 +335,8 @@ const Account = () => {
                       <Button variant="link" className="text-sm" onClick={() => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
-                          supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: 'https://auto-speed-shop-qsal-7twe8zhg3-ankurrera-1515s-projects.vercel.app/account/reset-password',
+                           supabase.auth.resetPasswordForEmail(emailInput, {
+                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account/reset-password',
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
@@ -749,7 +749,7 @@ const Account = () => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                           supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: 'https://auto-speed-shop-qsal-7twe8zhg3-ankurrera-1515s-projects.vercel.app/account/reset-password',
+                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account/reset-password',
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
