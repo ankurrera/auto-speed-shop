@@ -20,7 +20,7 @@ const PasswordResetForm = ({ onBackToLogin }: PasswordResetFormProps) => {
     setMessage("");
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/account/reset-password`,
+      redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account/reset-password',
     });
 
     if (error) {
