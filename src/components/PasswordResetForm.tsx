@@ -20,7 +20,7 @@ const PasswordResetForm = ({ onBackToLogin }: PasswordResetFormProps) => {
     setMessage("");
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'http://localhost:8080/account/reset-password', // Corrected URL
+      redirectTo: `${window.location.origin}/account/reset-password`,
     });
 
     if (error) {
