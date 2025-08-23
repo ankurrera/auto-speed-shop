@@ -155,6 +155,17 @@ const Header = () => {
                   {item.name}
                 </Link>
               ))}
+              {/* New link for sellers */}
+              <Link
+                  to="/sell"
+                  className={`text-sm font-medium transition-colors hover:text-primary ${
+                    isActive("/sell")
+                      ? "text-primary border-b-2 border-primary pb-3"
+                      : "text-foreground"
+                  }`}
+              >
+                Sell with Us
+              </Link>
             </div>
             <div className="flex items-center space-x-6 text-sm text-muted-foreground">
               <span>Shop by Category</span>
@@ -179,6 +190,16 @@ const Header = () => {
                     {item.name}
                   </Link>
                 ))}
+                 {/* New mobile link for sellers */}
+                <Link
+                  to="/sell"
+                  className={`text-sm font-medium ${
+                    isActive("/sell") ? "text-primary" : "text-foreground"
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Sell with Us
+                </Link>
                 <div className="pt-4 border-t border-border">
                   <div className="flex flex-col space-y-2 text-sm text-muted-foreground">
                     <span>Shop by Category</span>

@@ -14,6 +14,7 @@ import Wishlist from "./pages/Wishlist";
 import Account from "./pages/Account";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import SellerDashboard from "./pages/SellerDashboard"; // <-- ADD THIS LINE
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/wishlist" element={<Wishlist />} />
               <Route path="/account" element={<Account />} />
               <Route path="/account/reset-password" element={<ResetPassword />} />
+              <Route path="/sell" element={<SellerDashboard />} /> {/* <-- ADD THIS LINE */}
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
