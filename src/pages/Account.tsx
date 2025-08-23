@@ -19,6 +19,7 @@ const Account = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [loginMode, setLoginMode] = useState("user"); // ADDED: State to track login mode
 
   const [userInfo, setUserInfo] = useState({
     firstName: "",
@@ -84,9 +85,6 @@ const Account = () => {
         phone: data.phone || "",
         is_admin: data.is_admin || false,
       });
-      if (data.is_admin) {
-        navigate("/sell");
-      }
     }
   };
 
@@ -165,7 +163,7 @@ const Account = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchUserProfile]); // FIXED: Added fetchUserProfile as a dependency
+  }, [fetchUserProfile]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,8 +174,7 @@ const Account = () => {
       console.error("Error signing out:", signOutError.message);
     }
     
-    // Attempt to sign in with the new password
-    const { error, data } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -187,10 +184,25 @@ const Account = () => {
       alert("Login failed: " + error.message);
     } else {
       console.log("Login successful!");
-      setIsLoggedIn(true);
-      fetchUserProfile(data.user.id);
-      fetchUserAddresses(data.user.id);
-      fetchUserOrders(data.user.id);
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("user_id", data.user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching profile:", profileError.message);
+      } else if (profileData?.is_admin && loginMode === "admin") {
+        navigate("/sell");
+      } else if (!profileData?.is_admin && loginMode === "user") {
+        setIsLoggedIn(true);
+        fetchUserProfile(data.user.id);
+        fetchUserAddresses(data.user.id);
+        fetchUserOrders(data.user.id);
+      } else {
+        alert("Invalid login mode selected.");
+        await supabase.auth.signOut();
+      }
     }
   };
 
@@ -221,7 +233,7 @@ const Account = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
-    setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false }); // FIXED
+    setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false });
   };
   
   const handleEditAddress = (address) => {
@@ -301,6 +313,24 @@ const Account = () => {
                 {view === "login" ? (
                   <>
                     <form onSubmit={handleLogin} className="space-y-4">
+                      {/* ADDED: Login mode selection buttons */}
+                      <div className="flex justify-center space-x-2">
+                        <Button
+                          type="button"
+                          variant={loginMode === "user" ? "default" : "outline"}
+                          onClick={() => setLoginMode("user")}
+                        >
+                          User Login
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={loginMode === "admin" ? "default" : "outline"}
+                          onClick={() => setLoginMode("admin")}
+                        >
+                          Admin Login
+                        </Button>
+                      </div>
+                      
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
                         <Input
