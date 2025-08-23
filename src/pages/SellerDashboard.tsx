@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Edit, Trash2 } from "lucide-react";
 
 const categories = [
   "Engine",
@@ -25,6 +27,8 @@ const SellerDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSeller, setIsSeller] = useState(false);
   const [user, setUser] = useState(null);
+  const [sellerId, setSellerId] = useState(null);
+  const [editingProductId, setEditingProductId] = useState(null);
   const [sellerInfo, setSellerInfo] = useState({
     name: "",
     email: "",
@@ -42,6 +46,7 @@ const SellerDashboard = () => {
   });
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const checkUserAndSeller = async () => {
@@ -49,7 +54,6 @@ const SellerDashboard = () => {
       if (session) {
         setIsLoggedIn(true);
         setUser(session.user);
-        // Check if user is already a seller
         const { data: sellerData, error } = await supabase
           .from("sellers")
           .select("id, name")
@@ -57,6 +61,7 @@ const SellerDashboard = () => {
           .maybeSingle();
         if (sellerData) {
           setIsSeller(true);
+          setSellerId(sellerData.id);
         } else if (error) {
           console.error("Error checking seller status:", error.message);
         }
@@ -67,6 +72,22 @@ const SellerDashboard = () => {
     };
     checkUserAndSeller();
   }, [navigate]);
+
+  const { data: products = [], refetch: refetchProducts } = useQuery({
+    queryKey: ['seller-products', sellerId],
+    queryFn: async () => {
+      if (!sellerId) return [];
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('seller_id', sellerId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!sellerId,
+  });
 
   const handleSellerSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,65 +121,113 @@ const SellerDashboard = () => {
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !sellerId) return;
 
-    // Get seller ID
-    const { data: sellerData, error: sellerError } = await supabase
-      .from("sellers")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (sellerError || !sellerData) {
-      toast({
-        title: "Error",
-        description: "Could not find your seller profile.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Determine if the product is active based on stock quantity
     const isActive = productInfo.stock_quantity > 0;
 
-    // Insert new product
-    const { data, error } = await supabase.from("products").insert([
-      {
-        name: productInfo.name,
-        description: productInfo.description,
-        price: productInfo.price,
-        stock_quantity: productInfo.stock_quantity,
-        is_active: isActive,
-        image_urls: productInfo.images.map(img => URL.createObjectURL(img)),
-        specifications: productInfo.specifications,
-        is_featured: false,
-        brand: sellerInfo.name,
-        seller_id: sellerData.id,
-        category: productInfo.category,
-      },
-    ]);
+    const productData = {
+      name: productInfo.name,
+      description: productInfo.description,
+      price: productInfo.price,
+      stock_quantity: productInfo.stock_quantity,
+      is_active: isActive,
+      image_urls: productInfo.images.map(img => URL.createObjectURL(img)),
+      specifications: productInfo.specifications,
+      is_featured: false,
+      brand: sellerInfo.name,
+      seller_id: sellerId,
+      category: productInfo.category,
+    };
 
-    if (error) {
-      console.error("Error adding product:", error.message);
-      toast({
-        title: "Error",
-        description: "Failed to add product. Please check the form and try again.",
-        variant: "destructive",
-      });
+    if (editingProductId) {
+      // Update existing product
+      const { error } = await supabase
+        .from("products")
+        .update(productData)
+        .eq("id", editingProductId);
+
+      if (error) {
+        console.error("Error updating product:", error.message);
+        toast({
+          title: "Error",
+          description: "Failed to update product. Please check the form and try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success!",
+          description: "Your product has been updated successfully.",
+        });
+        setEditingProductId(null);
+      }
     } else {
-      toast({
-        title: "Success!",
-        description: "Your product has been listed successfully.",
-      });
-      setProductInfo({
-        name: "",
-        description: "",
-        price: "",
-        stock_quantity: 0,
-        images: [],
-        specifications: "",
-        category: "",
-      });
+      // Insert new product
+      const { error } = await supabase.from("products").insert([productData]);
+
+      if (error) {
+        console.error("Error adding product:", error.message);
+        toast({
+          title: "Error",
+          description: "Failed to add product. Please check the form and try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success!",
+          description: "Your product has been listed successfully.",
+        });
+      }
+    }
+    
+    // Reset form and refetch products
+    setProductInfo({
+      name: "",
+      description: "",
+      price: "",
+      stock_quantity: 0,
+      images: [],
+      specifications: "",
+      category: "",
+    });
+    refetchProducts();
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProductId(product.id);
+    setProductInfo({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock_quantity: product.stock_quantity,
+      images: product.image_urls,
+      specifications: product.specifications,
+      category: product.category,
+    });
+    // Scroll to the form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (window.confirm("Are you sure you want to delete this product?")) {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", productId);
+
+      if (error) {
+        console.error("Error deleting product:", error.message);
+        toast({
+          title: "Error",
+          description: "Failed to delete product.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success!",
+          description: "Product has been deleted.",
+        });
+        refetchProducts();
+      }
     }
   };
 
@@ -239,7 +308,7 @@ const SellerDashboard = () => {
       {/* Product Listing Form */}
       <Card>
         <CardHeader>
-          <CardTitle>List a New Product</CardTitle>
+          <CardTitle>{editingProductId ? "Edit Product" : "List a New Product"}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleProductSubmit} className="space-y-6">
@@ -297,7 +366,7 @@ const SellerDashboard = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-category">Category</Label>
-              <Select onValueChange={(value) => setProductInfo({ ...productInfo, category: value })}>
+              <Select value={productInfo.category} onValueChange={(value) => setProductInfo({ ...productInfo, category: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
@@ -334,17 +403,64 @@ const SellerDashboard = () => {
                 placeholder="List specifications, e.g., 'Make: Toyota', 'Model: Camry', 'Year: 2018-2024'"
               />
             </div>
-            <Button type="submit">List Product</Button>
+            <div className="flex space-x-2">
+              <Button type="submit">
+                {editingProductId ? "Update Product" : "List Product"}
+              </Button>
+              {editingProductId && (
+                <Button type="button" variant="outline" onClick={() => {
+                  setEditingProductId(null);
+                  setProductInfo({
+                    name: "",
+                    description: "",
+                    price: "",
+                    stock_quantity: 0,
+                    images: [],
+                    specifications: "",
+                    category: "",
+                  });
+                }}>
+                  Cancel Edit
+                </Button>
+              )}
+            </div>
           </form>
         </CardContent>
       </Card>
 
       <Separator className="my-8" />
-
-      <div className="text-center">
-        <Link to="/shop">
-          <Button variant="outline">View All Products</Button>
-        </Link>
+      
+      {/* Products list */}
+      <h2 className="text-2xl font-bold mb-4">Your Listed Products</h2>
+      <div className="space-y-4">
+        {products.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            You have no products listed yet.
+          </div>
+        ) : (
+          products.map((product) => (
+            <Card key={product.id}>
+              <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+                <div className="flex-1 space-y-1">
+                  <h3 className="font-semibold text-lg">{product.name}</h3>
+                  <p className="text-muted-foreground text-sm">{product.category}</p>
+                  <p className="text-lg font-bold">${product.price}</p>
+                  <p className="text-sm">In Stock: {product.stock_quantity}</p>
+                </div>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );
