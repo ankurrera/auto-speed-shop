@@ -23,6 +23,7 @@ const SellerDashboard = () => {
     name: "",
     description: "",
     price: "",
+    stock_quantity: 0,
     images: [],
     specifications: "",
   });
@@ -40,7 +41,7 @@ const SellerDashboard = () => {
           .from("sellers")
           .select("id, name")
           .eq("user_id", session.user.id)
-          .maybeSingle(); // Use maybeSingle() to handle both null and single result
+          .maybeSingle();
         if (sellerData) {
           setIsSeller(true);
         } else if (error) {
@@ -104,18 +105,22 @@ const SellerDashboard = () => {
       return;
     }
 
+    // Determine if the product is active based on stock quantity
+    const isActive = productInfo.stock_quantity > 0;
+
     // Insert new product
     const { data, error } = await supabase.from("products").insert([
       {
         name: productInfo.name,
         description: productInfo.description,
         price: productInfo.price,
+        stock_quantity: productInfo.stock_quantity,
+        is_active: isActive,
         image_urls: productInfo.images.map(img => URL.createObjectURL(img)), // Temporary URL for display
         specifications: productInfo.specifications,
-        is_active: true, // Set to active by default
-        is_featured: false, // Not featured by default
-        brand: sellerInfo.name, // Use seller name as brand for now
-        seller_id: sellerData.id, // Link to the seller
+        is_featured: false,
+        brand: sellerInfo.name,
+        seller_id: sellerData.id,
       },
     ]);
 
@@ -135,6 +140,7 @@ const SellerDashboard = () => {
         name: "",
         description: "",
         price: "",
+        stock_quantity: 0,
         images: [],
         specifications: "",
       });
@@ -262,14 +268,26 @@ const SellerDashboard = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="product-images">Product Images</Label>
+                <Label htmlFor="product-quantity">Quantity</Label>
                 <Input
-                  id="product-images"
-                  type="file"
-                  multiple
-                  onChange={handleImageUpload}
+                  id="product-quantity"
+                  type="number"
+                  value={productInfo.stock_quantity.toString()}
+                  onChange={(e) =>
+                    setProductInfo({ ...productInfo, stock_quantity: parseInt(e.target.value) })
+                  }
+                  required
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="product-images">Product Images</Label>
+              <Input
+                id="product-images"
+                type="file"
+                multiple
+                onChange={handleImageUpload}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-specs">Specifications</Label>
