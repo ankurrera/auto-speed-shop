@@ -19,14 +19,13 @@ export type Database = {
           address_line_1: string
           address_line_2: string | null
           city: string
-          company: string | null
           country: string
           created_at: string
           first_name: string
           id: string
           is_default: boolean
           last_name: string
-          phone: string | null
+          phone: string
           postal_code: string
           state: string
           type: string
@@ -37,14 +36,13 @@ export type Database = {
           address_line_1: string
           address_line_2?: string | null
           city: string
-          company?: string | null
           country?: string
           created_at?: string
           first_name: string
           id?: string
           is_default?: boolean
           last_name: string
-          phone?: string | null
+          phone: string
           postal_code: string
           state: string
           type: string
@@ -55,14 +53,13 @@ export type Database = {
           address_line_1?: string
           address_line_2?: string | null
           city?: string
-          company?: string | null
           country?: string
           created_at?: string
           first_name?: string
           id?: string
           is_default?: boolean
           last_name?: string
-          phone?: string | null
+          phone?: string
           postal_code?: string
           state?: string
           type?: string
@@ -261,6 +258,30 @@ export type Database = {
         }
         Relationships: []
       }
+      otp_codes: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          otp_code: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          otp_code: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          otp_code?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           brand: string | null
@@ -389,6 +410,77 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      vehicle_makes: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vehicle_models: {
+        Row: {
+          created_at: string
+          id: string
+          make_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          make_id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          make_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_models_make_id_fkey"
+            columns: ["make_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_makes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_years: {
+        Row: {
+          created_at: string
+          id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          year?: number
         }
         Relationships: []
       }
