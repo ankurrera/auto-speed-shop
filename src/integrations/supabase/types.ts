@@ -285,7 +285,6 @@ export type Database = {
       products: {
         Row: {
           brand: string | null
-          category: string | null
           category_id: string | null
           compare_at_price: number | null
           created_at: string
@@ -310,12 +309,9 @@ export type Database = {
           weight: number | null
           year_from: number | null
           year_to: number | null
-          seller_id: string | null
-          specifications: string | null
         }
         Insert: {
           brand?: string | null
-          category?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
@@ -340,12 +336,9 @@ export type Database = {
           weight?: number | null
           year_from?: number | null
           year_to?: number | null
-          seller_id?: string | null
-          specifications?: string | null
         }
         Update: {
           brand?: string | null
-          category?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
@@ -370,8 +363,6 @@ export type Database = {
           weight?: number | null
           year_from?: number | null
           year_to?: number | null
-          seller_id?: string | null
-          specifications?: string | null
         }
         Relationships: [
           {
@@ -379,13 +370,6 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_seller_id_fkey"
-            columns: ["seller_id"]
-            isOneToOne: false
-            referencedRelation: "sellers"
             referencedColumns: ["id"]
           },
         ]
@@ -398,6 +382,7 @@ export type Database = {
           email: string | null
           first_name: string | null
           id: string
+          is_admin: boolean | null // <-- ADDED
           last_name: string | null
           phone: string | null
           updated_at: string
@@ -410,6 +395,7 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id?: string
+          is_admin?: boolean | null // <-- ADDED
           last_name?: string | null
           phone?: string | null
           updated_at?: string
@@ -422,42 +408,10 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id?: string
+          is_admin?: boolean | null // <-- ADDED
           last_name?: string | null
           phone?: string | null
           updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      sellers: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          name: string
-          email: string
-          phone: string | null
-          address: string | null
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          name: string
-          email: string
-          phone?: string | null
-          address?: string | null
-          user_id: string
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          name?: string
-          email?: string
-          phone?: string | null
-          address?: string | null
           user_id?: string
         }
         Relationships: []

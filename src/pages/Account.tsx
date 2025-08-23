@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -23,7 +24,8 @@ const Account = () => {
     firstName: "",
     lastName: "",
     email: "",
-    phone: ""
+    phone: "",
+    is_admin: false,
   });
   
   const [addresses, setAddresses] = useState([]);
@@ -43,6 +45,7 @@ const Account = () => {
   });
 
   const [orders, setOrders] = useState([]);
+  const navigate = useNavigate();
 
   const fetchUserOrders = async (userId: string) => {
     const { data, error } = await supabase
@@ -67,7 +70,7 @@ const Account = () => {
   const fetchUserProfile = async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("first_name, last_name, email, phone")
+      .select("first_name, last_name, email, phone, is_admin")
       .eq("user_id", userId)
       .single();
 
@@ -78,8 +81,12 @@ const Account = () => {
         firstName: data.first_name || "",
         lastName: data.last_name || "",
         email: data.email || "",
-        phone: data.phone || ""
+        phone: data.phone || "",
+        is_admin: data.is_admin || false,
       });
+      if (data.is_admin) {
+        navigate("/sell");
+      }
     }
   };
 
@@ -148,7 +155,7 @@ const Account = () => {
         fetchUserOrders(session.user.id);
       } else {
         setIsLoggedIn(false);
-        setUserInfo({ firstName: "", lastName: "", email: "", phone: "" });
+        setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false });
         setAddresses([]);
         setOrders([]);
       }
@@ -158,7 +165,7 @@ const Account = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchUserProfile]); // FIXED: Added fetchUserProfile as a dependency
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,6 +221,7 @@ const Account = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
+    setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false }); // FIXED
   };
   
   const handleEditAddress = (address) => {
