@@ -40,11 +40,9 @@ const SellerDashboard = () => {
           .from("sellers")
           .select("id, name")
           .eq("user_id", session.user.id)
-          .single();
+          .maybeSingle(); // Use maybeSingle() to handle both null and single result
         if (sellerData) {
           setIsSeller(true);
-        } else if (error && error.message.includes("rows returned from a single row query")) {
-          setIsSeller(false);
         } else if (error) {
           console.error("Error checking seller status:", error.message);
         }
