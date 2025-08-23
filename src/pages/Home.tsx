@@ -1,5 +1,3 @@
-// src/pages/Home.tsx
-
 import { useState, useEffect } from "react";
 import { Search, Wrench, Truck, Shield, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,8 +35,8 @@ const Home = () => {
         price: Number(product.price),
         originalPrice: product.compare_at_price ? Number(product.compare_at_price) : undefined,
         image: product.image_urls?.[0] || '/placeholder.svg',
-        rating: 4.5, // Default rating since we don't have reviews yet
-        reviews: Math.floor(Math.random() * 200) + 50, // Random reviews for now
+        rating: 4.5,
+        reviews: Math.floor(Math.random() * 200) + 50,
         inStock: product.stock_quantity > 0,
         isOnSale: product.compare_at_price && Number(product.compare_at_price) > Number(product.price)
       }));
@@ -77,7 +75,6 @@ const Home = () => {
   const { data: vehicleModels = [] } = useQuery({
     queryKey: ['vehicle-models', selectedMake],
     queryFn: async () => {
-      // Find the ID of the selected make
       const makeId = vehicleMakes.find(make => make.name === selectedMake)?.id;
       
       if (!makeId) {
@@ -93,8 +90,23 @@ const Home = () => {
       if (error) throw error;
       return data.map(item => item.name);
     },
-    enabled: !!selectedMake, // This ensures the query only runs if a make is selected
+    enabled: !!selectedMake,
   });
+
+  // This is the new function to handle the search button click
+  const handleSearch = () => {
+    const searchParams = new URLSearchParams();
+    if (searchQuery) searchParams.append("query", searchQuery);
+    if (selectedYear) searchParams.append("year", selectedYear);
+    if (selectedMake) searchParams.append("make", selectedMake);
+    if (selectedModel) searchParams.append("model", selectedModel);
+    
+    // Log the search parameters to the console
+    console.log("Search initiated with:", searchParams.toString());
+
+    // You can now use these searchParams to navigate to a search results page
+    // For example: router.push(`/search?${searchParams.toString()}`);
+  };
 
   const categories = [
     { name: "Engine", icon: "🔧" },
@@ -175,7 +187,8 @@ const Home = () => {
                     </SelectContent>
                   </Select>
                   
-                  <Button size="lg" className="h-10">
+                  {/* The corrected button with the onClick handler */}
+                  <Button size="lg" className="h-10" onClick={handleSearch}>
                     <Search className="h-4 w-4 mr-2" />
                     Search Parts
                   </Button>
