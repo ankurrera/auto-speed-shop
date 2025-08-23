@@ -38,7 +38,7 @@ const SellerDashboard = () => {
     stock_quantity: 0,
     images: [],
     specifications: "",
-    category: "", // ADDED: New state for category
+    category: "",
   });
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -129,12 +129,12 @@ const SellerDashboard = () => {
         price: productInfo.price,
         stock_quantity: productInfo.stock_quantity,
         is_active: isActive,
-        image_urls: productInfo.images.map(img => URL.createObjectURL(img)), // Temporary URL for display
+        image_urls: productInfo.images.map(img => URL.createObjectURL(img)),
         specifications: productInfo.specifications,
         is_featured: false,
         brand: sellerInfo.name,
         seller_id: sellerData.id,
-        category: productInfo.category, // ADDED: Add category
+        category: productInfo.category,
       },
     ]);
 

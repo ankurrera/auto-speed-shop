@@ -285,6 +285,7 @@ export type Database = {
       products: {
         Row: {
           brand: string | null
+          category: string | null
           category_id: string | null
           compare_at_price: number | null
           created_at: string
@@ -309,11 +310,12 @@ export type Database = {
           weight: number | null
           year_from: number | null
           year_to: number | null
-          seller_id: string | null // <-- ADDED
-          specifications: string | null // <-- ADDED
+          seller_id: string | null
+          specifications: string | null
         }
         Insert: {
           brand?: string | null
+          category?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
@@ -338,11 +340,12 @@ export type Database = {
           weight?: number | null
           year_from?: number | null
           year_to?: number | null
-          seller_id?: string | null // <-- ADDED
-          specifications?: string | null // <-- ADDED
+          seller_id?: string | null
+          specifications?: string | null
         }
         Update: {
           brand?: string | null
+          category?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
@@ -367,8 +370,8 @@ export type Database = {
           weight?: number | null
           year_from?: number | null
           year_to?: number | null
-          seller_id?: string | null // <-- ADDED
-          specifications?: string | null // <-- ADDED
+          seller_id?: string | null
+          specifications?: string | null
         }
         Relationships: [
           {
