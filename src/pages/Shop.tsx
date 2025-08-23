@@ -4,24 +4,39 @@ import { Grid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SearchFilters from "@/components/SearchFilters";
 import ProductCard from "@/components/ProductCard";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const Shop = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filters, setFilters] = useState({});
 
-  // Sample products data
-  const products = Array.from({ length: 12 }, (_, i) => ({
-    id: `product-${i + 1}`,
-    name: `Auto Part ${i + 1}`,
-    brand: ["ACDelco", "Bosch", "Monroe", "Moog"][i % 4],
-    price: 29.99 + (i * 10),
-    originalPrice: i % 3 === 0 ? 39.99 + (i * 10) : undefined,
-    image: "/placeholder.svg",
-    rating: 4.2 + (i % 8) * 0.1,
-    reviews: 50 + (i * 15),
-    inStock: i % 7 !== 0,
-    isOnSale: i % 3 === 0
-  }));
+  // Fetch all products from Supabase
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      return data.map(product => ({
+        id: product.id,
+        name: product.name,
+        brand: product.brand || 'Unknown',
+        price: Number(product.price),
+        originalPrice: product.compare_at_price ? Number(product.compare_at_price) : undefined,
+        image: product.image_urls?.[0] || '/placeholder.svg',
+        rating: 4.5, // Default rating since we don't have reviews yet
+        reviews: Math.floor(Math.random() * 200) + 50, // Random reviews for now
+        inStock: product.stock_quantity > 0,
+        isOnSale: product.compare_at_price && Number(product.compare_at_price) > Number(product.price)
+      }));
+    }
+  });
 
   const handleFilterChange = (newFilters: any) => {
     setFilters(newFilters);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Wrench, Truck, Shield, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProductCard from "@/components/ProductCard";
 import heroImage from "@/assets/hero-auto-parts.jpg";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -13,53 +15,73 @@ const Home = () => {
   const [selectedMake, setSelectedMake] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
 
-  // Sample data - would come from API
-  const featuredProducts = [
-    {
-      id: "1",
-      name: "Premium Brake Pads - Ceramic",
-      brand: "ACDelco",
-      price: 89.99,
-      originalPrice: 109.99,
-      image: "/placeholder.svg",
-      rating: 4.8,
-      reviews: 124,
-      inStock: true,
-      isOnSale: true
-    },
-    {
-      id: "2",
-      name: "Full Synthetic Motor Oil 5W-30",
-      brand: "Mobil 1",
-      price: 24.99,
-      image: "/placeholder.svg",
-      rating: 4.9,
-      reviews: 89,
-      inStock: true
-    },
-    {
-      id: "3",
-      name: "Air Filter - High Performance",
-      brand: "K&N",
-      price: 45.99,
-      originalPrice: 55.99,
-      image: "/placeholder.svg",
-      rating: 4.7,
-      reviews: 67,
-      inStock: true,
-      isOnSale: true
-    },
-    {
-      id: "4",
-      name: "Spark Plugs - Iridium (Set of 4)",
-      brand: "NGK",
-      price: 32.99,
-      image: "/placeholder.svg",
-      rating: 4.6,
-      reviews: 156,
-      inStock: true
+  // Fetch featured products from Supabase
+  const { data: featuredProducts = [] } = useQuery({
+    queryKey: ['featured-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_featured', true)
+        .eq('is_active', true)
+        .limit(4);
+      
+      if (error) throw error;
+      
+      return data.map(product => ({
+        id: product.id,
+        name: product.name,
+        brand: product.brand || 'Unknown',
+        price: Number(product.price),
+        originalPrice: product.compare_at_price ? Number(product.compare_at_price) : undefined,
+        image: product.image_urls?.[0] || '/placeholder.svg',
+        rating: 4.5, // Default rating since we don't have reviews yet
+        reviews: Math.floor(Math.random() * 200) + 50, // Random reviews for now
+        inStock: product.stock_quantity > 0,
+        isOnSale: product.compare_at_price && Number(product.compare_at_price) > Number(product.price)
+      }));
     }
-  ];
+  });
+
+  // Fetch vehicle data from Supabase
+  const { data: vehicleYears = [] } = useQuery({
+    queryKey: ['vehicle-years'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vehicle_years')
+        .select('year')
+        .order('year', { ascending: false });
+      
+      if (error) throw error;
+      return data.map(item => item.year);
+    }
+  });
+
+  const { data: vehicleMakes = [] } = useQuery({
+    queryKey: ['vehicle-makes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vehicle_makes')
+        .select('name')
+        .order('name');
+      
+      if (error) throw error;
+      return data.map(item => item.name);
+    }
+  });
+
+  const { data: vehicleModels = [] } = useQuery({
+    queryKey: ['vehicle-models'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vehicle_models')
+        .select('name')
+        .order('name');
+      
+      if (error) throw error;
+      return data.map(item => item.name);
+    }
+  });
 
   const categories = [
     { name: "Engine", icon: "🔧" },
@@ -72,9 +94,6 @@ const Home = () => {
     { name: "Tools", icon: "🔧" }
   ];
 
-  const years = Array.from({ length: 30 }, (_, i) => 2024 - i);
-  const makes = ["Toyota", "Honda", "Ford", "Chevrolet", "BMW", "Mercedes", "Audi", "Nissan"];
-  const models = ["Camry", "Accord", "F-150", "Silverado", "3 Series", "C-Class"];
 
   return (
     <div className="min-h-screen bg-background">
@@ -110,7 +129,7 @@ const Home = () => {
                       <SelectValue placeholder="Year" />
                     </SelectTrigger>
                     <SelectContent>
-                      {years.map(year => (
+                      {vehicleYears.map(year => (
                         <SelectItem key={year} value={year.toString()}>
                           {year}
                         </SelectItem>
@@ -123,7 +142,7 @@ const Home = () => {
                       <SelectValue placeholder="Make" />
                     </SelectTrigger>
                     <SelectContent>
-                      {makes.map(make => (
+                      {vehicleMakes.map(make => (
                         <SelectItem key={make} value={make}>
                           {make}
                         </SelectItem>
@@ -136,7 +155,7 @@ const Home = () => {
                       <SelectValue placeholder="Model" />
                     </SelectTrigger>
                     <SelectContent>
-                      {models.map(model => (
+                      {vehicleModels.map(model => (
                         <SelectItem key={model} value={model}>
                           {model}
                         </SelectItem>
