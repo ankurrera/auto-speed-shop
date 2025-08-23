@@ -73,9 +73,8 @@ const ResetPassword = () => {
             console.error(error);
         } else {
             setStatusMessage("Password updated successfully! You will be redirected to the login page.");
-            setTimeout(() => {
-                window.location.href = '/account'; 
-            }, 3000);
+            // Removed setTimeout for instant redirection
+            window.location.href = '/account'; 
         }
         setIsUpdating(false);
     };
