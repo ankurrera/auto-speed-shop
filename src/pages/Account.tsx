@@ -19,7 +19,8 @@ const Account = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [loginMode, setLoginMode] = useState("user"); // ADDED: State to track login mode
+  const [loginMode, setLoginMode] = useState("user");
+  const [adminExists, setAdminExists] = useState(true); // ADDED: State to track if an admin account exists
 
   const [userInfo, setUserInfo] = useState({
     firstName: "",
@@ -158,7 +159,22 @@ const Account = () => {
         setOrders([]);
       }
     };
+    
+    // ADDED: Check if an admin exists on initial load
+    const checkAdminExists = async () => {
+      const { data, count } = await supabase
+        .from('profiles')
+        .select('is_admin', { count: 'exact' })
+        .eq('is_admin', true);
+      if (count > 0) {
+        setAdminExists(true);
+      } else {
+        setAdminExists(false);
+      }
+    };
+
     checkUserSession();
+    checkAdminExists();
     
     return () => {
       authListener.subscription.unsubscribe();
@@ -168,13 +184,7 @@ const Account = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Explicitly sign out to clear any old session state
-    const { error: signOutError } = await supabase.auth.signOut();
-    if (signOutError) {
-      console.error("Error signing out:", signOutError.message);
-    }
-    
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -183,7 +193,6 @@ const Account = () => {
       console.error("Login failed:", error.message);
       alert("Login failed: " + error.message);
     } else {
-      console.log("Login successful!");
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("is_admin")
@@ -192,6 +201,8 @@ const Account = () => {
 
       if (profileError) {
         console.error("Error fetching profile:", profileError.message);
+        alert("Login failed: Could not retrieve profile information.");
+        await supabase.auth.signOut();
       } else if (profileData?.is_admin && loginMode === "admin") {
         navigate("/sell");
       } else if (!profileData?.is_admin && loginMode === "user") {
@@ -208,6 +219,13 @@ const Account = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ADDED: Logic to handle admin signup only once
+    if (loginMode === "admin" && adminExists) {
+      alert("Admin account has already been created. Please log in.");
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -225,6 +243,17 @@ const Account = () => {
       alert("Signup failed: " + error.message);
     } else {
       console.log('Signup successful, user:', data.user);
+      
+      // ADDED: Set is_admin flag for the newly created admin account
+      if (loginMode === "admin") {
+        await supabase
+          .from('profiles')
+          .update({ is_admin: true })
+          .eq('user_id', data.user.id);
+        setAdminExists(true); // Update state to hide signup
+        navigate("/sell"); // Immediately redirect admin after signup
+      }
+
       setView("login");
       alert("Please check your email to confirm your account!");
     }
@@ -313,7 +342,6 @@ const Account = () => {
                 {view === "login" ? (
                   <>
                     <form onSubmit={handleLogin} className="space-y-4">
-                      {/* ADDED: Login mode selection buttons */}
                       <div className="flex justify-center space-x-2">
                         <Button
                           type="button"
@@ -459,10 +487,26 @@ const Account = () => {
                     
                     <div className="mt-6 text-center space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        Already have an account?{" "}
-                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
-                          Login here
-                        </Button>
+                        {/* UPDATED: Conditionally render signup link based on loginMode and adminExists state */}
+                        {loginMode === "user" && "Already have an account? "}
+                        {loginMode === "user" ? (
+                          <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
+                            Login here
+                          </Button>
+                        ) : (
+                          !adminExists && (
+                            <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
+                              Login here
+                            </Button>
+                          )
+                        )}
+                        {loginMode === "admin" && !adminExists && "Don't have an account? "}
+                        {loginMode === "admin" && !adminExists && (
+                          <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
+                            Sign up here
+                          </Button>
+                        )}
+                        {loginMode === "admin" && adminExists && "Admin account exists. Please log in."}
                       </p>
                     </div>
                   </>
