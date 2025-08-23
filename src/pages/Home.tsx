@@ -1,3 +1,5 @@
+// src/pages/Home.tsx
+
 import { useState, useEffect } from "react";
 import { Search, Wrench, Truck, Shield, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,7 +45,7 @@ const Home = () => {
     }
   });
 
-  // Fetch vehicle data from Supabase
+  // Fetch vehicle years from Supabase
   const { data: vehicleYears = [] } = useQuery({
     queryKey: ['vehicle-years'],
     queryFn: async () => {
@@ -57,30 +59,41 @@ const Home = () => {
     }
   });
 
+  // Fetch vehicle makes from Supabase
   const { data: vehicleMakes = [] } = useQuery({
     queryKey: ['vehicle-makes'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vehicle_makes')
-        .select('name')
+        .select('id, name')
         .order('name');
       
       if (error) throw error;
-      return data.map(item => item.name);
+      return data;
     }
   });
 
+  // Fetch vehicle models from Supabase, dependent on selectedMake
   const { data: vehicleModels = [] } = useQuery({
-    queryKey: ['vehicle-models'],
+    queryKey: ['vehicle-models', selectedMake],
     queryFn: async () => {
+      // Find the ID of the selected make
+      const makeId = vehicleMakes.find(make => make.name === selectedMake)?.id;
+      
+      if (!makeId) {
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('vehicle_models')
         .select('name')
+        .eq('make_id', makeId)
         .order('name');
       
       if (error) throw error;
       return data.map(item => item.name);
-    }
+    },
+    enabled: !!selectedMake, // This ensures the query only runs if a make is selected
   });
 
   const categories = [
@@ -93,7 +106,6 @@ const Home = () => {
     { name: "Filters", icon: "🌪️" },
     { name: "Tools", icon: "🔧" }
   ];
-
 
   return (
     <div className="min-h-screen bg-background">
@@ -143,8 +155,8 @@ const Home = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {vehicleMakes.map(make => (
-                        <SelectItem key={make} value={make}>
-                          {make}
+                        <SelectItem key={make.name} value={make.name}>
+                          {make.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
