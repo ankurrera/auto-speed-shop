@@ -6,8 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+
+const categories = [
+  "Engine",
+  "Brakes",
+  "Suspension",
+  "Electrical",
+  "Cooling",
+  "Exhaust",
+  "Filters",
+  "Tools",
+];
 
 const SellerDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -26,6 +38,7 @@ const SellerDashboard = () => {
     stock_quantity: 0,
     images: [],
     specifications: "",
+    category: "", // ADDED: New state for category
   });
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -121,6 +134,7 @@ const SellerDashboard = () => {
         is_featured: false,
         brand: sellerInfo.name,
         seller_id: sellerData.id,
+        category: productInfo.category, // ADDED: Add category
       },
     ]);
 
@@ -143,6 +157,7 @@ const SellerDashboard = () => {
         stock_quantity: 0,
         images: [],
         specifications: "",
+        category: "",
       });
     }
   };
@@ -279,6 +294,21 @@ const SellerDashboard = () => {
                   required
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="product-category">Category</Label>
+              <Select onValueChange={(value) => setProductInfo({ ...productInfo, category: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-images">Product Images</Label>
