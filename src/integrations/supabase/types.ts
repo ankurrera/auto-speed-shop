@@ -309,6 +309,8 @@ export type Database = {
           weight: number | null
           year_from: number | null
           year_to: number | null
+          seller_id: string | null // <-- ADDED
+          specifications: string | null // <-- ADDED
         }
         Insert: {
           brand?: string | null
@@ -336,6 +338,8 @@ export type Database = {
           weight?: number | null
           year_from?: number | null
           year_to?: number | null
+          seller_id?: string | null // <-- ADDED
+          specifications?: string | null // <-- ADDED
         }
         Update: {
           brand?: string | null
@@ -363,6 +367,8 @@ export type Database = {
           weight?: number | null
           year_from?: number | null
           year_to?: number | null
+          seller_id?: string | null // <-- ADDED
+          specifications?: string | null // <-- ADDED
         }
         Relationships: [
           {
@@ -370,6 +376,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
             referencedColumns: ["id"]
           },
         ]
@@ -409,6 +422,39 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sellers: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string
+          name: string
+          email: string
+          phone: string | null
+          address: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          name: string
+          email: string
+          phone?: string | null
+          address?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          name?: string
+          email?: string
+          phone?: string | null
+          address?: string | null
           user_id?: string
         }
         Relationships: []

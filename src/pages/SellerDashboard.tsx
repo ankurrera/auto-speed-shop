@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const SellerDashboard = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSeller, setIsSeller] = useState(false);
+  const [user, setUser] = useState(null);
   const [sellerInfo, setSellerInfo] = useState({
     name: "",
     email: "",
@@ -23,35 +26,136 @@ const SellerDashboard = () => {
     images: [],
     specifications: "",
   });
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkUserAndSeller = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setIsLoggedIn(true);
+        setUser(session.user);
+        // Check if user is already a seller
+        const { data: sellerData, error } = await supabase
+          .from("sellers")
+          .select("id, name")
+          .eq("user_id", session.user.id)
+          .single();
+        if (sellerData) {
+          setIsSeller(true);
+        } else if (error && error.message.includes("rows returned from a single row query")) {
+          setIsSeller(false);
+        } else if (error) {
+          console.error("Error checking seller status:", error.message);
+        }
+      } else {
+        setIsLoggedIn(false);
+        navigate("/account");
+      }
+    };
+    checkUserAndSeller();
+  }, [navigate]);
 
   const handleSellerSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate seller signup
-    console.log("Seller Signup:", sellerInfo);
-    setIsSeller(true);
-    // In a real app, this would involve a Supabase call to create a seller profile
+    if (!user) return;
+
+    const { data, error } = await supabase.from("sellers").insert([
+      {
+        name: sellerInfo.name,
+        email: user.email,
+        phone: sellerInfo.phone,
+        address: sellerInfo.address,
+        user_id: user.id,
+      },
+    ]);
+
+    if (error) {
+      console.error("Error creating seller account:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to create seller account. Please try again.",
+        variant: "destructive",
+      });
+    } else {
+      setIsSeller(true);
+      toast({
+        title: "Success!",
+        description: "Your seller account has been created successfully.",
+      });
+    }
   };
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would involve a Supabase call to insert the new product
-    console.log("New Product:", productInfo);
-    alert("Product added successfully!");
-    setProductInfo({
-      name: "",
-      description: "",
-      price: "",
-      images: [],
-      specifications: "",
-    });
+    if (!user) return;
+
+    // Get seller ID
+    const { data: sellerData, error: sellerError } = await supabase
+      .from("sellers")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (sellerError || !sellerData) {
+      toast({
+        title: "Error",
+        description: "Could not find your seller profile.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Insert new product
+    const { data, error } = await supabase.from("products").insert([
+      {
+        name: productInfo.name,
+        description: productInfo.description,
+        price: productInfo.price,
+        image_urls: productInfo.images.map(img => URL.createObjectURL(img)), // Temporary URL for display
+        specifications: productInfo.specifications,
+        is_active: true, // Set to active by default
+        is_featured: false, // Not featured by default
+        brand: sellerInfo.name, // Use seller name as brand for now
+        seller_id: sellerData.id, // Link to the seller
+      },
+    ]);
+
+    if (error) {
+      console.error("Error adding product:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to add product. Please check the form and try again.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success!",
+        description: "Your product has been listed successfully.",
+      });
+      setProductInfo({
+        name: "",
+        description: "",
+        price: "",
+        images: [],
+        specifications: "",
+      });
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Simulate image upload
     const files = Array.from(e.target.files || []);
-    console.log("Uploading images:", files);
     setProductInfo({ ...productInfo, images: files });
   };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <p className="text-lg">Please log in to access the seller dashboard.</p>
+        <Button className="mt-4" onClick={() => navigate("/account")}>Go to Login</Button>
+      </div>
+    );
+  }
 
   if (!isSeller) {
     return (
@@ -71,19 +175,6 @@ const SellerDashboard = () => {
                     value={sellerInfo.name}
                     onChange={(e) =>
                       setSellerInfo({ ...sellerInfo, name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="seller-email">Email</Label>
-                  <Input
-                    id="seller-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={sellerInfo.email}
-                    onChange={(e) =>
-                      setSellerInfo({ ...sellerInfo, email: e.target.value })
                     }
                     required
                   />
@@ -201,12 +292,12 @@ const SellerDashboard = () => {
           </form>
         </CardContent>
       </Card>
-      
+
       <Separator className="my-8" />
-      
+
       <div className="text-center">
         <Link to="/shop">
-          <Button variant="outline">View My Products</Button>
+          <Button variant="outline">View All Products</Button>
         </Link>
       </div>
     </div>
