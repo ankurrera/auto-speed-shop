@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 
 const Account = () => {
@@ -226,37 +226,52 @@ const Account = () => {
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/account`,
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone,
+    console.log('Starting signup process...', { email, loginMode });
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/account`,
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            phone: phone,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      console.error('Signup error:', error.message);
-      alert("Signup failed: " + error.message);
-    } else {
-      console.log('Signup successful, user:', data.user);
-      
-      // ADDED: Set is_admin flag for the newly created admin account
-      if (loginMode === "admin") {
-        await supabase
-          .from('profiles')
-          .update({ is_admin: true })
-          .eq('user_id', data.user.id);
-        setAdminExists(true); // Update state to hide signup
-        navigate("/sell"); // Immediately redirect admin after signup
+      console.log('Signup response:', { data, error });
+
+      if (error) {
+        console.error('Signup error:', error.message);
+        alert("Signup failed: " + error.message);
+      } else {
+        console.log('Signup successful, user:', data.user);
+        
+        // ADDED: Set is_admin flag for the newly created admin account
+        if (loginMode === "admin" && data.user) {
+          console.log('Setting admin flag for user:', data.user.id);
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ is_admin: true })
+            .eq('user_id', data.user.id);
+          
+          if (profileError) {
+            console.error('Error setting admin flag:', profileError);
+          }
+          
+          setAdminExists(true); // Update state to hide signup
+          navigate("/sell"); // Immediately redirect admin after signup
+        } else {
+          setView("login");
+          alert("Please check your email to confirm your account!");
+        }
       }
-
-      setView("login");
-      alert("Please check your email to confirm your account!");
+    } catch (networkError) {
+      console.error('Network error during signup:', networkError);
+      alert("Network error during signup. Please check your internet connection and try again.");
     }
   };
 
