@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,7 +69,7 @@ const Account = () => {
     }
   };
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("first_name, last_name, email, phone, is_admin")
@@ -87,7 +87,7 @@ const Account = () => {
         is_admin: data.is_admin || false,
       });
     }
-  };
+  }, []);
 
   const fetchUserAddresses = async (userId: string) => {
     const { data, error } = await supabase
@@ -179,7 +179,7 @@ const Account = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchUserProfile]);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
