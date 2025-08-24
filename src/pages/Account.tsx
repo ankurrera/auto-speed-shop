@@ -402,7 +402,7 @@ const Account = () => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                            supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account/reset-password',
+                            redirectTo: `${window.location.origin}/account/reset-password`,
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
@@ -414,16 +414,33 @@ const Account = () => {
                       }}>
                         Forgot your password?
                       </Button>
-                      <p className="text-sm text-muted-foreground">
-                        Don't have an account?{" "}
-                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
-                          Sign up here
-                        </Button>
-                      </p>
+                      {(loginMode === "user" || (loginMode === "admin" && !adminExists)) && (
+                        <p className="text-sm text-muted-foreground">
+                          Don't have an account?{" "}
+                          <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
+                            {loginMode === "admin" ? "Create Admin Account" : "Sign up here"}
+                          </Button>
+                        </p>
+                      )}
+                      {loginMode === "admin" && adminExists && (
+                        <p className="text-sm text-muted-foreground">
+                          Admin account already exists. Please login with admin credentials.
+                        </p>
+                      )}
                     </div>
                   </>
                 ) : view === "signup" ? (
                   <>
+                    {loginMode === "admin" && (
+                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                        <p className="text-sm text-amber-800 font-medium">
+                          Creating Admin Account
+                        </p>
+                        <p className="text-xs text-amber-700 mt-1">
+                          This will be the only admin account for this website. After creation, this signup option will be removed.
+                        </p>
+                      </div>
+                    )}
                     <form onSubmit={handleSignup} className="space-y-4">
                       <div className="grid md:grid-cols-2 gap-4">
                         <div className="space-y-2">
