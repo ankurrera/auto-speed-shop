@@ -23,8 +23,10 @@ const Account = () => {
   const [loginMode, setLoginMode] = useState("user");
   const [adminExists, setAdminExists] = useState(true);
 
-  const [newSellerFirstName, setNewSellerFirstName] = useState("");
-  const [newSellerLastName, setNewSellerLastName] = useState("");
+  // Correctly declared state variables for the new seller form.
+  const [newSellerName, setNewSellerName] = useState("");
+  const [newSellerAddress, setNewSellerAddress] = useState("");
+  const [newSellerPhoneNumber, setNewSellerPhoneNumber] = useState("");
   const [newSellerEmail, setNewSellerEmail] = useState("");
   const [newSellerPassword, setNewSellerPassword] = useState("");
   const [sellerExistsForAdmin, setSellerExistsForAdmin] = useState(false);
@@ -112,10 +114,9 @@ const Account = () => {
   
   const checkSellerExists = useCallback(async (userId: string) => {
     const { data, count, error } = await supabase
-      .from('profiles')
-      .select('is_seller', { count: 'exact' })
-      .eq('user_id', userId)
-      .eq('is_seller', true);
+      .from('sellers')
+      .select('user_id', { count: 'exact' })
+      .eq('user_id', userId);
     
     if (error) {
       console.error("Error checking seller status:", error.message);
@@ -207,17 +208,23 @@ const Account = () => {
     } else {
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("is_admin, is_seller")
+        .select("is_admin")
         .eq("user_id", data.user.id)
         .single();
-
+      
+      const { data: sellerData, error: sellerError } = await supabase
+        .from("sellers")
+        .select("user_id")
+        .eq("user_id", data.user.id)
+        .single();
+        
       if (profileError) {
         console.error("Error fetching profile:", profileError.message);
         alert("Login failed: Could not retrieve profile information.");
         await supabase.auth.signOut();
       } else if (profileData?.is_admin && loginMode === "admin") {
-        if (profileData?.is_seller) {
-          navigate("/"); // Redirect to home page if admin is also a seller
+        if (sellerData) {
+          navigate("/");
         } else {
           setIsLoggedIn(true);
           fetchUserProfile(data.user.id);
@@ -282,9 +289,9 @@ const Account = () => {
       password: newSellerPassword,
       options: {
         data: {
-          first_name: newSellerFirstName,
-          last_name: newSellerLastName,
-          is_seller: true,
+          // FIX: Use newSellerName for the first and last name
+          first_name: newSellerName,
+          last_name: "",
         },
       },
     });
@@ -294,18 +301,39 @@ const Account = () => {
       alert("Failed to create seller account: " + userError.message);
       return;
     }
+    
+    // Now insert into the sellers table
+    const { error: sellerError } = await supabase
+      .from('sellers')
+      .insert({
+        user_id: newUserData.user.id,
+        name: newSellerName,
+        address: newSellerAddress,
+        email: newSellerEmail,
+        phone: newSellerPhoneNumber,
+      });
 
+    if (sellerError) {
+      console.error('Error inserting into sellers table:', sellerError.message);
+      alert('Error creating seller account. Please try again.');
+      return;
+    }
+    
     alert(`Seller account created successfully for ${newSellerEmail}!`);
-    setNewSellerFirstName("");
-    setNewSellerLastName("");
+    setNewSellerName("");
+    setNewSellerAddress("");
     setNewSellerEmail("");
     setNewSellerPassword("");
+    setNewSellerPhoneNumber("");
+    setSellerExistsForAdmin(true);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
     setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false });
+    setSellerExistsForAdmin(false);
+    navigate("/");
   };
   
   const handleEditAddress = (address) => {
@@ -910,48 +938,46 @@ const Account = () => {
             </div>
           </TabsContent>
 
-          {userInfo.is_admin && (
-            <TabsContent value={sellerExistsForAdmin ? "admin-dashboard" : "admin-tools"}>
-              {sellerExistsForAdmin ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Admin Dashboard</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p>Welcome to the Admin Dashboard. You can manage products, orders, and sellers here.</p>
-                    <p>This is a placeholder for your admin-specific content.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardHeader className="text-center">
-                    <CardTitle className="text-2xl">Create Seller Account</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleCreateSellerAccount} className="space-y-4">
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="seller-first-name">First Name</Label>
-                          <Input
-                            id="seller-first-name"
-                            placeholder="Enter seller's first name"
-                            value={newSellerFirstName}
-                            onChange={(e) => setNewSellerFirstName(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="seller-last-name">Last Name</Label>
-                          <Input
-                            id="seller-last-name"
-                            placeholder="Enter seller's last name"
-                            value={newSellerLastName}
-                            onChange={(e) => setNewSellerLastName(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
+          {userInfo.is_admin && !sellerExistsForAdmin && (
+            <TabsContent value="admin-tools">
+              <Card>
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl">Create Seller Account</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateSellerAccount} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="seller-name">Seller's Name</Label>
+                      <Input
+                        id="seller-name"
+                        placeholder="Enter seller's business name"
+                        value={newSellerName}
+                        onChange={(e) => setNewSellerName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="seller-address">Address</Label>
+                      <Input
+                        id="seller-address"
+                        placeholder="Enter seller's address"
+                        value={newSellerAddress}
+                        onChange={(e) => setNewSellerAddress(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="seller-phone">Phone Number</Label>
+                      <Input
+                        id="seller-phone"
+                        type="tel"
+                        placeholder="Enter seller's phone number"
+                        value={newSellerPhoneNumber}
+                        onChange={(e) => setNewSellerPhoneNumber(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
                         <Label htmlFor="seller-email">Email</Label>
                         <Input
                           id="seller-email"
@@ -962,24 +988,37 @@ const Account = () => {
                           required
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="seller-password">Password</Label>
-                        <Input
-                          id="seller-password"
-                          type="password"
-                          placeholder="Create a password"
-                          value={newSellerPassword}
-                          onChange={(e) => setNewSellerPassword(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <Button type="submit" className="w-full">
-                        Create Seller Account
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              )}
+                    <div className="space-y-2">
+                      <Label htmlFor="seller-password">Password</Label>
+                      <Input
+                        id="seller-password"
+                        type="password"
+                        placeholder="Create a password"
+                        value={newSellerPassword}
+                        onChange={(e) => setNewSellerPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full">
+                      Create Seller Account
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {userInfo.is_admin && sellerExistsForAdmin && (
+            <TabsContent value="admin-dashboard">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Admin Dashboard</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-4">Welcome to the Admin Dashboard. You can publish new products from here.</p>
+                  <Button onClick={() => navigate('/sell')}>Publish New Product</Button>
+                </CardContent>
+              </Card>
             </TabsContent>
           )}
         </Tabs>
