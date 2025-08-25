@@ -119,17 +119,20 @@ const Account = () => {
     }
   }, []);
   
-  const checkSellerExists = useCallback(async (userId: string) => {
-    const { data, count, error } = await supabase
-      .from('sellers')
-      .select('user_id', { count: 'exact' })
-      .eq('user_id', userId);
-    
-    if (error) {
-      console.error("Error checking seller status:", error.message);
-      setSellerExistsForAdmin(false);
-    } else {
-      setSellerExistsForAdmin(count > 0);
+  const checkSellerExists = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const { count, error } = await supabase
+        .from('sellers')
+        .select('user_id', { count: 'exact' })
+        .eq('user_id', session.user.id);
+      
+      if (error) {
+        console.error("Error checking seller status:", error.message);
+        setSellerExistsForAdmin(false);
+      } else {
+        setSellerExistsForAdmin(count > 0);
+      }
     }
   }, []);
 
@@ -172,7 +175,7 @@ const Account = () => {
         fetchUserProfile(session.user.id);
         fetchUserAddresses(session.user.id);
         fetchUserOrders(session.user.id);
-        checkSellerExists(session.user.id);
+        checkSellerExists();
       } else {
         setIsLoggedIn(false);
         setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false });
@@ -1154,12 +1157,31 @@ const Account = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="product-category">Category</Label>
-                      <Input
+                      <select
                         id="product-category"
-                        placeholder="Enter product category"
+                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
                         value={productCategory}
                         onChange={(e) => setProductCategory(e.target.value)}
                         required
+                      >
+                        <option value="" disabled>Select a category</option>
+                        <option value="Engine">Engine</option>
+                        <option value="Brakes">Brakes</option>
+                        <option value="Suspension">Suspension</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Cooling">Cooling</option>
+                        <option value="Exhaust">Exhaust</option>
+                        <option value="Filters">Filters</option>
+                        <option value="Tools">Tools</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="product-images">Product Images</Label>
+                      <Input
+                        id="product-images"
+                        type="file"
+                        onChange={(e) => setProductImages(e.target.files)}
+                        multiple
                       />
                     </div>
                     <div className="space-y-2">
