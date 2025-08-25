@@ -37,6 +37,7 @@ const Account = () => {
   const [productCategory, setProductCategory] = useState("");
   const [productSpecifications, setProductSpecifications] = useState("");
   const [productImages, setProductImages] = useState(null);
+  const [productBrand, setProductBrand] = useState("");
 
   const [userInfo, setUserInfo] = useState({
     firstName: "",
@@ -119,20 +120,17 @@ const Account = () => {
     }
   }, []);
   
-  const checkSellerExists = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const { count, error } = await supabase
-        .from('sellers')
-        .select('user_id', { count: 'exact' })
-        .eq('user_id', session.user.id);
-      
-      if (error) {
-        console.error("Error checking seller status:", error.message);
-        setSellerExistsForAdmin(false);
-      } else {
-        setSellerExistsForAdmin(count > 0);
-      }
+  const checkSellerExists = useCallback(async (userId: string) => {
+    const { data, count, error } = await supabase
+      .from('sellers')
+      .select('user_id', { count: 'exact' })
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error("Error checking seller status:", error.message);
+      setSellerExistsForAdmin(false);
+    } else {
+      setSellerExistsForAdmin(count > 0);
     }
   }, []);
 
@@ -175,7 +173,7 @@ const Account = () => {
         fetchUserProfile(session.user.id);
         fetchUserAddresses(session.user.id);
         fetchUserOrders(session.user.id);
-        checkSellerExists();
+        checkSellerExists(session.user.id);
       } else {
         setIsLoggedIn(false);
         setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false });
@@ -419,6 +417,7 @@ const Account = () => {
         specifications: productSpecifications,
         seller_id: sellerData.id,
         image_urls: imageUrls,
+        brand: productBrand,
       });
 
     if (productError) {
@@ -433,6 +432,7 @@ const Account = () => {
       setProductCategory("");
       setProductSpecifications("");
       setProductImages(null);
+      setProductBrand("");
     }
   };
 
@@ -1154,6 +1154,31 @@ const Account = () => {
                           required
                         />
                       </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="product-brand">Brand</Label>
+                      <select
+                        id="product-brand"
+                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
+                        value={productBrand}
+                        onChange={(e) => setProductBrand(e.target.value)}
+                        required
+                      >
+                        <option value="" disabled>Select a brand</option>
+                        <option value="Wagner">Wagner</option>
+                        <option value="K&N">K&N</option>
+                        <option value="Philips">Philips</option>
+                        <option value="Borla">Borla</option>
+                        <option value="Fram">Fram</option>
+                        <option value="NGK">NGK</option>
+                        <option value="Monroe">Monroe</option>
+                        <option value="Mishimoto">Mishimoto</option>
+                        <option value="Optima">Optima</option>
+                        <option value="StopTech">StopTech</option>
+                        <option value="Deatschwerks">Deatschwerks</option>
+                        <option value="BC Racing">BC Racing</option>
+                        <option value="Garrett Motion">Garrett Motion</option>
+                      </select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="product-category">Category</Label>
