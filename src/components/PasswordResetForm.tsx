@@ -1,68 +1,90 @@
+// ankurrera/auto-speed-shop/auto-speed-shop-a6c1eaad5589ed44cfc017c36f824719e66129fd/src/components/PasswordResetForm.tsx
+
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Eye, EyeOff } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
-interface PasswordResetFormProps {
-  onBackToLogin: () => void;
-}
-
-const PasswordResetForm = ({ onBackToLogin }: PasswordResetFormProps) => {
-  const [email, setEmail] = useState("");
+const PasswordResetForm = () => {
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
-  const handlePasswordReset = async (e: React.FormEvent) => {
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage("");
+    if (newPassword !== confirmPassword) {
+      alert("Passwords do not match!");
+      return;
+    }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account/reset-password',
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
     });
 
-    if (error) {
-      setMessage(`Error: ${error.message}`);
-      console.error("Password reset failed:", error.message);
-    } else {
-      setMessage("Check your email for the password reset link!");
-    }
     setLoading(false);
+    if (error) {
+      alert(`Failed to update password: ${error.message}`);
+    } else {
+      alert("Password updated successfully! You are now logged in.");
+      // Redirect to the account page after a successful update
+      navigate("/account"); 
+    }
   };
 
   return (
-    <CardContent>
-      <form onSubmit={handlePasswordReset} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="Enter your registered email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Sending..." : "Send Password Reset Email"}
-        </Button>
-      </form>
-
-      {message && (
-        <div className="mt-4 text-center">
-          <p className="text-sm text-primary">{message}</p>
-        </div>
-      )}
-
-      <div className="mt-6 text-center">
-        <Button variant="link" className="text-sm" onClick={onBackToLogin}>
-          Back to Login
-        </Button>
-      </div>
-    </CardContent>
+    <Card>
+      <CardHeader>
+        <CardTitle>Reset Your Password</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handlePasswordUpdate} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-password">New Password</Label>
+            <div className="relative">
+              <Input
+                id="new-password"
+                type={showPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter your new password"
+                required
+                minLength={6}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Confirm Password</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm your new password"
+              required
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Updating..." : "Update Password"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 

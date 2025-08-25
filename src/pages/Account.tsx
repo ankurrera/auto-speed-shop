@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+// ankurrera/auto-speed-shop/auto-speed-shop-a6c1eaad5589ed44cfc017c36f824719e66129fd/src/pages/Account.tsx
+
+import { useState, useEffect, useCallback } from "react";
 import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import PasswordResetForm from "@/components/PasswordResetForm";
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -20,7 +23,7 @@ const Account = () => {
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [loginMode, setLoginMode] = useState("user");
-  const [adminExists, setAdminExists] = useState(true); // ADDED: State to track if an admin account exists
+  const [adminExists, setAdminExists] = useState(true);
 
   const [userInfo, setUserInfo] = useState({
     firstName: "",
@@ -49,7 +52,8 @@ const Account = () => {
   const [orders, setOrders] = useState([]);
   const navigate = useNavigate();
 
-  const fetchUserOrders = async (userId: string) => {
+  // FIX: Wrap these functions in useCallback to prevent them from changing on every render
+  const fetchUserOrders = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("orders")
       .select("id, created_at, order_number, status, total_amount")
@@ -67,9 +71,9 @@ const Account = () => {
         total: order.total_amount
       })));
     }
-  };
+  }, []);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("first_name, last_name, email, phone, is_admin")
@@ -87,9 +91,9 @@ const Account = () => {
         is_admin: data.is_admin || false,
       });
     }
-  };
+  }, []);
 
-  const fetchUserAddresses = async (userId: string) => {
+  const fetchUserAddresses = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("addresses")
       .select("*")
@@ -101,7 +105,7 @@ const Account = () => {
     } else {
       setAddresses(data);
     }
-  };
+  }, []);
 
   const handleSaveProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -128,20 +132,10 @@ const Account = () => {
     }
   };
   
-  // ✅ New useEffect hook to handle the official password recovery flow
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
-        const newPassword = prompt("Please enter a new password for your account.");
-        if (newPassword && newPassword.length >= 6) {
-          supabase.auth.updateUser({ password: newPassword }).then(({ error }) => {
-            if (error) {
-              alert("Failed to update password. Please try again.");
-            } else {
-              alert("Password updated successfully! You can now log in.");
-            }
-          });
-        }
+        setView("reset");
       }
     });
 
@@ -149,6 +143,7 @@ const Account = () => {
       const { data: { session } = {} } = await supabase.auth.getSession();
       if (session) {
         setIsLoggedIn(true);
+        // FIX: Now these functions can be safely used in the dependency array
         fetchUserProfile(session.user.id);
         fetchUserAddresses(session.user.id);
         fetchUserOrders(session.user.id);
@@ -160,7 +155,6 @@ const Account = () => {
       }
     };
     
-    // ADDED: Check if an admin exists on initial load
     const checkAdminExists = async () => {
       const { data, count } = await supabase
         .from('profiles')
@@ -179,7 +173,7 @@ const Account = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, fetchUserAddresses, fetchUserOrders]); // FIX: Add the new memoized functions to the dependency array
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,7 +214,6 @@ const Account = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ADDED: Logic to handle admin signup only once
     if (loginMode === "admin" && adminExists) {
       alert("Admin account has already been created. Please log in.");
       return;
@@ -244,14 +237,13 @@ const Account = () => {
     } else {
       console.log('Signup successful, user:', data.user);
       
-      // ADDED: Set is_admin flag for the newly created admin account
       if (loginMode === "admin") {
         await supabase
           .from('profiles')
           .update({ is_admin: true })
           .eq('user_id', data.user.id);
-        setAdminExists(true); // Update state to hide signup
-        navigate("/sell"); // Immediately redirect admin after signup
+        setAdminExists(true);
+        navigate("/sell");
       }
 
       setView("login");
@@ -402,7 +394,7 @@ const Account = () => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                            supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account/reset-password',
+                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
@@ -487,7 +479,6 @@ const Account = () => {
                     
                     <div className="mt-6 text-center space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        {/* UPDATED: Conditionally render signup link based on loginMode and adminExists state */}
                         {loginMode === "user" && "Already have an account? "}
                         {loginMode === "user" ? (
                           <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
@@ -511,12 +502,7 @@ const Account = () => {
                     </div>
                   </>
                 ) : (
-                  <div className="text-center">
-                    <p className="text-lg">Please check your email for a password reset link.</p>
-                    <Button onClick={() => setView("login")} className="mt-4">
-                      Back to Login
-                    </Button>
-                  </div>
+                  <PasswordResetForm />
                 )}
               </CardContent>
             </Card>
@@ -828,21 +814,21 @@ const Account = () => {
                       Reset your password using a secure password reset link sent to your email.
                     </p>
                     <Button onClick={() => {
-                        const emailInput = prompt("Please enter your email address to reset your password:");
-                        if (emailInput) {
-                          supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account/reset-password',
-                          }).then(({ error }) => {
-                            if (error) {
-                              alert("Error sending password reset email: " + error.message);
-                            } else {
-                              alert("Password reset email sent. Please check your inbox!");
-                            }
-                          });
-                        }
-                      }}>
-                        Send Password Reset Link
-                      </Button>
+                      const emailInput = prompt("Please enter your email address to reset your password:");
+                      if (emailInput) {
+                        supabase.auth.resetPasswordForEmail(emailInput, {
+                          redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
+                        }).then(({ error }) => {
+                          if (error) {
+                            alert("Error sending password reset email: " + error.message);
+                          } else {
+                            alert("Password reset email sent. Please check your inbox!");
+                          }
+                        });
+                      }
+                    }}>
+                      Send Password Reset Link
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
