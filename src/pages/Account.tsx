@@ -25,7 +25,7 @@ const Account = () => {
   const [loginMode, setLoginMode] = useState("user");
   const [adminExists, setAdminExists] = useState(true);
 
-  // FIX: Added the missing state variable declarations for the new seller form.
+  // Correctly declared state variables for the new seller form.
   const [newSellerFirstName, setNewSellerFirstName] = useState("");
   const [newSellerLastName, setNewSellerLastName] = useState("");
   const [newSellerEmail, setNewSellerEmail] = useState("");
@@ -276,18 +276,6 @@ const Account = () => {
       return;
     }
 
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ is_seller: true })
-      .eq('user_id', newUserData.user.id);
-
-    if (profileError) {
-      console.error('Error updating profile for new seller:', profileError.message);
-      alert("Failed to update profile for new seller.");
-      await supabase.auth.signOut(); 
-      return;
-    }
-
     alert(`Seller account created successfully for ${newSellerEmail}!`);
     setNewSellerFirstName("");
     setNewSellerLastName("");
@@ -361,7 +349,7 @@ const Account = () => {
     fetchUserAddresses(session.user.id);
   };
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn || view === "reset") {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-16">
