@@ -30,7 +30,6 @@ const Account = () => {
   const [newSellerPassword, setNewSellerPassword] = useState("");
   const [sellerExistsForAdmin, setSellerExistsForAdmin] = useState(false);
   
-  // New state variables for product creation
   const [productName, setProductName] = useState("");
   const [productDescription, setProductDescription] = useState("");
   const [productPrice, setProductPrice] = useState("");
@@ -356,7 +355,6 @@ const Account = () => {
     setSellerExistsForAdmin(true);
   };
   
-  // New function to handle product publishing
   const handlePublishNewProduct = async (e) => {
     e.preventDefault();
     const { data: { session } } = await supabase.auth.getSession();
@@ -366,11 +364,10 @@ const Account = () => {
       return;
     }
 
-    // Fetch the seller ID for the current user
     const { data: sellerData, error: sellerError } = await supabase
       .from('sellers')
-      .select('user_id')
-      .eq('email', userInfo.email)
+      .select('id')
+      .eq('user_id', session.user.id)
       .single();
 
     if (sellerError || !sellerData) {
@@ -378,8 +375,7 @@ const Account = () => {
       alert("Could not find seller information. Please create a seller account first.");
       return;
     }
-
-    // Insert the new product into the products table
+    
     const { error: productError } = await supabase
       .from('products')
       .insert({
@@ -389,8 +385,7 @@ const Account = () => {
         stock_quantity: parseInt(productQuantity),
         category: productCategory,
         specifications: productSpecifications,
-        seller_id: sellerData.user_id,
-        // You can add more fields here if needed, such as image_urls
+        seller_id: sellerData.id,
       });
 
     if (productError) {
@@ -398,7 +393,6 @@ const Account = () => {
       alert("Failed to publish product. Please try again.");
     } else {
       alert("Product published successfully!");
-      // Clear the form fields
       setProductName("");
       setProductDescription("");
       setProductPrice("");
