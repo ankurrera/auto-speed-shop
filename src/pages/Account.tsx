@@ -36,6 +36,7 @@ const Account = () => {
   const [productQuantity, setProductQuantity] = useState("");
   const [productCategory, setProductCategory] = useState("");
   const [productSpecifications, setProductSpecifications] = useState("");
+  const [productImages, setProductImages] = useState(null);
 
   const [userInfo, setUserInfo] = useState({
     firstName: "",
@@ -375,6 +376,34 @@ const Account = () => {
       alert("Could not find seller information. Please create a seller account first.");
       return;
     }
+
+    const imageUrls = [];
+    if (productImages) {
+        // Upload images to Supabase Storage
+        for (const image of productImages) {
+            const fileExt = image.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `product_images/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('products-images') // Make sure this bucket exists
+                .upload(filePath, image);
+
+            if (uploadError) {
+                console.error("Error uploading image:", uploadError.message);
+                alert("Failed to upload product image. Please try again.");
+                return;
+            }
+
+            const { data: publicUrlData } = supabase.storage
+                .from('products-images')
+                .getPublicUrl(filePath);
+
+            if (publicUrlData) {
+                imageUrls.push(publicUrlData.publicUrl);
+            }
+        }
+    }
     
     const { error: productError } = await supabase
       .from('products')
@@ -386,6 +415,7 @@ const Account = () => {
         category: productCategory,
         specifications: productSpecifications,
         seller_id: sellerData.id,
+        image_urls: imageUrls,
       });
 
     if (productError) {
@@ -399,6 +429,7 @@ const Account = () => {
       setProductQuantity("");
       setProductCategory("");
       setProductSpecifications("");
+      setProductImages(null);
     }
   };
 
