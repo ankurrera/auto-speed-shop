@@ -263,7 +263,15 @@ const Account = () => {
           }
           
           setAdminExists(true); // Update state to hide signup
-          navigate("/sell"); // Immediately redirect admin after signup
+          
+          // Check if user has a session (email confirmation not required)
+          if (data.session) {
+            navigate("/sell");
+          } else {
+            alert("Admin account created! Please check your email to confirm your account, then login as admin.");
+            setView("login");
+            setLoginMode("admin");
+          }
         } else {
           setView("login");
           alert("Please check your email to confirm your account!");
