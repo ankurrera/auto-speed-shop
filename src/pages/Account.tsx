@@ -131,11 +131,9 @@ const Account = () => {
     }
   };
   
-  // FIX: This useEffect now correctly updates the view for a password reset.
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
-        // Set the view to "reset" to display the password reset form.
         setView("reset");
       }
     });
@@ -144,7 +142,6 @@ const Account = () => {
       const { data: { session } = {} } = await supabase.auth.getSession();
       if (session) {
         setIsLoggedIn(true);
-        // FIX: Now these functions can be safely used in the dependency array
         fetchUserProfile(session.user.id);
         fetchUserAddresses(session.user.id);
         fetchUserOrders(session.user.id);
@@ -318,7 +315,8 @@ const Account = () => {
     fetchUserAddresses(session.user.id);
   };
 
-  if (!isLoggedIn) {
+  // FIX: Change the conditional to check isLoggedIn and the view state
+  if (!isLoggedIn || view === "reset") {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-16">
