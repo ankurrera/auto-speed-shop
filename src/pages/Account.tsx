@@ -25,6 +25,13 @@ const Account = () => {
   const [loginMode, setLoginMode] = useState("user");
   const [adminExists, setAdminExists] = useState(true);
 
+  // New state for creating seller account
+  const [isCreatingSeller, setIsCreatingSeller] = useState(false);
+  const [newSellerFirstName, setNewSellerFirstName] = useState("");
+  const [newSellerLastName, setNewSellerLastName] = useState("");
+  const [newSellerEmail, setNewSellerEmail] = useState("");
+  const [newSellerPassword, setNewSellerPassword] = useState("");
+
   const [userInfo, setUserInfo] = useState({
     firstName: "",
     lastName: "",
@@ -249,6 +256,36 @@ const Account = () => {
     }
   };
 
+  // New function to handle seller account creation
+  const handleCreateSellerAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const { data: newUserData, error: userError } = await supabase.auth.signUp({
+      email: newSellerEmail,
+      password: newSellerPassword,
+      options: {
+        data: {
+          first_name: newSellerFirstName,
+          last_name: newSellerLastName,
+          is_seller: true, // This is a new field you need to add to your Supabase table
+        },
+      },
+    });
+
+    if (userError) {
+      console.error('Seller account creation error:', userError.message);
+      alert("Failed to create seller account: " + userError.message);
+      return;
+    }
+
+    alert(`Seller account created successfully for ${newSellerEmail}!`);
+    // Clear the form
+    setNewSellerFirstName("");
+    setNewSellerLastName("");
+    setNewSellerEmail("");
+    setNewSellerPassword("");
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
@@ -315,8 +352,7 @@ const Account = () => {
     fetchUserAddresses(session.user.id);
   };
 
-  // FIX: Change the conditional to check isLoggedIn and the view state
-  if (!isLoggedIn || view === "reset") {
+  if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-16">
@@ -506,6 +542,78 @@ const Account = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // New conditional rendering for admin account creation
+  if (userInfo.is_admin) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Create Seller Account</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateSellerAccount} className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="seller-first-name">First Name</Label>
+                    <Input
+                      id="seller-first-name"
+                      placeholder="Enter seller's first name"
+                      value={newSellerFirstName}
+                      onChange={(e) => setNewSellerFirstName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="seller-last-name">Last Name</Label>
+                    <Input
+                      id="seller-last-name"
+                      placeholder="Enter seller's last name"
+                      value={newSellerLastName}
+                      onChange={(e) => setNewSellerLastName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="seller-email">Email</Label>
+                  <Input
+                    id="seller-email"
+                    type="email"
+                    placeholder="Enter seller's email"
+                    value={newSellerEmail}
+                    onChange={(e) => setNewSellerEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="seller-password">Password</Label>
+                  <Input
+                    id="seller-password"
+                    type="password"
+                    placeholder="Create a password"
+                    value={newSellerPassword}
+                    onChange={(e) => setNewSellerPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full">
+                  Create Seller Account
+                </Button>
+              </form>
+              <div className="mt-4 text-center">
+                <Button variant="link" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
