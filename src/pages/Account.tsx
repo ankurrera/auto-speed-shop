@@ -812,20 +812,20 @@ const Account = () => {
                       Reset your password using a secure password reset link sent to your email.
                     </p>
                     <Button onClick={() => {
-                        const emailInput = prompt("Please enter your email address to reset your password:");
-                        if (emailInput) {
-                          supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
-                          }).then(({ error }) => {
-                            if (error) {
-                              alert("Error sending password reset email: " + error.message);
-                            } else {
-                              alert("Password reset email sent. Please check your inbox!");
-                            }
-                          });
-                        }
-                      }}>
-                        Send Password Reset Link
+                      const emailInput = prompt("Please enter your email address to reset your password:");
+                      if (emailInput) {
+                        supabase.auth.resetPasswordForEmail(emailInput, {
+                          redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
+                        }).then(({ error }) => {
+                          if (error) {
+                            alert("Error sending password reset email: " + error.message);
+                          } else {
+                            alert("Password reset email sent. Please check your inbox!");
+                          }
+                        });
+                      }
+                    }}>
+                      Send Password Reset Link
                     </Button>
                   </div>
                 </CardContent>
