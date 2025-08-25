@@ -426,7 +426,7 @@ const Account = () => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                            supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: `${window.location.origin}/account/reset-password`,
+                            redirectTo: `${window.location.origin}/account`,
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
