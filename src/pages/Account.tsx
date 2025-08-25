@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+// ankurrera/auto-speed-shop/auto-speed-shop-a6c1eaad5589ed44cfc017c36f824719e66129fd/src/pages/Account.tsx
+
+import { useState, useEffect } from "react";
 import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,10 +22,7 @@ const Account = () => {
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [loginMode, setLoginMode] = useState("user");
-  const [adminExists, setAdminExists] = useState(true); // ADDED: State to track if an admin account exists
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [adminExists, setAdminExists] = useState(true);
 
   const [userInfo, setUserInfo] = useState({
     firstName: "",
@@ -72,7 +71,7 @@ const Account = () => {
     }
   };
 
-  const fetchUserProfile = useCallback(async (userId: string) => {
+  const fetchUserProfile = async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("first_name, last_name, email, phone, is_admin")
@@ -90,7 +89,7 @@ const Account = () => {
         is_admin: data.is_admin || false,
       });
     }
-  }, []);
+  };
 
   const fetchUserAddresses = async (userId: string) => {
     const { data, error } = await supabase
@@ -131,12 +130,19 @@ const Account = () => {
     }
   };
   
-  // ✅ New useEffect hook to handle the official password recovery flow
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
-        setView("reset");
-        setIsResettingPassword(true);
+        const newPassword = prompt("Please enter a new password for your account.");
+        if (newPassword && newPassword.length >= 6) {
+          supabase.auth.updateUser({ password: newPassword }).then(({ error }) => {
+            if (error) {
+              alert("Failed to update password. Please try again.");
+            } else {
+              alert("Password updated successfully! You can now log in.");
+            }
+          });
+        }
       }
     });
 
@@ -155,7 +161,6 @@ const Account = () => {
       }
     };
     
-    // ADDED: Check if an admin exists on initial load
     const checkAdminExists = async () => {
       const { data, count } = await supabase
         .from('profiles')
@@ -174,7 +179,7 @@ const Account = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchUserProfile]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,66 +220,40 @@ const Account = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ADDED: Logic to handle admin signup only once
     if (loginMode === "admin" && adminExists) {
       alert("Admin account has already been created. Please log in.");
       return;
     }
 
-    console.log('Starting signup process...', { email, loginMode });
-
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/account`,
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            phone: phone,
-          },
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone,
         },
-      });
+      },
+    });
 
-      console.log('Signup response:', { data, error });
-
-      if (error) {
-        console.error('Signup error:', error.message);
-        alert("Signup failed: " + error.message);
-      } else {
-        console.log('Signup successful, user:', data.user);
-        
-        // ADDED: Set is_admin flag for the newly created admin account
-        if (loginMode === "admin" && data.user) {
-          console.log('Setting admin flag for user:', data.user.id);
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ is_admin: true })
-            .eq('user_id', data.user.id);
-          
-          if (profileError) {
-            console.error('Error setting admin flag:', profileError);
-          }
-          
-          setAdminExists(true); // Update state to hide signup
-          
-          // Check if user has a session (email confirmation not required)
-          if (data.session) {
-            navigate("/sell");
-          } else {
-            alert("Admin account created! Please check your email to confirm your account, then login as admin.");
-            setView("login");
-            setLoginMode("admin");
-          }
-        } else {
-          setView("login");
-          alert("Please check your email to confirm your account!");
-        }
+    if (error) {
+      console.error('Signup error:', error.message);
+      alert("Signup failed: " + error.message);
+    } else {
+      console.log('Signup successful, user:', data.user);
+      
+      if (loginMode === "admin") {
+        await supabase
+          .from('profiles')
+          .update({ is_admin: true })
+          .eq('user_id', data.user.id);
+        setAdminExists(true);
+        navigate("/sell");
       }
-    } catch (networkError) {
-      console.error('Network error during signup:', networkError);
-      alert("Network error during signup. Please check your internet connection and try again.");
+
+      setView("login");
+      alert("Please check your email to confirm your account!");
     }
   };
 
@@ -282,40 +261,6 @@ const Account = () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
     setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false });
-  };
-
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsResettingPassword(true);
-
-    if (newPassword !== confirmPassword) {
-      alert("Passwords do not match!");
-      setIsResettingPassword(false);
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      alert("Password must be at least 6 characters long!");
-      setIsResettingPassword(false);
-      return;
-    }
-
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) {
-        alert("Failed to update password: " + error.message);
-      } else {
-        alert("Password updated successfully! You can now log in.");
-        setView("login");
-        setNewPassword("");
-        setConfirmPassword("");
-        setIsResettingPassword(false);
-      }
-    } catch (error) {
-      console.error("Password reset error:", error);
-      alert("An error occurred while updating your password.");
-      setIsResettingPassword(false);
-    }
   };
   
   const handleEditAddress = (address) => {
@@ -455,7 +400,8 @@ const Account = () => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                            supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: `${window.location.origin}/account`,
+                            // CORRECTED: This is the primary fix
+                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
@@ -467,161 +413,109 @@ const Account = () => {
                       }}>
                         Forgot your password?
                       </Button>
-                      {loginMode === "user" && (
-                        <p className="text-sm text-muted-foreground">
-                          Don't have an account?{" "}
+                      <p className="text-sm text-muted-foreground">
+                        Don't have an account?{" "}
+                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
+                          Sign up here
+                        </Button>
+                      </p>
+                    </div>
+                  </>
+                ) : view === "signup" ? (
+                  <>
+                    <form onSubmit={handleSignup} className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-first-name">First Name</Label>
+                          <Input
+                            id="signup-first-name"
+                            placeholder="Enter your first name"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-last-name">Last Name</Label>
+                          <Input
+                            id="signup-last-name"
+                            placeholder="Enter your last name"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email">Email</Label>
+                        <Input
+                          id="signup-email"
+                          type="email"
+                          placeholder="Enter your email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password">Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="signup-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Create a password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      <Button type="submit" className="w-full">
+                        Sign Up
+                      </Button>
+                    </form>
+                    
+                    <div className="mt-6 text-center space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        {loginMode === "user" && "Already have an account? "}
+                        {loginMode === "user" ? (
+                          <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
+                            Login here
+                          </Button>
+                        ) : (
+                          !adminExists && (
+                            <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
+                              Login here
+                            </Button>
+                          )
+                        )}
+                        {loginMode === "admin" && !adminExists && "Don't have an account? "}
+                        {loginMode === "admin" && !adminExists && (
                           <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
                             Sign up here
                           </Button>
-                        </p>
-                      )}
-                      {loginMode === "admin" && !adminExists && (
-                        <p className="text-sm text-muted-foreground">
-                          Don't have an admin account?{" "}
-                          <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
-                            Create Admin Account
-                          </Button>
-                        </p>
-                      )}
-                      {loginMode === "admin" && adminExists && (
-                        <p className="text-sm text-muted-foreground">
-                          Admin account already exists. Use the "Forgot your password?" link above if needed.
-                        </p>
-                      )}
+                        )}
+                        {loginMode === "admin" && adminExists && "Admin account exists. Please log in."}
+                      </p>
                     </div>
                   </>
-                 ) : view === "reset" ? (
-                   <>
-                     <form onSubmit={handlePasswordReset} className="space-y-4">
-                       <div className="space-y-2">
-                         <Label htmlFor="new-password">New Password</Label>
-                         <div className="relative">
-                           <Input
-                             id="new-password"
-                             type={showPassword ? "text" : "password"}
-                             placeholder="Enter your new password"
-                             value={newPassword}
-                             onChange={(e) => setNewPassword(e.target.value)}
-                             required
-                             minLength={6}
-                           />
-                           <Button
-                             type="button"
-                             variant="ghost"
-                             size="sm"
-                             className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                             onClick={() => setShowPassword(!showPassword)}
-                           >
-                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                           </Button>
-                         </div>
-                       </div>
-                       <div className="space-y-2">
-                         <Label htmlFor="confirm-password">Confirm New Password</Label>
-                         <Input
-                           id="confirm-password"
-                           type={showPassword ? "text" : "password"}
-                           placeholder="Confirm your new password"
-                           value={confirmPassword}
-                           onChange={(e) => setConfirmPassword(e.target.value)}
-                           required
-                           minLength={6}
-                         />
-                       </div>
-                       <Button type="submit" className="w-full" disabled={isResettingPassword}>
-                         {isResettingPassword ? "Updating Password..." : "Update Password"}
-                       </Button>
-                     </form>
-                     
-                     <div className="mt-6 text-center space-y-2">
-                       <Button variant="link" className="text-sm" onClick={() => setView("login")}>
-                         Back to Login
-                       </Button>
-                     </div>
-                   </>
-                  ) : (
-                   <>
-                     {loginMode === "admin" && (
-                       <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                         <p className="text-sm text-amber-800 font-medium">
-                           Creating Admin Account
-                         </p>
-                         <p className="text-xs text-amber-700 mt-1">
-                           This will be the only admin account for this website. After creation, this signup option will be removed.
-                         </p>
-                       </div>
-                     )}
-                     <form onSubmit={handleSignup} className="space-y-4">
-                       <div className="grid md:grid-cols-2 gap-4">
-                         <div className="space-y-2">
-                           <Label htmlFor="signup-first-name">First Name</Label>
-                           <Input
-                             id="signup-first-name"
-                             placeholder="Enter your first name"
-                             value={firstName}
-                             onChange={(e) => setFirstName(e.target.value)}
-                             required
-                           />
-                         </div>
-                         <div className="space-y-2">
-                           <Label htmlFor="signup-last-name">Last Name</Label>
-                           <Input
-                             id="signup-last-name"
-                             placeholder="Enter your last name"
-                             value={lastName}
-                             onChange={(e) => setLastName(e.target.value)}
-                             required
-                           />
-                         </div>
-                       </div>
-                       <div className="space-y-2">
-                         <Label htmlFor="signup-email">Email</Label>
-                         <Input
-                           id="signup-email"
-                           type="email"
-                           placeholder="Enter your email"
-                           value={email}
-                           onChange={(e) => setEmail(e.target.value)}
-                           required
-                         />
-                       </div>
-                       <div className="space-y-2">
-                         <Label htmlFor="signup-password">Password</Label>
-                         <div className="relative">
-                           <Input
-                             id="signup-password"
-                             type={showPassword ? "text" : "password"}
-                             placeholder="Create a password"
-                             value={password}
-                             onChange={(e) => setPassword(e.target.value)}
-                             required
-                           />
-                           <Button
-                             type="button"
-                             variant="ghost"
-                             size="sm"
-                             className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                             onClick={() => setShowPassword(!showPassword)}
-                           >
-                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                           </Button>
-                         </div>
-                       </div>
-                       <Button type="submit" className="w-full">
-                         Sign Up
-                       </Button>
-                     </form>
-                     
-                     <div className="mt-6 text-center space-y-2">
-                       <p className="text-sm text-muted-foreground">
-                         Already have an account?{" "}
-                         <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
-                           Login here
-                         </Button>
-                       </p>
-                     </div>
-                   </>
-                 )}
+                ) : (
+                  <div className="text-center">
+                    <p className="text-lg">Please check your email for a password reset link.</p>
+                    <Button onClick={() => setView("login")} className="mt-4">
+                      Back to Login
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -931,11 +825,12 @@ const Account = () => {
                     <p className="text-muted-foreground">
                       Reset your password using a secure password reset link sent to your email.
                     </p>
-                         <Button onClick={() => {
+                    <Button onClick={() => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                           supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: `${window.location.origin}/account#reset`,
+                            // CORRECTED: This is the primary fix
+                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
