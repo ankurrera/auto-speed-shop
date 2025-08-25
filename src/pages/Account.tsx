@@ -25,13 +25,12 @@ const Account = () => {
   const [loginMode, setLoginMode] = useState("user");
   const [adminExists, setAdminExists] = useState(true);
 
-  // New state for creating seller account
-  const [isCreatingSeller, setIsCreatingSeller] = useState(false);
+  // FIX: Added the missing state variable declarations for the new seller form.
   const [newSellerFirstName, setNewSellerFirstName] = useState("");
   const [newSellerLastName, setNewSellerLastName] = useState("");
   const [newSellerEmail, setNewSellerEmail] = useState("");
   const [newSellerPassword, setNewSellerPassword] = useState("");
-
+  
   const [userInfo, setUserInfo] = useState({
     firstName: "",
     lastName: "",
@@ -256,7 +255,6 @@ const Account = () => {
     }
   };
 
-  // New function to handle seller account creation
   const handleCreateSellerAccount = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -267,7 +265,7 @@ const Account = () => {
         data: {
           first_name: newSellerFirstName,
           last_name: newSellerLastName,
-          is_seller: true, // This is a new field you need to add to your Supabase table
+          is_seller: true,
         },
       },
     });
@@ -278,8 +276,19 @@ const Account = () => {
       return;
     }
 
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ is_seller: true })
+      .eq('user_id', newUserData.user.id);
+
+    if (profileError) {
+      console.error('Error updating profile for new seller:', profileError.message);
+      alert("Failed to update profile for new seller.");
+      await supabase.auth.signOut(); 
+      return;
+    }
+
     alert(`Seller account created successfully for ${newSellerEmail}!`);
-    // Clear the form
     setNewSellerFirstName("");
     setNewSellerLastName("");
     setNewSellerEmail("");
@@ -547,7 +556,6 @@ const Account = () => {
     );
   }
 
-  // New conditional rendering for admin account creation
   if (userInfo.is_admin) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8">
