@@ -438,17 +438,25 @@ const Account = () => {
                       }}>
                         Forgot your password?
                       </Button>
-                      {(loginMode === "user" || (loginMode === "admin" && !adminExists)) && (
+                      {loginMode === "user" && (
                         <p className="text-sm text-muted-foreground">
                           Don't have an account?{" "}
                           <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
-                            {loginMode === "admin" ? "Create Admin Account" : "Sign up here"}
+                            Sign up here
+                          </Button>
+                        </p>
+                      )}
+                      {loginMode === "admin" && !adminExists && (
+                        <p className="text-sm text-muted-foreground">
+                          Don't have an admin account?{" "}
+                          <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
+                            Create Admin Account
                           </Button>
                         </p>
                       )}
                       {loginMode === "admin" && adminExists && (
                         <p className="text-sm text-muted-foreground">
-                          Admin account already exists. Please login with admin credentials.
+                          Admin account already exists. Use the "Forgot your password?" link above if needed.
                         </p>
                       )}
                     </div>
