@@ -1,5 +1,3 @@
-// ankurrera/auto-speed-shop/auto-speed-shop-a6c1eaad5589ed44cfc017c36f824719e66129fd/src/pages/Account.tsx
-
 import { useState, useEffect, useCallback } from "react";
 import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,11 +23,11 @@ const Account = () => {
   const [loginMode, setLoginMode] = useState("user");
   const [adminExists, setAdminExists] = useState(true);
 
-  // Correctly declared state variables for the new seller form.
   const [newSellerFirstName, setNewSellerFirstName] = useState("");
   const [newSellerLastName, setNewSellerLastName] = useState("");
   const [newSellerEmail, setNewSellerEmail] = useState("");
   const [newSellerPassword, setNewSellerPassword] = useState("");
+  const [sellerExistsForAdmin, setSellerExistsForAdmin] = useState(false);
   
   const [userInfo, setUserInfo] = useState({
     firstName: "",
@@ -111,6 +109,21 @@ const Account = () => {
       setAddresses(data);
     }
   }, []);
+  
+  const checkSellerExists = useCallback(async (userId: string) => {
+    const { data, count, error } = await supabase
+      .from('profiles')
+      .select('is_seller', { count: 'exact' })
+      .eq('user_id', userId)
+      .eq('is_seller', true);
+    
+    if (error) {
+      console.error("Error checking seller status:", error.message);
+      setSellerExistsForAdmin(false);
+    } else {
+      setSellerExistsForAdmin(count > 0);
+    }
+  }, []);
 
   const handleSaveProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -151,6 +164,7 @@ const Account = () => {
         fetchUserProfile(session.user.id);
         fetchUserAddresses(session.user.id);
         fetchUserOrders(session.user.id);
+        checkSellerExists(session.user.id);
       } else {
         setIsLoggedIn(false);
         setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false });
@@ -177,7 +191,7 @@ const Account = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchUserProfile, fetchUserAddresses, fetchUserOrders]);
+  }, [fetchUserProfile, fetchUserAddresses, fetchUserOrders, checkSellerExists]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,7 +207,7 @@ const Account = () => {
     } else {
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("is_admin")
+        .select("is_admin, is_seller")
         .eq("user_id", data.user.id)
         .single();
 
@@ -202,7 +216,12 @@ const Account = () => {
         alert("Login failed: Could not retrieve profile information.");
         await supabase.auth.signOut();
       } else if (profileData?.is_admin && loginMode === "admin") {
-        navigate("/sell");
+        if (profileData?.is_seller) {
+          navigate("/"); // Redirect to home page if admin is also a seller
+        } else {
+          setIsLoggedIn(true);
+          fetchUserProfile(data.user.id);
+        }
       } else if (!profileData?.is_admin && loginMode === "user") {
         setIsLoggedIn(true);
         fetchUserProfile(data.user.id);
@@ -544,7 +563,6 @@ const Account = () => {
     );
   }
 
-  // FIX: Admin users now see their profile details and a dedicated tab for admin tools
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -566,7 +584,8 @@ const Account = () => {
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="orders">Order History</TabsTrigger>
-            {userInfo.is_admin && <TabsTrigger value="admin-tools">Admin Tools</TabsTrigger>}
+            {userInfo.is_admin && !sellerExistsForAdmin && <TabsTrigger value="admin-tools">Admin Tools</TabsTrigger>}
+            {userInfo.is_admin && sellerExistsForAdmin && <TabsTrigger value="admin-dashboard">Admin Dashboard</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="profile">
@@ -890,65 +909,77 @@ const Account = () => {
               </Card>
             </div>
           </TabsContent>
-          
+
           {userInfo.is_admin && (
-            <TabsContent value="admin-tools">
-              <Card>
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl">Create Seller Account</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCreateSellerAccount} className="space-y-4">
-                    <div className="grid md:grid-cols-2 gap-4">
+            <TabsContent value={sellerExistsForAdmin ? "admin-dashboard" : "admin-tools"}>
+              {sellerExistsForAdmin ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Admin Dashboard</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p>Welcome to the Admin Dashboard. You can manage products, orders, and sellers here.</p>
+                    <p>This is a placeholder for your admin-specific content.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardHeader className="text-center">
+                    <CardTitle className="text-2xl">Create Seller Account</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleCreateSellerAccount} className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="seller-first-name">First Name</Label>
+                          <Input
+                            id="seller-first-name"
+                            placeholder="Enter seller's first name"
+                            value={newSellerFirstName}
+                            onChange={(e) => setNewSellerFirstName(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="seller-last-name">Last Name</Label>
+                          <Input
+                            id="seller-last-name"
+                            placeholder="Enter seller's last name"
+                            value={newSellerLastName}
+                            onChange={(e) => setNewSellerLastName(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
                       <div className="space-y-2">
-                        <Label htmlFor="seller-first-name">First Name</Label>
+                        <Label htmlFor="seller-email">Email</Label>
                         <Input
-                          id="seller-first-name"
-                          placeholder="Enter seller's first name"
-                          value={newSellerFirstName}
-                          onChange={(e) => setNewSellerFirstName(e.target.value)}
+                          id="seller-email"
+                          type="email"
+                          placeholder="Enter seller's email"
+                          value={newSellerEmail}
+                          onChange={(e) => setNewSellerEmail(e.target.value)}
                           required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="seller-last-name">Last Name</Label>
+                        <Label htmlFor="seller-password">Password</Label>
                         <Input
-                          id="seller-last-name"
-                          placeholder="Enter seller's last name"
-                          value={newSellerLastName}
-                          onChange={(e) => setNewSellerLastName(e.target.value)}
+                          id="seller-password"
+                          type="password"
+                          placeholder="Create a password"
+                          value={newSellerPassword}
+                          onChange={(e) => setNewSellerPassword(e.target.value)}
                           required
                         />
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="seller-email">Email</Label>
-                      <Input
-                        id="seller-email"
-                        type="email"
-                        placeholder="Enter seller's email"
-                        value={newSellerEmail}
-                        onChange={(e) => setNewSellerEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="seller-password">Password</Label>
-                      <Input
-                        id="seller-password"
-                        type="password"
-                        placeholder="Create a password"
-                        value={newSellerPassword}
-                        onChange={(e) => setNewSellerPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <Button type="submit" className="w-full">
-                      Create Seller Account
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+                      <Button type="submit" className="w-full">
+                        Create Seller Account
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           )}
         </Tabs>
