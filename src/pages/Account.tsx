@@ -544,77 +544,7 @@ const Account = () => {
     );
   }
 
-  if (userInfo.is_admin) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Create Seller Account</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCreateSellerAccount} className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="seller-first-name">First Name</Label>
-                    <Input
-                      id="seller-first-name"
-                      placeholder="Enter seller's first name"
-                      value={newSellerFirstName}
-                      onChange={(e) => setNewSellerFirstName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="seller-last-name">Last Name</Label>
-                    <Input
-                      id="seller-last-name"
-                      placeholder="Enter seller's last name"
-                      value={newSellerLastName}
-                      onChange={(e) => setNewSellerLastName(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="seller-email">Email</Label>
-                  <Input
-                    id="seller-email"
-                    type="email"
-                    placeholder="Enter seller's email"
-                    value={newSellerEmail}
-                    onChange={(e) => setNewSellerEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="seller-password">Password</Label>
-                  <Input
-                    id="seller-password"
-                    type="password"
-                    placeholder="Create a password"
-                    value={newSellerPassword}
-                    onChange={(e) => setNewSellerPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full">
-                  Create Seller Account
-                </Button>
-              </form>
-              <div className="mt-4 text-center">
-                <Button variant="link" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
+  // FIX: Admin users now see their profile details and a dedicated tab for admin tools
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -636,7 +566,7 @@ const Account = () => {
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="orders">Order History</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
+            {userInfo.is_admin && <TabsTrigger value="admin-tools">Admin Tools</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="profile">
@@ -960,6 +890,67 @@ const Account = () => {
               </Card>
             </div>
           </TabsContent>
+          
+          {userInfo.is_admin && (
+            <TabsContent value="admin-tools">
+              <Card>
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl">Create Seller Account</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateSellerAccount} className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="seller-first-name">First Name</Label>
+                        <Input
+                          id="seller-first-name"
+                          placeholder="Enter seller's first name"
+                          value={newSellerFirstName}
+                          onChange={(e) => setNewSellerFirstName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="seller-last-name">Last Name</Label>
+                        <Input
+                          id="seller-last-name"
+                          placeholder="Enter seller's last name"
+                          value={newSellerLastName}
+                          onChange={(e) => setNewSellerLastName(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="seller-email">Email</Label>
+                      <Input
+                        id="seller-email"
+                        type="email"
+                        placeholder="Enter seller's email"
+                        value={newSellerEmail}
+                        onChange={(e) => setNewSellerEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="seller-password">Password</Label>
+                      <Input
+                        id="seller-password"
+                        type="password"
+                        placeholder="Create a password"
+                        value={newSellerPassword}
+                        onChange={(e) => setNewSellerPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full">
+                      Create Seller Account
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
