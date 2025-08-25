@@ -32,8 +32,10 @@ const PasswordResetForm = () => {
     if (error) {
       alert(`Failed to update password: ${error.message}`);
     } else {
-      alert("Password updated successfully! You are now logged in.");
-      // Redirect to the account page after a successful update
+      alert("Password updated successfully! You can now log in.");
+      // FIX: Manually sign out the user to force them to log in again with the new password.
+      await supabase.auth.signOut();
+      // FIX: Redirect to the login page after a successful update and sign out.
       navigate("/account"); 
     }
   };

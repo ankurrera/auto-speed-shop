@@ -315,8 +315,7 @@ const Account = () => {
     fetchUserAddresses(session.user.id);
   };
 
-  // FIX: Change the conditional to check isLoggedIn and the view state
-  if (!isLoggedIn || view === "reset") {
+  if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-16">
