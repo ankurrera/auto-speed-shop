@@ -283,30 +283,55 @@ const Account = () => {
 
   const handleCreateSellerAccount = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if the user already exists
+    const { data: existingUser, error: userError } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .eq('email', newSellerEmail)
+      .single();
 
-    const { data: newUserData, error: userError } = await supabase.auth.signUp({
-      email: newSellerEmail,
-      password: newSellerPassword,
-      options: {
-        data: {
-          // FIX: Use newSellerName for the first and last name
-          first_name: newSellerName,
-          last_name: "",
-        },
-      },
-    });
+    let userId = null;
 
-    if (userError) {
-      console.error('Seller account creation error:', userError.message);
-      alert("Failed to create seller account: " + userError.message);
+    if (userError && userError.code !== 'PGRST116') { // PGRST116 is the code for "No rows found"
+      console.error('Error checking for existing user:', userError.message);
+      alert('An error occurred while checking for an existing user. Please try again.');
       return;
     }
+
+    if (existingUser) {
+      userId = existingUser.user_id;
+      // Also update their profile to reflect they are a seller
+      await supabase
+        .from('profiles')
+        .update({ is_seller: true })
+        .eq('user_id', userId);
+    } else {
+      // User doesn't exist, so create a new user and profile
+      const { data: newUserData, error: signUpError } = await supabase.auth.signUp({
+        email: newSellerEmail,
+        password: newSellerPassword,
+        options: {
+          data: {
+            first_name: newSellerName,
+            is_seller: true,
+          },
+        },
+      });
+
+      if (signUpError) {
+        console.error('Seller account creation error:', signUpError.message);
+        alert("Failed to create seller account: " + signUpError.message);
+        return;
+      }
+      userId = newUserData.user.id;
+    }
     
-    // Now insert into the sellers table
+    // Insert into the sellers table
     const { error: sellerError } = await supabase
       .from('sellers')
       .insert({
-        user_id: newUserData.user.id,
+        user_id: userId,
         name: newSellerName,
         address: newSellerAddress,
         email: newSellerEmail,
