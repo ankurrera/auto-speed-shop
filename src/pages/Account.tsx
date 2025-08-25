@@ -23,7 +23,6 @@ const Account = () => {
   const [loginMode, setLoginMode] = useState("user");
   const [adminExists, setAdminExists] = useState(true);
 
-  // Correctly declared state variables for the new seller form.
   const [newSellerName, setNewSellerName] = useState("");
   const [newSellerAddress, setNewSellerAddress] = useState("");
   const [newSellerPhoneNumber, setNewSellerPhoneNumber] = useState("");
@@ -31,6 +30,14 @@ const Account = () => {
   const [newSellerPassword, setNewSellerPassword] = useState("");
   const [sellerExistsForAdmin, setSellerExistsForAdmin] = useState(false);
   
+  // New state variables for product creation
+  const [productName, setProductName] = useState("");
+  const [productDescription, setProductDescription] = useState("");
+  const [productPrice, setProductPrice] = useState("");
+  const [productQuantity, setProductQuantity] = useState("");
+  const [productCategory, setProductCategory] = useState("");
+  const [productSpecifications, setProductSpecifications] = useState("");
+
   const [userInfo, setUserInfo] = useState({
     firstName: "",
     lastName: "",
@@ -284,7 +291,6 @@ const Account = () => {
   const handleCreateSellerAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if the user already exists
     const { data: existingUser, error: userError } = await supabase
       .from('profiles')
       .select('user_id')
@@ -293,7 +299,7 @@ const Account = () => {
 
     let userId = null;
 
-    if (userError && userError.code !== 'PGRST116') { // PGRST116 is the code for "No rows found"
+    if (userError && userError.code !== 'PGRST116') {
       console.error('Error checking for existing user:', userError.message);
       alert('An error occurred while checking for an existing user. Please try again.');
       return;
@@ -301,13 +307,11 @@ const Account = () => {
 
     if (existingUser) {
       userId = existingUser.user_id;
-      // Also update their profile to reflect they are a seller
       await supabase
         .from('profiles')
         .update({ is_seller: true })
         .eq('user_id', userId);
     } else {
-      // User doesn't exist, so create a new user and profile
       const { data: newUserData, error: signUpError } = await supabase.auth.signUp({
         email: newSellerEmail,
         password: newSellerPassword,
@@ -327,7 +331,6 @@ const Account = () => {
       userId = newUserData.user.id;
     }
     
-    // Insert into the sellers table
     const { error: sellerError } = await supabase
       .from('sellers')
       .insert({
@@ -351,6 +354,58 @@ const Account = () => {
     setNewSellerPassword("");
     setNewSellerPhoneNumber("");
     setSellerExistsForAdmin(true);
+  };
+  
+  // New function to handle product publishing
+  const handlePublishNewProduct = async (e) => {
+    e.preventDefault();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      alert("You must be logged in to publish a product.");
+      return;
+    }
+
+    // Fetch the seller ID for the current user
+    const { data: sellerData, error: sellerError } = await supabase
+      .from('sellers')
+      .select('user_id')
+      .eq('email', userInfo.email)
+      .single();
+
+    if (sellerError || !sellerData) {
+      console.error("Error fetching seller ID:", sellerError?.message);
+      alert("Could not find seller information. Please create a seller account first.");
+      return;
+    }
+
+    // Insert the new product into the products table
+    const { error: productError } = await supabase
+      .from('products')
+      .insert({
+        name: productName,
+        description: productDescription,
+        price: parseFloat(productPrice),
+        stock_quantity: parseInt(productQuantity),
+        category: productCategory,
+        specifications: productSpecifications,
+        seller_id: sellerData.user_id,
+        // You can add more fields here if needed, such as image_urls
+      });
+
+    if (productError) {
+      console.error("Error publishing product:", productError.message);
+      alert("Failed to publish product. Please try again.");
+    } else {
+      alert("Product published successfully!");
+      // Clear the form fields
+      setProductName("");
+      setProductDescription("");
+      setProductPrice("");
+      setProductQuantity("");
+      setProductCategory("");
+      setProductSpecifications("");
+    }
   };
 
   const handleLogout = async () => {
@@ -583,25 +638,10 @@ const Account = () => {
                     
                     <div className="mt-6 text-center space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        {loginMode === "user" && "Already have an account? "}
-                        {loginMode === "user" ? (
-                          <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
-                            Login here
-                          </Button>
-                        ) : (
-                          !adminExists && (
-                            <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
-                              Login here
-                            </Button>
-                          )
-                        )}
-                        {loginMode === "admin" && !adminExists && "Don't have an account? "}
-                        {loginMode === "admin" && !adminExists && (
-                          <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
-                            Sign up here
-                          </Button>
-                        )}
-                        {loginMode === "admin" && adminExists && "Admin account exists. Please log in."}
+                        Don't have an account?{" "}
+                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
+                          Sign up here
+                        </Button>
                       </p>
                     </div>
                   </>
@@ -1037,11 +1077,80 @@ const Account = () => {
             <TabsContent value="admin-dashboard">
               <Card>
                 <CardHeader>
-                  <CardTitle>Admin Dashboard</CardTitle>
+                  <CardTitle>List a New Product</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="mb-4">Welcome to the Admin Dashboard. You can publish new products from here.</p>
-                  <Button onClick={() => navigate('/sell')}>Publish New Product</Button>
+                  <form onSubmit={handlePublishNewProduct} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="product-name">Product Name</Label>
+                      <Input
+                        id="product-name"
+                        placeholder="Enter product name"
+                        value={productName}
+                        onChange={(e) => setProductName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="product-description">Description</Label>
+                      <textarea
+                        id="product-description"
+                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
+                        placeholder="Enter product description"
+                        value={productDescription}
+                        onChange={(e) => setProductDescription(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="product-price">Price ($)</Label>
+                        <Input
+                          id="product-price"
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={productPrice}
+                          onChange={(e) => setProductPrice(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="product-quantity">Quantity</Label>
+                        <Input
+                          id="product-quantity"
+                          type="number"
+                          placeholder="0"
+                          value={productQuantity}
+                          onChange={(e) => setProductQuantity(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="product-category">Category</Label>
+                      <Input
+                        id="product-category"
+                        placeholder="Enter product category"
+                        value={productCategory}
+                        onChange={(e) => setProductCategory(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="product-specs">Specifications</Label>
+                      <textarea
+                        id="product-specs"
+                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
+                        placeholder='e.g., {"weight": "5 lbs", "material": "steel"}'
+                        value={productSpecifications}
+                        onChange={(e) => setProductSpecifications(e.target.value)}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full">
+                      Publish New Product
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
             </TabsContent>
