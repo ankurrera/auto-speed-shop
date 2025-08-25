@@ -52,7 +52,6 @@ const Account = () => {
   const [orders, setOrders] = useState([]);
   const navigate = useNavigate();
 
-  // FIX: Wrap these functions in useCallback to prevent them from changing on every render
   const fetchUserOrders = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("orders")
@@ -143,7 +142,6 @@ const Account = () => {
       const { data: { session } = {} } = await supabase.auth.getSession();
       if (session) {
         setIsLoggedIn(true);
-        // FIX: Now these functions can be safely used in the dependency array
         fetchUserProfile(session.user.id);
         fetchUserAddresses(session.user.id);
         fetchUserOrders(session.user.id);
@@ -173,7 +171,7 @@ const Account = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchUserProfile, fetchUserAddresses, fetchUserOrders]); // FIX: Add the new memoized functions to the dependency array
+  }, [fetchUserProfile, fetchUserAddresses, fetchUserOrders]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -814,20 +812,20 @@ const Account = () => {
                       Reset your password using a secure password reset link sent to your email.
                     </p>
                     <Button onClick={() => {
-                      const emailInput = prompt("Please enter your email address to reset your password:");
-                      if (emailInput) {
-                        supabase.auth.resetPasswordForEmail(emailInput, {
-                          redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
-                        }).then(({ error }) => {
-                          if (error) {
-                            alert("Error sending password reset email: " + error.message);
-                          } else {
-                            alert("Password reset email sent. Please check your inbox!");
-                          }
-                        });
-                      }
-                    }}>
-                      Send Password Reset Link
+                        const emailInput = prompt("Please enter your email address to reset your password:");
+                        if (emailInput) {
+                          supabase.auth.resetPasswordForEmail(emailInput, {
+                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
+                          }).then(({ error }) => {
+                            if (error) {
+                              alert("Error sending password reset email: " + error.message);
+                            } else {
+                              alert("Password reset email sent. Please check your inbox!");
+                            }
+                          });
+                        }
+                      }}>
+                        Send Password Reset Link
                     </Button>
                   </div>
                 </CardContent>
