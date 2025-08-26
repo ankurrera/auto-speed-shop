@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProductCard from "@/components/ProductCard";
-import heroImage from "@/assets/hero-auto-parts.jpg";
+import heroImage from "@/assets/McLaren_Home_Hero.jpg"; // Updated hero image import
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -118,7 +118,7 @@ const Home = () => {
           <img
             src={heroImage}
             alt="Auto Parts Hero"
-            className="w-full h-full object-cover opacity-20"
+            className="w-full h-full object-cover opacity-20" // Adjust opacity as needed
           />
         </div>
         <div className="relative container mx-auto px-4 text-center">
