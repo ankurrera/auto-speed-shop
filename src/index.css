@@ -2,55 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    /* Core background and text colors */
-    --background: 0 0% 100%;
+    /* New Light Theme Palette */
+    --background: 0 0% 98%;
     --foreground: 220 15% 25%;
 
-    /* Card and surface colors */
     --card: 0 0% 100%;
     --card-foreground: 220 15% 25%;
 
-    /* Popover colors */
     --popover: 0 0% 100%;
     --popover-foreground: 220 15% 25%;
 
-    /* Primary brand color - Professional Blue */
-    --primary: 217 91% 60%;
+    --primary: 0 84% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 217 91% 55%;
+    --primary-hover: 0 84% 50%;
 
-    /* Secondary colors - Light Gray */
     --secondary: 220 14% 96%;
     --secondary-foreground: 220 15% 25%;
 
-    /* Muted colors for subtle elements */
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
-    /* Accent colors for highlights */
     --accent: 220 14% 96%;
     --accent-foreground: 220 15% 25%;
 
-    /* Destructive colors for errors */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Border and input colors */
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 217 91% 60%;
+    --ring: 0 84% 60%;
 
-    /* Success color for positive actions */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    /* Warning color */
     --warning: 48 96% 53%;
     --warning-foreground: 220 15% 25%;
 
@@ -60,8 +46,8 @@ All colors MUST be HSL.
     --automotive-light: 220 14% 98%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(217 91% 45%));
-    --gradient-hero: linear-gradient(135deg, hsl(var(--automotive-dark)), hsl(220 20% 20%));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(0 84% 45%));
+    --gradient-hero: linear-gradient(135deg, hsl(220 26% 14%), hsl(220 20% 20%));
 
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 hsl(220 13% 91% / 0.05);
@@ -73,7 +59,7 @@ All colors MUST be HSL.
     --radius: 0.5rem;
     --radius-lg: 0.75rem;
 
-    /* Sidebar colors from dark-theme project */
+    /* Sidebar colors */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -85,49 +71,39 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Core background and text colors */
+    /* New Dark Theme Palette */
     --background: 220 26% 14%;
     --foreground: 220 14% 95%;
 
-    /* Card and surface colors */
     --card: 220 26% 14%;
     --card-foreground: 220 14% 95%;
 
-    /* Popover colors */
     --popover: 220 26% 14%;
     --popover-foreground: 220 14% 95%;
 
-    /* Primary brand color - Professional Blue */
-    --primary: 217 91% 60%;
+    --primary: 0 84% 60%;
     --primary-foreground: 220 26% 14%;
-    --primary-hover: 217 91% 65%;
+    --primary-hover: 0 84% 65%;
 
-    /* Secondary colors - Light Gray */
     --secondary: 220 17% 20%;
     --secondary-foreground: 220 14% 95%;
 
-    /* Muted colors for subtle elements */
     --muted: 220 17% 20%;
     --muted-foreground: 220 9% 65%;
 
-    /* Accent colors for highlights */
     --accent: 220 17% 20%;
     --accent-foreground: 220 14% 95%;
 
-    /* Destructive colors for errors */
     --destructive: 0 62% 50%;
     --destructive-foreground: 220 14% 95%;
 
-    /* Border and input colors */
     --border: 220 17% 20%;
     --input: 220 17% 20%;
-    --ring: 217 91% 60%;
+    --ring: 0 84% 60%;
 
-    /* Success color for positive actions */
     --success: 142 76% 36%;
     --success-foreground: 220 14% 95%;
 
-    /* Warning color */
     --warning: 48 96% 53%;
     --warning-foreground: 220 26% 14%;
 
@@ -137,10 +113,10 @@ All colors MUST be HSL.
     --automotive-light: 220 26% 14%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(217 91% 70%));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(0 84% 70%));
     --gradient-hero: linear-gradient(135deg, hsl(220 26% 14%), hsl(220 20% 18%));
 
-    /* Dark mode sidebar colors from dark-theme project */
+    /* Sidebar colors */
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
