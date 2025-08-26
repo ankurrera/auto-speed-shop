@@ -72,13 +72,13 @@
 
   .dark {
     /* High-contrast Dark Theme Palette */
-    --background: 220 10% 10%;
+    --background: 0 0% 0%; /* <-- UPDATED to be pitch dark */
     --foreground: 220 14% 95%;
 
-    --card: 220 10% 10%;
+    --card: 0 0% 0%; /* <-- UPDATED to be pitch dark */
     --card-foreground: 220 14% 95%;
 
-    --popover: 220 10% 10%;
+    --popover: 0 0% 0%; /* <-- UPDATED to be pitch dark */
     --popover-foreground: 220 14% 95%;
 
     --primary: 0 84% 60%;
