@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProductCard from "@/components/ProductCard";
-import heroImage from "@/assets/McLaren_Home_Hero.jpg"; // Updated hero image import
+import heroImage from "@/assets/McLaren_Home_Hero.jpg";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -36,7 +36,7 @@ const Home = () => {
         brand: product.brand || 'Unknown',
         price: Number(product.price),
         originalPrice: product.compare_at_price ? Number(product.compare_at_price) : undefined,
-        image: product.image_urls?.[0] || '/placeholder.svg', // Use the image URL from Supabase
+        image: product.image_urls?.[0] || '/placeholder.svg',
         rating: 4.5,
         reviews: Math.floor(Math.random() * 200) + 50,
         inStock: product.stock_quantity > 0,
@@ -113,21 +113,21 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center bg-automotive-dark overflow-hidden">
+      <section className="relative h-screen flex items-center justify-center bg-background overflow-hidden">
         <div className="absolute inset-0">
           <img
             src={heroImage}
             alt="Auto Parts Hero"
-            className="w-full h-full object-cover opacity-20" // Adjust opacity as needed
+            className="w-full h-full object-cover opacity-80" 
           />
         </div>
         <div className="relative container mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-7xl font-extrabold text-white leading-tight animate-fade-in-up">
+          <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight animate-fade-in-up">
             Your Ultimate
             <br />
             <span className="bg-gradient-primary bg-clip-text text-transparent">Auto Parts Destination</span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-300 mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100">
+          <p className="text-lg md:text-xl text-muted-foreground mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100">
             Discover premium parts and accessories for a ride that reflects your style and performance needs.
           </p>
             
