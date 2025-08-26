@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import SellerDashboard from "./pages/SellerDashboard"; 
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
+import { WishlistProvider } from "./contexts/WishlistContext";
 
 const queryClient = new QueryClient();
 
@@ -28,25 +29,27 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <CartProvider>
-            <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/shop" element={<Shop />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="/wishlist" element={<Wishlist />} />
-                  <Route path="/account" element={<Account />} />
-                  <Route path="/account/reset-password" element={<ResetPassword />} />
-                  <Route path="/sell" element={<SellerDashboard />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </main>
-              <Footer />
-            </div>
+            <WishlistProvider>
+              <div className="min-h-screen flex flex-col">
+                <Header />
+                <main className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/shop" element={<Shop />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/wishlist" element={<Wishlist />} />
+                    <Route path="/account" element={<Account />} />
+                    <Route path="/account/reset-password" element={<ResetPassword />} />
+                    <Route path="/sell" element={<SellerDashboard />} />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </main>
+                <Footer />
+              </div>
+            </WishlistProvider>
           </CartProvider>
         </BrowserRouter>
       </TooltipProvider>
