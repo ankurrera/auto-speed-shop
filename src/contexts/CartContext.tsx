@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -48,10 +47,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user?.id ?? null);
+      if (session) {
+        console.log('User is authenticated. User ID:', session.user.id);
+      } else {
+        console.log('User is not authenticated.');
+      }
     });
 
     return () => {
-      // Fix 1: Correctly unsubscribe from the auth listener
       if (authListener) {
         authListener.subscription.unsubscribe();
       }
@@ -61,7 +64,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const { data: cartItems = [], isLoading } = useQuery<CartItem[]>({
     queryKey: ['cartItems', userId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!userId) {
+        console.log('No user ID, skipping cart fetch.');
+        return [];
+      }
       
       const { data, error } = await supabase
         .from('cart_items')
@@ -78,9 +84,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         `)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching cart:', error);
+        throw error;
+      }
+      
+      console.log('Cart fetched successfully:', data);
 
-      // Fix 2: Use a specific type for the map function's item
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return data.map((item: any) => ({
         id: item.id,
         user_id: userId,
@@ -102,7 +113,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         .from('cart_items')
         .upsert(
           { user_id: userId, product_id, quantity },
-          // Fix 3: Change `onConflict` to a single string
           { onConflict: 'user_id,product_id' }
         )
         .select();
@@ -110,12 +120,22 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+      console.log(`Successfully added product ${variables.product_id} to cart.`);
     },
+    onError: (error) => {
+      console.error('Error adding to cart:', error);
+    }
   });
 
   const addToCart = (product: { id: string; name: string; brand: string; price: number; image: string }) => {
+    if (!userId) {
+      console.error('Add to cart failed: User not authenticated.');
+      // You could add a toast or redirect to the login page here
+      return;
+    }
+
     const existingItem = cartItems.find(item => item.product_id === product.id);
     if (existingItem) {
       addMutation.mutate({ product_id: product.id, quantity: existingItem.quantity + 1 });
@@ -137,7 +157,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+      console.log('Item removed from cart successfully.');
     },
+    onError: (error) => {
+      console.error('Error removing from cart:', error);
+    }
   });
 
   const removeFromCart = (id: string) => {
@@ -156,7 +180,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+      console.log('Cart cleared successfully.');
     },
+    onError: (error) => {
+      console.error('Error clearing cart:', error);
+    }
   });
 
   const clearCart = () => {

@@ -168,110 +168,110 @@ const Home = () => {
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="Model" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {vehicleModels.map(model => (
-                      <SelectItem key={model} value={model}>
-                        {model}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <Button size="lg" className="h-12 shadow-primary hover:shadow-lg transition-all duration-300" onClick={handleSearch}>
-                  <Search className="h-5 w-5 mr-2" />
-                  Search Parts
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
+                    <SelectContent>
+                      {vehicleModels.map(model => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button size="lg" className="h-12 shadow-primary hover:shadow-lg transition-all duration-300" onClick={handleSearch}>
+                    <Search className="h-5 w-5 mr-2" />
+                    Search Parts
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
 
-      {/* Features */}
-      <section className="py-24 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4 text-primary">Why Choose Us?</Badge>
-            <h2 className="text-4xl font-bold">Driven by Quality, Delivered with Speed</h2>
+        {/* Features */}
+        <section className="py-24 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <Badge variant="secondary" className="mb-4 text-primary">Why Choose Us?</Badge>
+              <h2 className="text-4xl font-bold">Driven by Quality, Delivered with Speed</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up">
+                <CardHeader className="p-0">
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Truck className="h-8 w-8 text-primary-foreground" />
+                  </div>
+                  <CardTitle className="font-semibold text-lg">Fast Shipping</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 pt-2">
+                  <p className="text-muted-foreground text-sm">Free shipping on orders over $75, nationwide.</p>
+                </CardContent>
+              </Card>
+              <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-100">
+                <CardHeader className="p-0">
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Shield className="h-8 w-8 text-primary-foreground" />
+                  </div>
+                  <CardTitle className="font-semibold text-lg">Quality Guarantee</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 pt-2">
+                  <p className="text-muted-foreground text-sm">All parts are backed by a comprehensive warranty.</p>
+                </CardContent>
+              </Card>
+              <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-200">
+                <CardHeader className="p-0">
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Wrench className="h-8 w-8 text-primary-foreground" />
+                  </div>
+                  <CardTitle className="font-semibold text-lg">Expert Support</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 pt-2">
+                  <p className="text-muted-foreground text-sm">Get professional advice from our experienced team.</p>
+                </CardContent>
+              </Card>
+              <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-300">
+                <CardHeader className="p-0">
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="h-8 w-8 text-primary-foreground" />
+                  </div>
+                  <CardTitle className="font-semibold text-lg">New Arrivals</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 pt-2">
+                  <p className="text-muted-foreground text-sm">Always the latest and greatest products in stock.</p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up">
-              <CardHeader className="p-0">
-                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Truck className="h-8 w-8 text-primary-foreground" />
-                </div>
-                <CardTitle className="font-semibold text-lg">Fast Shipping</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 pt-2">
-                <p className="text-muted-foreground text-sm">Free shipping on orders over $75, nationwide.</p>
-              </CardContent>
-            </Card>
-            <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-100">
-              <CardHeader className="p-0">
-                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Shield className="h-8 w-8 text-primary-foreground" />
-                </div>
-                <CardTitle className="font-semibold text-lg">Quality Guarantee</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 pt-2">
-                <p className="text-muted-foreground text-sm">All parts are backed by a comprehensive warranty.</p>
-              </CardContent>
-            </Card>
-            <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-200">
-              <CardHeader className="p-0">
-                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Wrench className="h-8 w-8 text-primary-foreground" />
-                </div>
-                <CardTitle className="font-semibold text-lg">Expert Support</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 pt-2">
-                <p className="text-muted-foreground text-sm">Get professional advice from our experienced team.</p>
-              </CardContent>
-            </Card>
-            <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-300">
-              <CardHeader className="p-0">
-                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="h-8 w-8 text-primary-foreground" />
-                </div>
-                <CardTitle className="font-semibold text-lg">New Arrivals</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 pt-2">
-                <p className="text-muted-foreground text-sm">Always the latest and greatest products in stock.</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Featured Products */}
-      <section className="py-24 bg-secondary">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16 animate-fade-in-up">
-            <h2 className="text-4xl font-bold">Featured Products</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto mt-4">
-              Top-rated parts chosen by our experts for your car's best performance.
-            </p>
+        {/* Featured Products */}
+        <section className="py-24 bg-secondary">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16 animate-fade-in-up">
+              <h2 className="text-4xl font-bold">Featured Products</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto mt-4">
+                Top-rated parts chosen by our experts for your car's best performance.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {featuredProducts.map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  {...product} 
+                  className="hover:scale-105 transition-transform duration-300 animate-fade-in-up"
+                />
+              ))}
+            </div>
+            
+            <div className="text-center mt-16 animate-fade-in-up delay-400">
+              <Button size="lg" variant="default" className="text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+                Explore All Products
+              </Button>
+            </div>
           </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featuredProducts.map((product) => (
-              <ProductCard 
-                key={product.id} 
-                {...product} 
-                className="hover:scale-105 transition-transform duration-300 animate-fade-in-up"
-              />
-            ))}
-          </div>
-          
-          <div className="text-center mt-16 animate-fade-in-up delay-400">
-            <Button size="lg" variant="default" className="text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
-              Explore All Products
-            </Button>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
-
-export default Home;
+        </section>
+      </div>
+    );
+  };
+  
+  export default Home;

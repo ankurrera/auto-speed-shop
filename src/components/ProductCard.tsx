@@ -18,7 +18,7 @@ interface ProductCardProps {
   reviews: number;
   inStock: boolean;
   isOnSale?: boolean;
-  className?: string; // Fix: Add className prop to the interface
+  className?: string; // <-- ADDED 'className' PROP HERE
 }
 
 const ProductCard = ({
@@ -32,7 +32,7 @@ const ProductCard = ({
   reviews,
   inStock,
   isOnSale,
-  className
+  className // <-- ACCEPT 'className' HERE
 }: ProductCardProps) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const { addToCart } = useCart();
