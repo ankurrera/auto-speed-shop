@@ -11,68 +11,89 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-// Placeholder data for demonstration
-const featuredProducts = [
-  {
-    id: "1",
-    name: "Performance Air Filter",
-    brand: "K&N",
-    price: 49.99,
-    originalPrice: 59.99,
-    image: "/placeholder.svg",
-    rating: 4.8,
-    reviews: 120,
-    inStock: true,
-    isOnSale: true,
-  },
-  {
-    id: "2",
-    name: "Ceramic Brake Pads",
-    brand: "Brembo",
-    price: 129.50,
-    originalPrice: 150.00,
-    image: "/placeholder.svg",
-    rating: 4.9,
-    reviews: 250,
-    inStock: true,
-    isOnSale: true,
-  },
-  {
-    id: "3",
-    name: "Coilover Suspension Kit",
-    brand: "Tein",
-    price: 999.00,
-    originalPrice: 1100.00,
-    image: "/placeholder.svg",
-    rating: 4.7,
-    reviews: 88,
-    inStock: true,
-    isOnSale: false,
-  },
-  {
-    id: "4",
-    name: "LED Headlight Bulbs",
-    brand: "Philips",
-    price: 75.00,
-    originalPrice: undefined,
-    image: "/placeholder.svg",
-    rating: 4.6,
-    reviews: 155,
-    inStock: true,
-    isOnSale: false,
-  },
-];
-
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedMake, setSelectedMake] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
 
-  // Placeholder data for vehicle fitment
-  const vehicleYears = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
-  const vehicleMakes = [{ id: 1, name: "Toyota" }, { id: 2, name: "Honda" }];
-  const vehicleModels = selectedMake === "Toyota" ? ["Camry", "Corolla"] : ["Civic", "Accord"];
+  // Fetch featured products from Supabase
+  const { data: featuredProducts = [] } = useQuery({
+    queryKey: ['featured-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_featured', true)
+        .eq('is_active', true)
+        .limit(4);
+      
+      if (error) throw error;
+      
+      return data.map(product => ({
+        id: product.id,
+        name: product.name,
+        brand: product.brand || 'Unknown',
+        price: Number(product.price),
+        originalPrice: product.compare_at_price ? Number(product.compare_at_price) : undefined,
+        image: product.image_urls?.[0] || '/placeholder.svg', // Use the image URL from Supabase
+        rating: 4.5,
+        reviews: Math.floor(Math.random() * 200) + 50,
+        inStock: product.stock_quantity > 0,
+        isOnSale: product.compare_at_price && Number(product.compare_at_price) > Number(product.price)
+      }));
+    }
+  });
+
+  // Fetch vehicle years from Supabase
+  const { data: vehicleYears = [] } = useQuery({
+    queryKey: ['vehicle-years'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vehicle_years')
+        .select('year')
+        .order('year', { ascending: false });
+      
+      if (error) throw error;
+      return data.map(item => item.year);
+    }
+  });
+
+  // Fetch vehicle makes from Supabase
+  const { data: vehicleMakes = [] } = useQuery({
+    queryKey: ['vehicle-makes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vehicle_makes')
+        .select('id, name')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch vehicle models from Supabase, dependent on selectedMake
+  const { data: vehicleModels = [] } = useQuery({
+    queryKey: ['vehicle-models', selectedMake],
+    queryFn: async () => {
+      const makeId = vehicleMakes.find(make => make.name === selectedMake)?.id;
+      
+      if (!makeId) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('vehicle_models')
+        .select('name')
+        .eq('make_id', makeId)
+        .order('name');
+      
+      if (error) throw error;
+      return data.map(item => item.name);
+    },
+    enabled: !!selectedMake,
+  });
 
   // This is the new function to handle the search button click
   const handleSearch = () => {
