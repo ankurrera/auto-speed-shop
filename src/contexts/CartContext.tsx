@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -34,6 +35,8 @@ interface CartContextType {
   addToCart: (product: { id: string; name: string; brand: string; price: number; image: string }) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;
+  increaseQuantity: (id: string) => void;
+  decreaseQuantity: (id: string) => void;
 }
 
 // Create the context
@@ -91,7 +94,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       
       console.log('Cart fetched successfully:', data);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // Fix: Correctly map the returned data using a type assertion
       return data.map((item: any) => ({
         id: item.id,
         user_id: userId,
@@ -132,7 +135,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addToCart = (product: { id: string; name: string; brand: string; price: number; image: string }) => {
     if (!userId) {
       console.error('Add to cart failed: User not authenticated.');
-      // You could add a toast or redirect to the login page here
       return;
     }
 
@@ -141,6 +143,66 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       addMutation.mutate({ product_id: product.id, quantity: existingItem.quantity + 1 });
     } else {
       addMutation.mutate({ product_id: product.id, quantity: 1 });
+    }
+  };
+
+  const increaseQuantityMutation = useMutation({
+    mutationFn: async ({ id, newQuantity }: { id: string; newQuantity: number }) => {
+      if (!userId) throw new Error('User not authenticated');
+      const { data, error } = await supabase
+        .from('cart_items')
+        .update({ quantity: newQuantity })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+    },
+    onError: (error) => {
+      console.error('Error increasing quantity:', error);
+    }
+  });
+
+  const increaseQuantity = (id: string) => {
+    const item = cartItems.find(cartItem => cartItem.id === id);
+    if (item) {
+      increaseQuantityMutation.mutate({ id, newQuantity: item.quantity + 1 });
+    }
+  };
+
+  const decreaseQuantityMutation = useMutation({
+    mutationFn: async ({ id, newQuantity }: { id: string; newQuantity: number }) => {
+      if (!userId) throw new Error('User not authenticated');
+      
+      if (newQuantity <= 0) {
+        removeFromCart(id);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('cart_items')
+        .update({ quantity: newQuantity })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+    },
+    onError: (error) => {
+      console.error('Error decreasing quantity:', error);
+    }
+  });
+
+  const decreaseQuantity = (id: string) => {
+    const item = cartItems.find(cartItem => cartItem.id === id);
+    if (item) {
+      decreaseQuantityMutation.mutate({ id, newQuantity: item.quantity - 1 });
     }
   };
 
@@ -197,6 +259,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     addToCart,
     removeFromCart,
     clearCart,
+    increaseQuantity,
+    decreaseQuantity,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

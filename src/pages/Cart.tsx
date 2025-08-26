@@ -8,12 +8,12 @@ import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 
 const Cart = () => {
-  const { cartItems, removeFromCart, clearCart } = useCart();
+  const { cartItems, removeFromCart, clearCart, increaseQuantity, decreaseQuantity } = useCart();
   const [promoCode, setPromoCode] = useState("");
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = subtotal > 75 ? 0 : 9.99;
-  const tax = subtotal * 0.08; // 8% tax
+  const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
 
   if (cartItems.length === 0) {
@@ -85,7 +85,7 @@ const Cart = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled
+                            onClick={() => decreaseQuantity(item.id)}
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
@@ -95,7 +95,7 @@ const Cart = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled
+                            onClick={() => increaseQuantity(item.id)}
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
