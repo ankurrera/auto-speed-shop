@@ -132,17 +132,17 @@ const Home = () => {
         </div>
         <div className="relative container mx-auto px-4 h-full flex items-center">
           <div className="max-w-3xl text-white">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight animate-hero-slide-in">
               Premium Auto Parts
               <br />
               <span className="text-primary">For Every Ride</span>
             </h1>
-            <p className="text-xl mb-8 text-gray-200 leading-relaxed">
+            <p className="text-xl mb-8 text-gray-200 leading-relaxed animate-hero-slide-in animation-delay-300">
               Quality parts, competitive prices, and expert support for professionals and enthusiasts.
             </p>
             
             {/* Vehicle Search */}
-            <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-lg">
+            <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-lg animate-hero-slide-in animation-delay-500">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold text-foreground mb-4">
                   Find Parts for Your Vehicle
@@ -247,7 +247,7 @@ const Home = () => {
           
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
             {categories.map((category) => (
-              <Card key={category.name} className="hover:shadow-md transition-all cursor-pointer group">
+              <Card key={category.name} className="hover:shadow-lg hover:border-primary transition-all cursor-pointer group animate-fade-in">
                 <CardContent className="p-6 text-center">
                   <div className="text-3xl mb-3">{category.icon}</div>
                   <h3 className="font-medium text-sm group-hover:text-primary transition-colors">

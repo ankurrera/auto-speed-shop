@@ -26,7 +26,7 @@ const About = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center">
+              <div key={index} className="text-center transition-transform hover:scale-105 duration-300">
                 <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
                   <stat.icon className="h-8 w-8 text-primary-foreground" />
                 </div>

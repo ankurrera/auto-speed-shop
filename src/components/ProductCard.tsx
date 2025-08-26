@@ -41,7 +41,7 @@ const ProductCard = ({
   };
 
   return (
-    <Card className="group hover:shadow-md transition-all duration-300 border-border">
+    <Card className="group hover:shadow-lg transition-all duration-300 border-border">
       <CardContent className="p-0">
         {/* Image container */}
         <div className="relative aspect-square overflow-hidden rounded-t-lg bg-muted">
