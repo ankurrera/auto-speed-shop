@@ -123,11 +123,11 @@ const Home = () => {
         </div>
         <div className="relative container mx-auto px-4 text-center">
           <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight animate-fade-in-up">
-            <span className="bg-gradient-primary bg-clip-text text-transparent">Your Ultimate</span>
+            Your Ultimate
             <br />
             <span className="bg-gradient-primary bg-clip-text text-transparent">Auto Parts Destination</span>
           </h1>
-          <p className="text-lg md:text-xl mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100 bg-gradient-primary bg-clip-text text-transparent">
+          <p className="text-lg md:text-xl text-muted-foreground mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100">
             Discover premium parts and accessories for a ride that reflects your style and performance needs.
           </p>
             
