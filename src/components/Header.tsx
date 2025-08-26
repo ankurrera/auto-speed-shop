@@ -12,14 +12,17 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { SimpleThemeToggle } from "./SimpleThemeToggle";
-import { useCart } from "@/contexts/CartContext"; // <-- ADD THIS IMPORT
+import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
-  const { cartItems } = useCart(); // <-- ADD THIS HOOK
-  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0); // <-- DYNAMIC CART COUNT
+  const { cartItems } = useCart();
+  const { wishlistItems } = useWishlist(); // <-- GET WISHLIST ITEMS
+  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const wishlistCount = wishlistItems.length; // <-- DYNAMIC WISHLIST COUNT
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -40,8 +43,6 @@ const Header = () => {
   ];
 
   const isActive = (path: string) => location.pathname === path;
-
-  const wishlistCount = 2; // This would come from context/state
 
   return (
     <header className="bg-background border-b border-border sticky top-0 z-50">
@@ -96,7 +97,7 @@ const Header = () => {
             <Button variant="ghost" size="sm" asChild className="relative">
               <Link to="/cart">
                 <ShoppingCart className="h-5 w-5" />
-                {cartItemCount > 0 && ( // <-- DYNAMICALLY RENDER BADGE
+                {cartItemCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
                     {cartItemCount}
                   </Badge>
