@@ -43,20 +43,6 @@ const Header = () => {
 
   return (
     <header className="bg-background border-b border-border sticky top-0 z-50">
-      {/* Top bar */}
-      <div className="bg-automotive-dark text-white">
-        <div className="container mx-auto px-4 py-2">
-          <div className="flex justify-between items-center text-sm">
-            <span>Free shipping on orders over $75</span>
-            <div className="flex items-center space-x-4">
-              <span>Call: (555) 123-PART</span>
-              <span>|</span>
-              <span>Mon-Fri 8AM-6PM EST</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main header */}
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
