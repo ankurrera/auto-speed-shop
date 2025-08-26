@@ -4,28 +4,28 @@
 
 @layer base {
   :root {
-    /* New Light Theme Palette */
-    --background: 0 0% 98%;
-    --foreground: 220 15% 25%;
+    /* High-contrast Light Theme Palette */
+    --background: 0 0% 100%;
+    --foreground: 220 26% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 25%;
+    --card-foreground: 220 26% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 25%;
+    --popover-foreground: 220 26% 14%;
 
     --primary: 0 84% 60%;
     --primary-foreground: 0 0% 100%;
     --primary-hover: 0 84% 50%;
 
     --secondary: 220 14% 96%;
-    --secondary-foreground: 220 15% 25%;
+    --secondary-foreground: 220 26% 14%;
 
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
     --accent: 220 14% 96%;
-    --accent-foreground: 220 15% 25%;
+    --accent-foreground: 220 26% 14%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -38,7 +38,7 @@
     --success-foreground: 0 0% 100%;
 
     --warning: 48 96% 53%;
-    --warning-foreground: 220 15% 25%;
+    --warning-foreground: 220 26% 14%;
 
     /* Auto parts specific colors */
     --automotive-red: 0 84% 60%;
@@ -71,18 +71,18 @@
   }
 
   .dark {
-    /* New Dark Theme Palette */
-    --background: 220 26% 14%;
+    /* High-contrast Dark Theme Palette */
+    --background: 220 10% 10%;
     --foreground: 220 14% 95%;
 
-    --card: 220 26% 14%;
+    --card: 220 10% 10%;
     --card-foreground: 220 14% 95%;
 
-    --popover: 220 26% 14%;
+    --popover: 220 10% 10%;
     --popover-foreground: 220 14% 95%;
 
     --primary: 0 84% 60%;
-    --primary-foreground: 220 26% 14%;
+    --primary-foreground: 220 10% 10%;
     --primary-hover: 0 84% 65%;
 
     --secondary: 220 17% 20%;
@@ -114,7 +114,7 @@
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(0 84% 70%));
-    --gradient-hero: linear-gradient(135deg, hsl(220 26% 14%), hsl(220 20% 18%));
+    --gradient-hero: linear-gradient(135deg, hsl(220 10% 10%), hsl(220 20% 18%));
 
     /* Sidebar colors */
     --sidebar-background: 240 5.9% 10%;
