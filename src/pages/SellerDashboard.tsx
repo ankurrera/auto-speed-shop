@@ -296,7 +296,6 @@ const SellerDashboard = () => {
         return (
           <>
             <h1 className="text-3xl font-bold mb-8">Seller Dashboard</h1>
-            {/* Product Listing Form */}
             <Card>
               <CardHeader>
                 <CardTitle>{editingProductId ? "Edit Product" : "List a New Product"}</CardTitle>
@@ -421,7 +420,6 @@ const SellerDashboard = () => {
 
             <Separator className="my-8" />
             
-            {/* Products list */}
             <h2 className="text-2xl font-bold mb-4">Your Listed Products</h2>
             <div className="space-y-4">
               {products.length === 0 ? (

@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, ShoppingCart, User, Package, DollarSign } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 const salesData = [
   { month: "Jan", "Product A": 186, "Product B": 100 },
@@ -26,6 +27,11 @@ const salesData = [
 ];
 
 const AnalyticsDashboard = () => {
+
+  useEffect(() => {
+    console.log("AnalyticsDashboard component is rendering.");
+  }, []);
+  
   // You can uncomment this to fetch real data from Supabase if you have a sales table
   // const { data: salesData } = useQuery({
   //   queryKey: ['sales-data'],
