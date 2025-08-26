@@ -31,7 +31,7 @@ const dashboardNavItems = [
     href: "products",
   },
   {
-    icon: <ShoppingCart className="h-4 w-4" />,
+  icon: <ShoppingCart className="h-4 w-4" />,
     label: "Orders",
     href: "orders",
   },
@@ -48,7 +48,7 @@ const SellerDashboard = () => {
   const [user, setUser] = useState(null);
   const [sellerId, setSellerId] = useState(null);
   const [editingProductId, setEditingProductId] = useState(null);
-  const [activeTab, setActiveTab] = useState("analytics"); // <-- UPDATED DEFAULT TAB
+  const [activeTab, setActiveTab] = useState("analytics");
   const [sellerInfo, setSellerInfo] = useState({
     name: "",
     email: "",
@@ -160,7 +160,6 @@ const SellerDashboard = () => {
     };
 
     if (editingProductId) {
-      // Update existing product
       const { error } = await supabase
         .from("products")
         .update(productData)
@@ -181,7 +180,6 @@ const SellerDashboard = () => {
         setEditingProductId(null);
       }
     } else {
-      // Insert new product
       const { error } = await supabase.from("products").insert([productData]);
 
       if (error) {
@@ -199,7 +197,6 @@ const SellerDashboard = () => {
       }
     }
     
-    // Reset form and refetch products
     setProductInfo({
       name: "",
       description: "",
@@ -293,6 +290,7 @@ const SellerDashboard = () => {
   };
 
   const renderContent = () => {
+    console.log(`Current activeTab: ${activeTab}`);
     switch (activeTab) {
       case "products":
         return (

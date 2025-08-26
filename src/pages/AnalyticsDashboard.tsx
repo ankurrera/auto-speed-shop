@@ -26,6 +26,15 @@ const salesData = [
 ];
 
 const AnalyticsDashboard = () => {
+  // You can uncomment this to fetch real data from Supabase if you have a sales table
+  // const { data: salesData } = useQuery({
+  //   queryKey: ['sales-data'],
+  //   queryFn: async () => {
+  //     const { data, error } = await supabase.rpc('get_sales_data_by_product');
+  //     if (error) throw error;
+  //     return data;
+  //   }
+  // });
 
   return (
     <div className="space-y-8">
