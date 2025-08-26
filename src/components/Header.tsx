@@ -25,14 +25,14 @@ const Header = () => {
   ];
 
   const categories = [
-    { name: "Engine", icon: "🔧" },
-    { name: "Brakes", icon: "🛞" },
-    { name: "Suspension", icon: "🚗" },
-    { name: "Electrical", icon: "⚡" },
-    { name: "Cooling", icon: "❄️" },
-    { name: "Exhaust", icon: "💨" },
-    { name: "Filters", icon: "🌪️" },
-    { name: "Tools", icon: "🔧" }
+    { name: "Engine"},
+    { name: "Brakes"},
+    { name: "Suspension"},
+    { name: "Electrical"},
+    { name: "Cooling"},
+    { name: "Exhaust"},
+    { name: "Filters"},
+    { name: "Tools"}
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -183,7 +183,7 @@ const Header = () => {
                   {categories.map((category) => (
                     <Link to="/shop" key={category.name}>
                       <DropdownMenuItem className="cursor-pointer">
-                        {category.icon} {category.name}
+                        {category.name}
                       </DropdownMenuItem>
                     </Link>
                   ))}
