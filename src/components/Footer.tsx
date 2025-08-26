@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 
 const Footer = () => {
   return (
-    <footer className="bg-automotive-dark text-white">
+    <footer className="bg-background text-foreground">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
@@ -17,21 +17,21 @@ const Footer = () => {
               </div>
               <span className="text-lg font-bold">AutoParts Pro</span>
             </div>
-            <p className="text-sm text-gray-300 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Your trusted source for high-quality auto parts, accessories, and tools. 
               Serving professionals and enthusiasts since 2010.
             </p>
             <div className="flex space-x-4">
-              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white p-2">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
                 <Facebook className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white p-2">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
                 <Twitter className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white p-2">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
                 <Instagram className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white p-2">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
                 <Youtube className="h-4 w-4" />
               </Button>
             </div>
@@ -41,19 +41,19 @@ const Footer = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Quick Links</h3>
             <div className="space-y-2">
-              <Link to="/shop" className="block text-sm text-gray-300 hover:text-white transition-colors">
+              <Link to="/shop" className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Shop All Parts
               </Link>
-              <Link to="/about" className="block text-sm text-gray-300 hover:text-white transition-colors">
+              <Link to="/about" className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
                 About Us
               </Link>
-              <Link to="/contact" className="block text-sm text-gray-300 hover:text-white transition-colors">
+              <Link to="/contact" className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Contact
               </Link>
-              <Link to="/account" className="block text-sm text-gray-300 hover:text-white transition-colors">
+              <Link to="/account" className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
                 My Account
               </Link>
-              <Link to="/wishlist" className="block text-sm text-gray-300 hover:text-white transition-colors">
+              <Link to="/wishlist" className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Wishlist
               </Link>
             </div>
@@ -65,15 +65,15 @@ const Footer = () => {
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4 text-primary" />
-                <span className="text-sm text-gray-300">(555) 123-PART</span>
+                <span className="text-sm text-muted-foreground">(555) 123-PART</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="h-4 w-4 text-primary" />
-                <span className="text-sm text-gray-300">support@autopartspro.com</span>
+                <span className="text-sm text-muted-foreground">support@autopartspro.com</span>
               </div>
               <div className="flex items-start space-x-2">
                 <MapPin className="h-4 w-4 text-primary mt-0.5" />
-                <div className="text-sm text-gray-300">
+                <div className="text-sm text-muted-foreground">
                   <p>1234 Auto Parts Ave</p>
                   <p>Detroit, MI 48201</p>
                 </div>
@@ -84,14 +84,14 @@ const Footer = () => {
           {/* Newsletter */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Stay Updated</h3>
-            <p className="text-sm text-gray-300">
+            <p className="text-sm text-muted-foreground">
               Get the latest deals and new arrivals straight to your inbox.
             </p>
             <div className="space-y-2">
               <Input
                 type="email"
                 placeholder="Enter your email"
-                className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-400"
+                className="bg-secondary border-border text-foreground placeholder:text-muted-foreground"
               />
               <Button className="w-full">
                 Subscribe
@@ -100,24 +100,24 @@ const Footer = () => {
           </div>
         </div>
 
-        <Separator className="my-8 bg-gray-700" />
+        <Separator className="my-8 bg-border" />
 
         {/* Bottom bar */}
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <div className="text-sm text-gray-300">
+          <div className="text-sm text-muted-foreground">
             © 2024 AutoParts Pro. All rights reserved.
           </div>
-          <div className="flex items-center space-x-6 text-sm text-gray-300">
-            <Link to="/privacy" className="hover:text-white transition-colors">
+          <div className="flex items-center space-x-6 text-sm text-muted-foreground">
+            <Link to="/privacy" className="hover:text-foreground transition-colors">
               Privacy Policy
             </Link>
-            <Link to="/terms" className="hover:text-white transition-colors">
+            <Link to="/terms" className="hover:text-foreground transition-colors">
               Terms of Service
             </Link>
-            <Link to="/shipping" className="hover:text-white transition-colors">
+            <Link to="/shipping" className="hover:text-foreground transition-colors">
               Shipping Info
             </Link>
-            <Link to="/returns" className="hover:text-white transition-colors">
+            <Link to="/returns" className="hover:text-foreground transition-colors">
               Returns
             </Link>
           </div>
