@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/contexts/CartContext";
-import { Link } from "react-router-dom"; // <-- ADDED THIS IMPORT
+import { Link } from "react-router-dom";
 
 interface ProductCardProps {
   id: string;
@@ -38,9 +38,8 @@ const ProductCard = ({
   const { addToCart } = useCart();
 
   const handleAddToCart = () => {
-    // Add to cart logic
+    // Call the new addToCart function from the context
     addToCart({ id, name, brand, price, image });
-    console.log(`Added ${name} to cart`);
   };
 
   const handleWishlist = () => {
