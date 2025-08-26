@@ -48,7 +48,7 @@ const SellerDashboard = () => {
   const [user, setUser] = useState(null);
   const [sellerId, setSellerId] = useState(null);
   const [editingProductId, setEditingProductId] = useState(null);
-  const [activeTab, setActiveTab] = useState("products");
+  const [activeTab, setActiveTab] = useState("analytics"); // <-- UPDATED DEFAULT TAB
   const [sellerInfo, setSellerInfo] = useState({
     name: "",
     email: "",
@@ -239,7 +239,6 @@ const SellerDashboard = () => {
         title: "Success!",
         description: "Product has been deleted.",
       });
-      // Fix: `invalidateQueries` expects an object with a queryKey
       queryClient.invalidateQueries({ queryKey: ['seller-products'] });
     },
     onError: (error) => {
@@ -258,7 +257,6 @@ const SellerDashboard = () => {
     }
   };
 
-  // Fix: Add a type for the mutation function's variables
   const archiveProductMutation = useMutation({
     mutationFn: async ({ productId, is_active }: { productId: string, is_active: boolean }) => {
       const { error } = await supabase
@@ -272,7 +270,6 @@ const SellerDashboard = () => {
         title: "Success!",
         description: `Product has been ${variables.is_active ? 'unarchived' : 'archived'}.`,
       });
-      // Fix: `invalidateQueries` expects an object with a queryKey
       queryClient.invalidateQueries({ queryKey: ['seller-products'] });
     },
     onError: (error) => {
