@@ -1,9 +1,16 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Search, ShoppingCart, User, Heart, Menu, X } from "lucide-react";
+import { Search, ShoppingCart, User, Heart, Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,6 +22,17 @@ const Header = () => {
     { name: "Shop", href: "/shop" },
     { name: "About", href: "/about" },
     { name: "Contact", href: "/contact" },
+  ];
+
+  const categories = [
+    { name: "Engine", icon: "🔧" },
+    { name: "Brakes", icon: "🛞" },
+    { name: "Suspension", icon: "🚗" },
+    { name: "Electrical", icon: "⚡" },
+    { name: "Cooling", icon: "❄️" },
+    { name: "Exhaust", icon: "💨" },
+    { name: "Filters", icon: "🌪️" },
+    { name: "Tools", icon: "🔧" }
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -155,9 +173,31 @@ const Header = () => {
                   {item.name}
                 </Link>
               ))}
+
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary">
+                  Shop by Category
+                  <ChevronDown className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {categories.map((category) => (
+                    <Link to="/shop" key={category.name}>
+                      <DropdownMenuItem className="cursor-pointer">
+                        {category.icon} {category.name}
+                      </DropdownMenuItem>
+                    </Link>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <Link to="/shop">
+                    <DropdownMenuItem className="cursor-pointer">
+                      View All Categories
+                    </DropdownMenuItem>
+                  </Link>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
             </div>
             <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-              <span>Shop by Category</span>
               <span>Brands</span>
               <span>Deals</span>
             </div>
