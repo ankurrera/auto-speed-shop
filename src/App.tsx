@@ -15,13 +15,13 @@ import Account from "./pages/Account";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import SellerDashboard from "./pages/SellerDashboard"; 
-import { ThemeProvider } from "./components/ThemeProvider"; // Import ThemeProvider
+import { ThemeProvider } from "./components/ThemeProvider";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme"> // Wrap with ThemeProvider
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
       <TooltipProvider>
         <Toaster />
         <Sonner />
