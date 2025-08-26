@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
+import { toast } from "sonner";
 
 interface ProductCardProps {
   id: string;
@@ -18,7 +20,7 @@ interface ProductCardProps {
   reviews: number;
   inStock: boolean;
   isOnSale?: boolean;
-  className?: string; // <-- ADDED 'className' PROP HERE
+  className?: string; // <-- ADDED THIS LINE
 }
 
 const ProductCard = ({
@@ -32,32 +34,32 @@ const ProductCard = ({
   reviews,
   inStock,
   isOnSale,
-  className // <-- ACCEPT 'className' HERE
+  className
 }: ProductCardProps) => {
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const { addToCart } = useCart();
+  const { isWishlisted, toggleWishlist } = useWishlist();
 
   const handleAddToCart = () => {
-    // Call the new addToCart function from the context
     addToCart({ id, name, brand, price, image });
+    toast.success(`${name} added to cart!`);
   };
 
   const handleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
+    toggleWishlist({ id, name, brand, image });
   };
 
   return (
     <Card className={cn("group hover:shadow-md transition-all duration-300 border-border", className)}>
       <CardContent className="p-0">
-        {/* Image container */}
         <div className="relative aspect-square overflow-hidden rounded-t-lg bg-muted">
-          <img
-            src={image}
-            alt={name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+          <Link to={`/product/${id}`}>
+            <img
+              src={image}
+              alt={name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          </Link>
           
-          {/* Badges */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {isOnSale && (
               <Badge variant="destructive" className="text-xs">
@@ -71,7 +73,6 @@ const ProductCard = ({
             )}
           </div>
 
-          {/* Wishlist button */}
           <Button
             variant="ghost"
             size="sm"
@@ -80,13 +81,12 @@ const ProductCard = ({
           >
             <Heart
               className={`h-4 w-4 ${
-                isWishlisted ? "fill-red-500 text-red-500" : "text-muted-foreground"
+                isWishlisted(id) ? "fill-red-500 text-red-500" : "text-muted-foreground"
               }`}
             />
           </Button>
         </div>
 
-        {/* Product info */}
         <div className="p-4">
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground font-medium">{brand}</p>
@@ -94,7 +94,6 @@ const ProductCard = ({
               {name}
             </h3>
             
-            {/* Rating */}
             <div className="flex items-center space-x-1">
               <div className="flex items-center">
                 {[...Array(5)].map((_, i) => (
@@ -113,7 +112,6 @@ const ProductCard = ({
               </span>
             </div>
 
-            {/* Price */}
             <div className="flex items-center space-x-2">
               <span className="text-lg font-bold text-foreground">
                 ${price.toFixed(2)}
