@@ -314,7 +314,6 @@ const ChartLegendContent = React.forwardRef<
 )
 ChartLegendContent.displayName = "ChartLegend"
 
-// Helper to extract item config from a payload.
 function getPayloadConfigFromPayload(
   config: ChartConfig,
   payload: unknown,
@@ -353,6 +352,18 @@ function getPayloadConfigFromPayload(
     : config[key as keyof typeof config]
 }
 
+const ChartColumn = React.forwardRef<
+  RechartsPrimitive.Bar,
+  RechartsPrimitive.BarProps
+>(({ className, ...props }, ref) => {
+  return <RechartsPrimitive.Bar className={cn("fill-[--color-fill]", className)} {...props} />
+})
+ChartColumn.displayName = "ChartColumn"
+
+const ChartAxis = RechartsPrimitive.XAxis;
+const ChartAxisY = RechartsPrimitive.YAxis;
+const ChartGrid = RechartsPrimitive.CartesianGrid;
+
 export {
   ChartContainer,
   ChartTooltip,
@@ -360,4 +371,8 @@ export {
   ChartLegend,
   ChartLegendContent,
   ChartStyle,
-}
+  ChartColumn,
+  ChartAxis,
+  ChartAxisY,
+  ChartGrid,
+};
