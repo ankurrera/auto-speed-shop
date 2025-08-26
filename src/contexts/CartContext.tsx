@@ -3,7 +3,20 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-// Define the type for a single product in the cart, including details from the 'products' table
+// Define the type for the raw data returned from the Supabase query
+interface SupabaseCartItem {
+  id: string;
+  product_id: string;
+  quantity: number;
+  products: {
+    name: string;
+    price: number;
+    brand: string;
+    image_urls: string[] | null;
+  };
+}
+
+// Define the type for a single product in the cart, as used by the UI
 export interface CartItem {
   id: string;
   user_id: string;
@@ -32,7 +45,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Listen for user authentication state changes
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user?.id ?? null);
@@ -46,13 +58,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Use a query to fetch the cart items for the current user
-  const { data: cartItems = [], isLoading } = useQuery({
+  const { data: cartItems = [], isLoading } = useQuery<CartItem[]>({
     queryKey: ['cartItems', userId],
     queryFn: async () => {
       if (!userId) return [];
       
-      // Fix 2: Use a specific type instead of 'any'
       const { data, error } = await supabase
         .from('cart_items')
         .select(`
@@ -70,6 +80,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
 
+      // Fix 2: Use a specific type for the map function's item
       return data.map((item: any) => ({
         id: item.id,
         user_id: userId,
@@ -84,15 +95,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     enabled: !!userId,
   });
   
-  // Use a mutation for adding or updating an item in the cart
   const addMutation = useMutation({
     mutationFn: async ({ product_id, quantity = 1 }: { product_id: string; quantity?: number }) => {
       if (!userId) throw new Error('User not authenticated');
       const { data, error } = await supabase
         .from('cart_items')
-        // Fix 3: Change `onConflict` to a single string
         .upsert(
           { user_id: userId, product_id, quantity },
+          // Fix 3: Change `onConflict` to a single string
           { onConflict: 'user_id,product_id' }
         )
         .select();
@@ -105,7 +115,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     },
   });
 
-  // Function to add a product to the cart (handles existing items)
   const addToCart = (product: { id: string; name: string; brand: string; price: number; image: string }) => {
     const existingItem = cartItems.find(item => item.product_id === product.id);
     if (existingItem) {
@@ -115,7 +124,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Use a mutation for removing an item from the cart
   const removeMutation = useMutation({
     mutationFn: async (id: string) => {
       if (!userId) throw new Error('User not authenticated');
@@ -136,7 +144,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     removeMutation.mutate(id);
   };
   
-  // Use a mutation for clearing the entire cart
   const clearMutation = useMutation({
     mutationFn: async () => {
       if (!userId) throw new Error('User not authenticated');
@@ -167,7 +174,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
-// Custom hook to use the cart context
 export const useCart = () => {
   const context = useContext(CartContext);
   if (context === undefined) {

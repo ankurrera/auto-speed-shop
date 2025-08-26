@@ -14,9 +14,9 @@ import Wishlist from "./pages/Wishlist";
 import Account from "./pages/Account";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
-import SellerDashboard from "./pages/SellerDashboard";
+import SellerDashboard from "./pages/SellerDashboard"; 
 import { ThemeProvider } from "./components/ThemeProvider";
-import { CartProvider } from "./contexts/CartContext"; // <-- ADD THIS IMPORT
+import { CartProvider } from "./contexts/CartContext";
 
 const queryClient = new QueryClient();
 
@@ -27,7 +27,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <CartProvider> {/* <-- WRAP WITH CartProvider */}
+          <CartProvider>
             <div className="min-h-screen flex flex-col">
               <Header />
               <main className="flex-1">
@@ -47,7 +47,7 @@ const App = () => (
               </main>
               <Footer />
             </div>
-          </CartProvider> {/* <-- WRAPPER ENDS HERE */}
+          </CartProvider>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
