@@ -3,6 +3,7 @@ import { Heart, ShoppingCart, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
   id: string;
@@ -15,6 +16,7 @@ interface ProductCardProps {
   reviews: number;
   inStock: boolean;
   isOnSale?: boolean;
+  className?: string; // <-- ADDED THIS LINE
 }
 
 const ProductCard = ({
@@ -27,7 +29,8 @@ const ProductCard = ({
   rating,
   reviews,
   inStock,
-  isOnSale
+  isOnSale,
+  className // <-- ADDED THIS LINE
 }: ProductCardProps) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
 
@@ -41,7 +44,7 @@ const ProductCard = ({
   };
 
   return (
-    <Card className="group hover:shadow-md transition-all duration-300 border-border">
+    <Card className={cn("group hover:shadow-md transition-all duration-300 border-border", className)}>
       <CardContent className="p-0">
         {/* Image container */}
         <div className="relative aspect-square overflow-hidden rounded-t-lg bg-muted">
