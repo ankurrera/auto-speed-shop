@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "./ThemeToggle"; // Import the ThemeToggle component
+import { SimpleThemeToggle } from "./SimpleThemeToggle";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -124,7 +124,7 @@ const Header = () => {
             </Button>
 
             {/* Theme toggle */}
-            <ThemeToggle />
+            <SimpleThemeToggle />
 
             {/* Mobile menu button */}
             <Button
