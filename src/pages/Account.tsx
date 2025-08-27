@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, Link } from "react-router-dom";
 import PasswordResetForm from "@/components/PasswordResetForm";
 import AnalyticsDashboard from "./AnalyticsDashboard";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -699,6 +701,14 @@ const Account = () => {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p>Loading account details...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -724,7 +734,9 @@ const Account = () => {
             {userInfo.is_admin && sellerExistsForAdmin && (
               <>
                 <TabsTrigger value="admin-dashboard">Admin Dashboard</TabsTrigger>
-                <TabsTrigger value="analytics-dashboard">Analytics Dashboard</TabsTrigger>
+                <Link to="/analytics">
+                  <TabsTrigger value="analytics-dashboard">Analytics Dashboard</TabsTrigger>
+                </Link>
               </>
             )}
           </TabsList>
@@ -1245,12 +1257,6 @@ const Account = () => {
                   </form>
                 </CardContent>
               </Card>
-            </TabsContent>
-          )}
-
-          {userInfo.is_admin && sellerExistsForAdmin && (
-            <TabsContent value="analytics-dashboard">
-              <AnalyticsDashboard />
             </TabsContent>
           )}
         </Tabs>
