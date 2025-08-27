@@ -304,7 +304,6 @@ const Account = () => {
   const handleCreateSellerAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if the user exists in the profiles table first
     const { data: existingUser, error: userError } = await supabase
       .from('profiles')
       .select('user_id')
@@ -321,20 +320,17 @@ const Account = () => {
 
     if (existingUser) {
       userId = existingUser.user_id;
-      // If user exists, just update their profile to be a seller
       await supabase
         .from('profiles')
         .update({ is_seller: true })
         .eq('user_id', userId);
     } else {
-      // If user does not exist in the profiles table, try to create an auth user
       const { data: newUserData, error: signUpError } = await supabase.auth.signUp({
         email: newSellerEmail,
         password: newSellerPassword,
         options: {
           data: {
             first_name: newSellerName,
-            // The is_seller metadata is not explicitly used by the profiles table trigger
           },
         },
       });
@@ -346,14 +342,12 @@ const Account = () => {
       }
       userId = newUserData.user.id;
 
-      // Explicitly update the profiles table for the newly created user
       await supabase
         .from('profiles')
         .update({ is_seller: true })
         .eq('user_id', userId);
     }
     
-    // Now create the seller entry in the sellers table
     const { error: sellerError } = await supabase
       .from('sellers')
       .insert({
@@ -402,14 +396,13 @@ const Account = () => {
 
     const imageUrls = [];
     if (productImages) {
-        // Upload images to Supabase Storage
         for (const image of productImages) {
             const fileExt = image.name.split('.').pop();
             const fileName = `${Math.random()}.${fileExt}`;
             const filePath = `product_images/${fileName}`;
 
             const { error: uploadError } = await supabase.storage
-                .from('products-images') // Make sure this bucket exists
+                .from('products-images')
                 .upload(filePath, image);
 
             if (uploadError) {
@@ -702,6 +695,14 @@ const Account = () => {
             </Card>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p>Loading account details...</p>
       </div>
     );
   }
