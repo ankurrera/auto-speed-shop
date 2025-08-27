@@ -307,58 +307,64 @@ const Account = () => {
   const handleCreateSellerAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const { data: existingUser, error: userError } = await supabase
-      .from('profiles')
-      .select('user_id')
-      .eq('email', newSellerEmail)
-      .single();
-
     let userId = null;
 
-    if (userError && userError.code !== 'PGRST116') {
-      console.error('Error checking for existing user:', userError.message);
-      alert('An error occurred while checking for an existing user. Please try again.');
-      return;
-    }
-
-    if (existingUser) {
-      userId = existingUser.user_id;
-      await supabase
+    // Check if a profile with the email already exists
+    const { data: existingProfile, error: profileError } = await supabase
         .from('profiles')
-        .update({ is_seller: true })
-        .eq('user_id', userId);
-    } else {
-      const { data: newUserData, error: signUpError } = await supabase.auth.signUp({
-        email: newSellerEmail,
-        password: newSellerPassword,
-        options: {
-          data: {
-            first_name: newSellerName,
-          },
-        },
-      });
+        .select('user_id, email')
+        .eq('email', newSellerEmail)
+        .maybeSingle();
 
-      if (signUpError) {
-        console.error('Seller account creation error:', signUpError.message);
-        alert("Failed to create seller account: " + signUpError.message);
+    if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error checking for existing profile:', profileError.message);
+        alert('An error occurred while checking for an existing profile. Please try again.');
         return;
-      }
-      userId = newUserData.user.id;
-      await supabase
-        .from('profiles')
-        .update({ is_seller: true })
-        .eq('user_id', userId);
     }
     
+    if (existingProfile) {
+        userId = existingProfile.user_id;
+        // If a profile exists, simply update it to be a seller
+        await supabase
+            .from('profiles')
+            .update({ is_seller: true })
+            .eq('user_id', userId);
+    } else {
+        // No existing profile, attempt to sign up a new user
+        const { data: newUserData, error: signUpError } = await supabase.auth.signUp({
+            email: newSellerEmail,
+            password: newSellerPassword,
+            options: {
+                data: {
+                    first_name: newSellerName,
+                },
+            },
+        });
+
+        if (signUpError) {
+            console.error('Seller account creation error:', signUpError.message);
+            alert("Failed to create seller account: " + signUpError.message);
+            return;
+        }
+        userId = newUserData.user.id;
+
+        // New user created, explicitly update the profiles table
+        await supabase
+            .from('profiles')
+            .update({ is_seller: true })
+            .eq('user_id', userId);
+    }
+    
+    // Now create the seller entry in the sellers table
     const { error: sellerError } = await supabase
-      .from('sellers')
-      .insert({
-        user_id: userId,
-        name: newSellerName,
-        address: newSellerAddress,
-        email: newSellerEmail,
-        phone: newSellerPhoneNumber,
-      });
+        .from('sellers')
+        .insert({
+            user_id: userId,
+            name: newSellerName,
+            address: newSellerAddress,
+            email: newSellerEmail,
+            phone: newSellerPhoneNumber,
+        });
 
     if (sellerError) {
       console.error('Error inserting into sellers table:', sellerError.message);
@@ -599,7 +605,7 @@ const Account = () => {
                         if (emailInput) {
                            supabase.auth.resetPasswordForEmail(emailInput, {
                             redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
-                          }).then(({ error } ) => {
+                          }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
                             } else {
@@ -1189,7 +1195,7 @@ const Account = () => {
                       <Label htmlFor="product-brand">Brand</Label>
                       <select
                         id="product-brand"
-                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
+                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[40px]"
                         value={productBrand}
                         onChange={(e) => setProductBrand(e.target.value)}
                         required
@@ -1214,7 +1220,7 @@ const Account = () => {
                       <Label htmlFor="product-category">Category</Label>
                       <select
                         id="product-category"
-                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
+                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[40px]"
                         value={productCategory}
                         onChange={(e) => setProductCategory(e.target.value)}
                         required
