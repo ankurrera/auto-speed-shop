@@ -135,7 +135,6 @@ const Account = () => {
     }
   }, []);
 
-  // New centralized data fetching function
   const fetchAndSetUserData = useCallback(async (userId: string) => {
     setIsLoading(true);
     await fetchUserProfile(userId);
@@ -305,6 +304,7 @@ const Account = () => {
   const handleCreateSellerAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if the user exists in the profiles table first
     const { data: existingUser, error: userError } = await supabase
       .from('profiles')
       .select('user_id')
@@ -321,18 +321,20 @@ const Account = () => {
 
     if (existingUser) {
       userId = existingUser.user_id;
+      // If user exists, just update their profile to be a seller
       await supabase
         .from('profiles')
         .update({ is_seller: true })
         .eq('user_id', userId);
     } else {
+      // If user does not exist in the profiles table, try to create an auth user
       const { data: newUserData, error: signUpError } = await supabase.auth.signUp({
         email: newSellerEmail,
         password: newSellerPassword,
         options: {
           data: {
             first_name: newSellerName,
-            is_seller: true,
+            // The is_seller metadata is not explicitly used by the profiles table trigger
           },
         },
       });
@@ -343,6 +345,7 @@ const Account = () => {
         return;
       }
       userId = newUserData.user.id;
+
       // Explicitly update the profiles table for the newly created user
       await supabase
         .from('profiles')
@@ -350,6 +353,7 @@ const Account = () => {
         .eq('user_id', userId);
     }
     
+    // Now create the seller entry in the sellers table
     const { error: sellerError } = await supabase
       .from('sellers')
       .insert({
@@ -487,7 +491,7 @@ const Account = () => {
 
   const handleAddressFormSubmit = async (e) => {
     e.preventDefault();
-    const { data: { session } = {} } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
     const addressToSave = { ...formAddress, user_id: session.user.id };
@@ -698,14 +702,6 @@ const Account = () => {
             </Card>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p>Loading account details...</p>
       </div>
     );
   }
