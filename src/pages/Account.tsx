@@ -599,7 +599,7 @@ const Account = () => {
                         if (emailInput) {
                            supabase.auth.resetPasswordForEmail(emailInput, {
                             redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
-                          }).then(({ error }) => {
+                          }).then(({ error } ) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
                             } else {
@@ -726,7 +726,7 @@ const Account = () => {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="orders">Order History</TabsTrigger>
@@ -734,9 +734,7 @@ const Account = () => {
             {userInfo.is_admin && sellerExistsForAdmin && (
               <>
                 <TabsTrigger value="admin-dashboard">Admin Dashboard</TabsTrigger>
-                <Link to="/analytics">
-                  <TabsTrigger value="analytics-dashboard">Analytics Dashboard</TabsTrigger>
-                </Link>
+                <TabsTrigger value="analytics-dashboard">Analytics Dashboard</TabsTrigger>
               </>
             )}
           </TabsList>
@@ -1257,6 +1255,12 @@ const Account = () => {
                   </form>
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {userInfo.is_admin && sellerExistsForAdmin && (
+            <TabsContent value="analytics-dashboard">
+              <AnalyticsDashboard />
             </TabsContent>
           )}
         </Tabs>
