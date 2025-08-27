@@ -124,7 +124,7 @@ const Home = () => {
         </div>
         <div className="relative container mx-auto px-4 text-center z-10">
           <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight animate-fade-in-up">
-            <span className="text-black dark:text-white">Your Ultimate</span>
+            <span className="text-white dark:text-white">Your Ultimate</span>
             <br />
             <span className="bg-gradient-primary bg-clip-text text-transparent">Auto Parts Destination</span>
           </h1>
