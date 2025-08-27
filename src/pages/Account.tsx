@@ -308,91 +308,74 @@ const Account = () => {
     e.preventDefault();
 
     let userId = null;
-    let signUpError = null;
 
-    // First, check if a profile with the email already exists
-    const { data: existingProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('email', newSellerEmail)
-        .maybeSingle();
-
-    if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error checking for existing profile:', profileError.message);
-        alert('An error occurred while checking for an existing profile. Please try again.');
-        return;
-    }
-    
-    if (existingProfile) {
-        userId = existingProfile.user_id;
-        // If a profile exists, simply update it to be a seller
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ is_seller: true })
-          .eq('user_id', userId);
-
-        if (updateError) {
-          console.error('Error updating existing profile:', updateError.message);
-          alert('Error updating profiles table. Please try again.');
-          return;
-        }
-    } else {
-        // No existing profile, attempt to sign up a new user
-        const { data: newUserData, error: userSignUpError } = await supabase.auth.signUp({
-            email: newSellerEmail,
-            password: newSellerPassword,
-            options: {
-                data: {
-                    first_name: newSellerName,
-                },
+    const { data: newUserData, error: signUpError } = await supabase.auth.signUp({
+        email: newSellerEmail,
+        password: newSellerPassword,
+        options: {
+            data: {
+                first_name: newSellerName,
             },
-        });
-        signUpError = userSignUpError;
+        },
+    });
 
-        if (signUpError) {
+    if (signUpError) {
+        // Handle the case where the user is already registered in the auth table
+        if (signUpError.message === 'User already registered') {
+            const { data: { user }, error: loginError } = await supabase.auth.signInWithPassword({
+                email: newSellerEmail,
+                password: newSellerPassword
+            });
+            if (loginError) {
+                console.error("Login error after failed signup:", loginError.message);
+                alert("User already exists, but login failed. Please try logging in directly.");
+                return;
+            }
+            userId = user?.id;
+        } else {
             console.error('Seller account creation error:', signUpError.message);
             alert("Failed to create seller account: " + signUpError.message);
             return;
         }
+    } else {
         userId = newUserData?.user?.id;
+    }
+    
+    // Now that we have a userId, we can update or insert the profile
+    if (userId) {
+        const { error: upsertError } = await supabase
+            .from('profiles')
+            .upsert({ 
+                user_id: userId, 
+                is_seller: true,
+                email: newSellerEmail,
+                first_name: newSellerName
+            }, { onConflict: 'user_id' });
 
-        // New user created, explicitly insert a new profile with is_seller set to true
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: userId,
-            is_seller: true,
-            email: newSellerEmail,
-            first_name: newSellerName,
-            // You might need to add other default values here from your schema
-          });
-        
-        if (insertError) {
-            console.error('Error inserting new profile:', insertError.message);
-            alert('Error creating profile. Please try again.');
+        if (upsertError) {
+            console.error('Error upserting profiles table:', upsertError.message);
+            alert('Error updating profiles table. Please try again.');
             return;
         }
+    } else {
+        alert("User ID could not be determined. Seller creation failed.");
+        return;
     }
 
-    // Now, insert the new seller entry into the sellers table
-    if (userId) {
-      const { error: sellerInsertError } = await supabase
-          .from('sellers')
-          .insert({
-              user_id: userId,
-              name: newSellerName,
-              address: newSellerAddress,
-              email: newSellerEmail,
-              phone: newSellerPhoneNumber,
-          });
+    // Finally, insert the new seller entry into the sellers table
+    const { error: sellerInsertError } = await supabase
+        .from('sellers')
+        .insert({
+            user_id: userId,
+            name: newSellerName,
+            address: newSellerAddress,
+            email: newSellerEmail,
+            phone: newSellerPhoneNumber,
+        });
 
-      if (sellerInsertError) {
-        console.error('Error inserting into sellers table:', sellerInsertError.message);
-        alert('Error creating seller account. Please try again.');
-        return;
-      }
-    } else {
-      alert("User ID could not be determined. Seller creation failed.");
+    if (sellerInsertError) {
+      console.error('Error inserting into sellers table:', sellerInsertError.message);
+      alert('Error creating seller account. Please try again.');
       return;
     }
     
