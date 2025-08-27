@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, Link } from "react-router-dom"; // Import Link
+import { useNavigate, Link } from "react-router-dom";
 import PasswordResetForm from "@/components/PasswordResetForm";
 
 const Account = () => {
@@ -64,6 +64,7 @@ const Account = () => {
   });
 
   const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   const fetchUserOrders = useCallback(async (userId: string) => {
@@ -167,19 +168,22 @@ const Account = () => {
     });
 
     const checkUserSession = async () => {
+      setIsLoading(true);
       const { data: { session } = {} } = await supabase.auth.getSession();
+      
       if (session) {
         setIsLoggedIn(true);
-        fetchUserProfile(session.user.id);
-        fetchUserAddresses(session.user.id);
-        fetchUserOrders(session.user.id);
-        checkSellerExists(session.user.id);
+        await fetchUserProfile(session.user.id);
+        await fetchUserAddresses(session.user.id);
+        await fetchUserOrders(session.user.id);
+        await checkSellerExists(session.user.id);
       } else {
         setIsLoggedIn(false);
         setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false });
         setAddresses([]);
         setOrders([]);
       }
+      setIsLoading(false);
     };
     
     const checkAdminExists = async () => {
@@ -469,7 +473,7 @@ const Account = () => {
 
   const handleAddressFormSubmit = async (e) => {
     e.preventDefault();
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } = {} } = await supabase.auth.getSession();
     if (!session) return;
 
     const addressToSave = { ...formAddress, user_id: session.user.id };
@@ -684,6 +688,14 @@ const Account = () => {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p>Loading account details...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -707,9 +719,8 @@ const Account = () => {
             <TabsTrigger value="orders">Order History</TabsTrigger>
             {userInfo.is_admin && !sellerExistsForAdmin && <TabsTrigger value="admin-tools">Admin Tools</TabsTrigger>}
             {userInfo.is_admin && sellerExistsForAdmin && (
-              <> {/* Add a React Fragment to wrap multiple children */}
+              <>
                 <TabsTrigger value="admin-dashboard">Admin Dashboard</TabsTrigger>
-                {/* This is the new button for Analytics */}
                 <Link to="/analytics">
                   <TabsTrigger value="analytics-dashboard">Analytics Dashboard</TabsTrigger>
                 </Link>
