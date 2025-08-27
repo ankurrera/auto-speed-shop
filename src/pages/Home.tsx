@@ -36,7 +36,7 @@ const Home = () => {
         brand: product.brand || 'Unknown',
         price: Number(product.price),
         originalPrice: product.compare_at_price ? Number(product.compare_at_price) : undefined,
-        image: product.image_urls?.[0] || '/placeholder.svg',
+        image_urls: product.image_urls || [],
         rating: 4.5,
         reviews: Math.floor(Math.random() * 200) + 50,
         inStock: product.stock_quantity > 0,
@@ -125,7 +125,7 @@ const Home = () => {
         </div>
         <div className="relative container mx-auto px-4 text-center z-10">
           <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight animate-fade-in-up">
-            <span className="text-white dark:text-white">Your Ultimate</span>
+            <span className="text-black dark:text-white">Your Ultimate</span>
             <br />
             <span className="bg-gradient-primary bg-clip-text text-transparent">Auto Parts Destination</span>
           </h1>
