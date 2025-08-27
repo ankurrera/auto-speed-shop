@@ -11,7 +11,7 @@ import { useNavigate, Link } from "react-router-dom";
 import PasswordResetForm from "@/components/PasswordResetForm";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -42,6 +42,11 @@ const Account = () => {
   const [productImages, setProductImages] = useState(null);
   const [productBrand, setProductBrand] = useState("");
 
+  // New state variables for vehicle fitment
+  const [newProductYear, setNewProductYear] = useState("");
+  const [newProductMake, setNewProductMake] = useState("");
+  const [newProductModel, setNewProductModel] = useState("");
+
   const [userInfo, setUserInfo] = useState({
     firstName: "",
     lastName: "",
@@ -70,6 +75,54 @@ const Account = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Fetching vehicle data for the new product form
+  const { data: vehicleYears = [] } = useQuery({
+    queryKey: ['vehicle-years'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vehicle_years')
+        .select('year')
+        .order('year', { ascending: false });
+      
+      if (error) throw error;
+      return data.map(item => item.year);
+    }
+  });
+
+  const { data: vehicleMakes = [] } = useQuery({
+    queryKey: ['vehicle-makes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vehicle_makes')
+        .select('id, name')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: vehicleModels = [] } = useQuery({
+    queryKey: ['vehicle-models', newProductMake],
+    queryFn: async () => {
+      const makeId = vehicleMakes.find(make => make.name === newProductMake)?.id;
+      
+      if (!makeId) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('vehicle_models')
+        .select('name')
+        .eq('make_id', makeId)
+        .order('name');
+      
+      if (error) throw error;
+      return data.map(item => item.name);
+    },
+    enabled: !!newProductMake,
+  });
+
   const fetchUserOrders = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("orders")
@@ -93,7 +146,7 @@ const Account = () => {
   const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("first_name, last_name, email, phone, is_admin")
+      .select("first_name, last_name, email, phone, is_admin, is_seller")
       .eq("user_id", userId)
       .single();
 
@@ -107,6 +160,7 @@ const Account = () => {
         phone: data.phone || "",
         is_admin: data.is_admin || false,
       });
+      setSellerExistsForAdmin(data.is_seller || false);
     }
   }, []);
 
@@ -450,6 +504,12 @@ const Account = () => {
       alert("Could not find seller information. Please create a seller account first.");
       return;
     }
+    
+    // Validate that all vehicle fitment fields are selected
+    if (!newProductYear || !newProductMake || !newProductModel) {
+      alert("Please select a Year, Make, and Model.");
+      return;
+    }
 
     const imageUrls = [];
     if (productImages) {
@@ -478,22 +538,25 @@ const Account = () => {
         }
     }
     
-    const { error: productError } = await supabase
-      .from('products')
-      .insert({
-        name: productName,
-        description: productDescription,
-        price: parseFloat(productPrice),
-        stock_quantity: parseInt(productQuantity),
-        category: productCategory,
-        specifications: productSpecifications,
-        seller_id: sellerData.id,
-        image_urls: imageUrls,
-        brand: productBrand,
-      });
+    // Call the RPC function to handle the entire insert process on the backend
+    const { data, error: rpcError } = await supabase.rpc('publish_new_product', {
+        p_name: productName,
+        p_description: productDescription,
+        p_price: parseFloat(productPrice),
+        p_stock_quantity: parseInt(productQuantity),
+        p_category: productCategory,
+        p_specifications: productSpecifications,
+        p_seller_id: sellerData.id,
+        p_image_urls: imageUrls,
+        p_brand: productBrand,
+        p_year: newProductYear,
+        p_make: newProductMake,
+        p_model: newProductModel,
+    });
+    
 
-    if (productError) {
-      console.error("Error publishing product:", productError.message);
+    if (rpcError) {
+      console.error("Error publishing product:", rpcError.message);
       alert("Failed to publish product. Please try again.");
     } else {
       alert("Product published successfully!");
@@ -505,6 +568,9 @@ const Account = () => {
       setProductSpecifications("");
       setProductImages(null);
       setProductBrand("");
+      setNewProductYear("");
+      setNewProductMake("");
+      setNewProductModel("");
     }
   };
 
@@ -1194,6 +1260,53 @@ const Account = () => {
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handlePublishNewProduct} className="space-y-4">
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="product-year">Vehicle Year</Label>
+                        <Select value={newProductYear} onValueChange={setNewProductYear}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vehicleYears.map(year => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="product-make">Vehicle Make</Label>
+                        <Select value={newProductMake} onValueChange={setNewProductMake}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Make" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vehicleMakes.map(make => (
+                              <SelectItem key={make.name} value={make.name}>
+                                {make.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="product-model">Vehicle Model</Label>
+                        <Select value={newProductModel} onValueChange={setNewProductModel}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Model" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vehicleModels.map(model => (
+                              <SelectItem key={model} value={model}>
+                                {model}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="product-name">Product Name</Label>
                       <Input
