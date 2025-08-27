@@ -120,8 +120,10 @@ const Home = () => {
             alt="Auto Parts Hero"
             className="w-full h-full object-cover opacity-80" 
           />
+          {/* Semi-transparent overlay for text contrast */}
+          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         </div>
-        <div className="relative container mx-auto px-4 text-center">
+        <div className="relative container mx-auto px-4 text-center z-10">
           <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight animate-fade-in-up">
             <span className="bg-gradient-primary bg-clip-text text-transparent">Your Ultimate</span>
             <br />
