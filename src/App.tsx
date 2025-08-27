@@ -18,6 +18,7 @@ import SellerDashboard from "./pages/SellerDashboard";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard"; // New import
 
 const queryClient = new QueryClient();
 
@@ -43,7 +44,7 @@ const App = () => (
                     <Route path="/account" element={<Account />} />
                     <Route path="/account/reset-password" element={<ResetPassword />} />
                     <Route path="/sell" element={<SellerDashboard />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="/analytics" element={<AnalyticsDashboard />} /> {/* New route added here */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>

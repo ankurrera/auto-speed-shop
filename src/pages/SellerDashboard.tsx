@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import AnalyticsDashboard from "./AnalyticsDashboard";
 
 const categories = [
   "Engine",
@@ -38,7 +37,7 @@ const dashboardNavItems = [
   {
     icon: <TrendingUp className="h-4 w-4" />,
     label: "Analytics",
-    href: "analytics",
+    href: "/analytics", // Changed to an absolute path
   },
 ];
 
@@ -48,7 +47,7 @@ const SellerDashboard = () => {
   const [user, setUser] = useState(null);
   const [sellerId, setSellerId] = useState(null);
   const [editingProductId, setEditingProductId] = useState(null);
-  const [activeTab, setActiveTab] = useState("analytics");
+  const [activeTab, setActiveTab] = useState("products"); // Default tab to "products"
   const [sellerInfo, setSellerInfo] = useState({
     name: "",
     email: "",
@@ -465,7 +464,8 @@ const SellerDashboard = () => {
           </>
         );
       case "analytics":
-        return <AnalyticsDashboard />;
+        // This case is no longer needed since analytics is a separate route
+        return null;
       default:
         return null;
     }
@@ -544,15 +544,16 @@ const SellerDashboard = () => {
           <h2 className="text-xl font-bold mb-4">Dashboard</h2>
           <div className="space-y-2">
             {dashboardNavItems.map((item) => (
-              <Button
-                key={item.label}
-                variant={activeTab === item.href ? "secondary" : "ghost"}
-                className="w-full justify-start space-x-2"
-                onClick={() => setActiveTab(item.href)}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </Button>
+              <Link to={item.href} key={item.label}> {/* Changed from Button to Link */}
+                <Button
+                  variant={activeTab === item.href ? "secondary" : "ghost"}
+                  className="w-full justify-start space-x-2"
+                  onClick={() => setActiveTab(item.href)}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </Button>
+              </Link>
             ))}
           </div>
         </Card>
