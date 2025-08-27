@@ -12,9 +12,12 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
-            {/* New logo and brand name */}
             <Link to="/" className="flex items-center space-x-2">
-                <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-10 w-auto" />
+                <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-14 w-auto" />
+                <div className="whitespace-nowrap flex-shrink-0">
+                  <h1 className="text-2xl font-bold text-foreground">AutoParts Pro</h1>
+                  <p className="text-sm text-muted-foreground">Premium Auto Parts</p>
+                </div>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Your trusted source for high-quality auto parts, accessories, and tools. 

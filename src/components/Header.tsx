@@ -14,7 +14,7 @@ import {
 import { SimpleThemeToggle } from "./SimpleThemeToggle";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
-import CarWrenchLogo from "@/assets/car-wrench-logo.png"; // Import the new logo
+import CarWrenchLogo from "@/assets/car-wrench-logo.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -52,8 +52,11 @@ const Header = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-10 w-auto" />
-            {/* Removed text logo as per request */}
+            <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-14 w-auto" />
+            <div className="whitespace-nowrap flex-shrink-0">
+              <h1 className="text-2xl font-bold text-foreground">AutoParts Pro</h1>
+              <p className="text-sm text-muted-foreground">Premium Auto Parts</p>
+            </div>
           </Link>
 
           {/* Search bar - Desktop */}
