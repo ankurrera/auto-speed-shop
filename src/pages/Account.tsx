@@ -823,8 +823,18 @@ const Account = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p>Loading account details...</p>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-between mb-8">
+            <div className="space-y-2">
+              <div className="h-8 w-64 bg-gray-200 rounded-md animate-pulse"></div>
+              <div className="h-5 w-80 bg-gray-200 rounded-md animate-pulse"></div>
+            </div>
+            <div className="h-10 w-24 bg-gray-200 rounded-md animate-pulse"></div>
+          </div>
+          <div className="h-12 w-full bg-gray-200 rounded-md animate-pulse mb-8"></div>
+          <div className="h-[200px] w-full bg-gray-200 rounded-md animate-pulse"></div>
+        </div>
       </div>
     );
   }
