@@ -135,6 +135,16 @@ const Account = () => {
     }
   }, []);
 
+  // New centralized data fetching function
+  const fetchAndSetUserData = useCallback(async (userId: string) => {
+    setIsLoading(true);
+    await fetchUserProfile(userId);
+    await fetchUserAddresses(userId);
+    await fetchUserOrders(userId);
+    await checkSellerExists(userId);
+    setIsLoading(false);
+  }, [fetchUserProfile, fetchUserAddresses, fetchUserOrders, checkSellerExists]);
+
   const handleSaveProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -165,27 +175,18 @@ const Account = () => {
       if (event === 'PASSWORD_RECOVERY') {
         setView("reset");
       }
-    });
-
-    const checkUserSession = async () => {
-      setIsLoading(true);
-      const { data: { session } = {} } = await supabase.auth.getSession();
-      
       if (session) {
         setIsLoggedIn(true);
-        await fetchUserProfile(session.user.id);
-        await fetchUserAddresses(session.user.id);
-        await fetchUserOrders(session.user.id);
-        await checkSellerExists(session.user.id);
+        fetchAndSetUserData(session.user.id);
       } else {
         setIsLoggedIn(false);
         setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false });
         setAddresses([]);
         setOrders([]);
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    };
-    
+    });
+
     const checkAdminExists = async () => {
       const { data, count } = await supabase
         .from('profiles')
@@ -198,13 +199,23 @@ const Account = () => {
       }
     };
 
-    checkUserSession();
+    const initialCheck = async () => {
+      const { data: { session } = {} } = await supabase.auth.getSession();
+      if (session) {
+        setIsLoggedIn(true);
+        fetchAndSetUserData(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    };
+
+    initialCheck();
     checkAdminExists();
     
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchUserProfile, fetchUserAddresses, fetchUserOrders, checkSellerExists]);
+  }, [fetchAndSetUserData]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,16 +247,14 @@ const Account = () => {
         await supabase.auth.signOut();
       } else if (profileData?.is_admin && loginMode === "admin") {
         if (sellerData) {
-          navigate("/");
+          navigate("/sell");
         } else {
           setIsLoggedIn(true);
-          fetchUserProfile(data.user.id);
+          fetchAndSetUserData(data.user.id);
         }
       } else if (!profileData?.is_admin && loginMode === "user") {
         setIsLoggedIn(true);
-        fetchUserProfile(data.user.id);
-        fetchUserAddresses(data.user.id);
-        fetchUserOrders(data.user.id);
+        fetchAndSetUserData(data.user.id);
       } else {
         alert("Invalid login mode selected.");
         await supabase.auth.signOut();
