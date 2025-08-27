@@ -10,12 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedMake, setSelectedMake] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
+  const navigate = useNavigate();
 
   // Fetch featured products from Supabase
   const { data: featuredProducts = [] } = useQuery({
@@ -95,7 +97,7 @@ const Home = () => {
     enabled: !!selectedMake,
   });
 
-  // This is the new function to handle the search button click
+  // Updated function to handle the search button click
   const handleSearch = () => {
     const searchParams = new URLSearchParams();
     if (searchQuery) searchParams.append("query", searchQuery);
@@ -103,11 +105,8 @@ const Home = () => {
     if (selectedMake) searchParams.append("make", selectedMake);
     if (selectedModel) searchParams.append("model", selectedModel);
     
-    // Log the search parameters to the console
-    console.log("Search initiated with:", searchParams.toString());
-
-    // You can now use these searchParams to navigate to a search results page
-    // For example: router.push(`/search?${searchParams.toString()}`);
+    // Navigate to the shop page with the search parameters
+    navigate(`/shop?${searchParams.toString()}`);
   };
 
   return (
