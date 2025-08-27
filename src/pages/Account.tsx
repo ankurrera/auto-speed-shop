@@ -308,37 +308,59 @@ const Account = () => {
     e.preventDefault();
 
     let userId = null;
+    let signUpError = null;
 
-    const { data: newUserData, error: signUpError } = await supabase.auth.signUp({
-        email: newSellerEmail,
-        password: newSellerPassword,
-        options: {
-            data: {
-                first_name: newSellerName,
-            },
+    // First, try to sign up the user. This is the primary action.
+    const { data: newUserData, error: userSignUpError } = await supabase.auth.signUp({
+      email: newSellerEmail,
+      password: newSellerPassword,
+      options: {
+        data: {
+          first_name: newSellerName,
         },
+      },
     });
-
-    if (signUpError) {
-        // Handle the case where the user is already registered in the auth table
-        if (signUpError.message === 'User already registered') {
-            const { data: { user }, error: loginError } = await supabase.auth.signInWithPassword({
-                email: newSellerEmail,
-                password: newSellerPassword
-            });
-            if (loginError) {
-                console.error("Login error after failed signup:", loginError.message);
-                alert("User already exists, but login failed. Please try logging in directly.");
-                return;
-            }
-            userId = user?.id;
-        } else {
-            console.error('Seller account creation error:', signUpError.message);
-            alert("Failed to create seller account: " + signUpError.message);
-            return;
+    signUpError = userSignUpError;
+    
+    // Check if the user already exists in auth.users
+    if (signUpError && signUpError.message.includes("User already registered")) {
+      // User exists, so retrieve their profile data
+      const { data: existingProfileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id, email')
+        .eq('email', newSellerEmail)
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error("Error retrieving existing user profile:", profileError.message);
+        alert("Failed to create seller account. User exists but profile could not be retrieved.");
+        return;
+      }
+      if (existingProfileData) {
+        userId = existingProfileData.user_id;
+      } else {
+        // User exists in auth but not profiles, which is an edge case. We proceed
+        // with the user ID from auth and create the profile.
+        // We'll need to sign in to get the user data in a secure way.
+        const { data: signedInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: newSellerEmail,
+          password: newSellerPassword
+        });
+        if (signInError) {
+          console.error("Failed to sign in existing user:", signInError.message);
+          alert("A user with this email exists, but we couldn't sign in. Please log in directly.");
+          return;
         }
+        userId = signedInData.user.id;
+      }
+    } else if (signUpError) {
+      // A different signup error occurred
+      console.error('Seller account creation error:', signUpError.message);
+      alert("Failed to create seller account: " + signUpError.message);
+      return;
     } else {
-        userId = newUserData?.user?.id;
+      // New user successfully signed up
+      userId = newUserData?.user?.id;
     }
     
     // Now that we have a userId, we can update or insert the profile
