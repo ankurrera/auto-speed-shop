@@ -3,6 +3,7 @@ import { Facebook, Twitter, Instagram, Youtube, Phone, Mail, MapPin } from "luci
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import CarWrenchLogo from "@/assets/car-wrench-logo.png"; // Import the logo
 
 const Footer = () => {
   return (
@@ -11,12 +12,10 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">AP</span>
-              </div>
-              <span className="text-lg font-bold">AutoParts Pro</span>
-            </div>
+            {/* New logo and brand name */}
+            <Link to="/" className="flex items-center space-x-2">
+                <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-10 w-auto" />
+            </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Your trusted source for high-quality auto parts, accessories, and tools. 
               Serving professionals and enthusiasts since 2010.

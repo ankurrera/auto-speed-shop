@@ -14,6 +14,7 @@ import {
 import { SimpleThemeToggle } from "./SimpleThemeToggle";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
+import CarWrenchLogo from "@/assets/car-wrench-logo.png"; // Import the new logo
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -51,14 +52,8 @@ const Header = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">AP</span>
-            </div>
-            {/* The fix is here: added 'whitespace-nowrap' and 'flex-shrink-0' */}
-            <div className="whitespace-nowrap flex-shrink-0">
-              <h1 className="text-xl font-bold text-foreground">AutoParts Pro</h1>
-              <p className="text-xs text-muted-foreground">Premium Auto Parts</p>
-            </div>
+            <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-10 w-auto" />
+            {/* Removed text logo as per request */}
           </Link>
 
           {/* Search bar - Desktop */}
