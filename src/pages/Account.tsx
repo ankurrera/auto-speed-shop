@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // Import Link
 import PasswordResetForm from "@/components/PasswordResetForm";
 
 const Account = () => {
@@ -706,7 +706,15 @@ const Account = () => {
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="orders">Order History</TabsTrigger>
             {userInfo.is_admin && !sellerExistsForAdmin && <TabsTrigger value="admin-tools">Admin Tools</TabsTrigger>}
-            {userInfo.is_admin && sellerExistsForAdmin && <TabsTrigger value="admin-dashboard">Admin Dashboard</TabsTrigger>}
+            {userInfo.is_admin && sellerExistsForAdmin && (
+              <> {/* Add a React Fragment to wrap multiple children */}
+                <TabsTrigger value="admin-dashboard">Admin Dashboard</TabsTrigger>
+                {/* This is the new button for Analytics */}
+                <Link to="/analytics">
+                  <TabsTrigger value="analytics-dashboard">Analytics Dashboard</TabsTrigger>
+                </Link>
+              </>
+            )}
           </TabsList>
 
           <TabsContent value="profile">
