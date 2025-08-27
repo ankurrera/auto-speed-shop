@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, Link } from "react-router-dom";
 import PasswordResetForm from "@/components/PasswordResetForm";
+import AnalyticsDashboard from "./AnalyticsDashboard";
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -246,7 +247,7 @@ const Account = () => {
         await supabase.auth.signOut();
       } else if (profileData?.is_admin && loginMode === "admin") {
         if (sellerData) {
-          navigate("/sell");
+          navigate("/");
         } else {
           setIsLoggedIn(true);
           fetchAndSetUserData(data.user.id);
@@ -341,7 +342,6 @@ const Account = () => {
         return;
       }
       userId = newUserData.user.id;
-
       await supabase
         .from('profiles')
         .update({ is_seller: true })
@@ -699,14 +699,6 @@ const Account = () => {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p>Loading account details...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -732,9 +724,7 @@ const Account = () => {
             {userInfo.is_admin && sellerExistsForAdmin && (
               <>
                 <TabsTrigger value="admin-dashboard">Admin Dashboard</TabsTrigger>
-                <Link to="/analytics">
-                  <TabsTrigger value="analytics-dashboard">Analytics Dashboard</TabsTrigger>
-                </Link>
+                <TabsTrigger value="analytics-dashboard">Analytics Dashboard</TabsTrigger>
               </>
             )}
           </TabsList>
@@ -1255,6 +1245,12 @@ const Account = () => {
                   </form>
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {userInfo.is_admin && sellerExistsForAdmin && (
+            <TabsContent value="analytics-dashboard">
+              <AnalyticsDashboard />
             </TabsContent>
           )}
         </Tabs>
