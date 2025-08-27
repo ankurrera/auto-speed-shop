@@ -20,9 +20,9 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
   const { cartItems } = useCart();
-  const { wishlistItems } = useWishlist(); // <-- GET WISHLIST ITEMS
+  const { wishlistItems } = useWishlist();
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
-  const wishlistCount = wishlistItems.length; // <-- DYNAMIC WISHLIST COUNT
+  const wishlistCount = wishlistItems.length;
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -54,7 +54,8 @@ const Header = () => {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-xl">AP</span>
             </div>
-            <div>
+            {/* The fix is here: added 'whitespace-nowrap' and 'flex-shrink-0' */}
+            <div className="whitespace-nowrap flex-shrink-0">
               <h1 className="text-xl font-bold text-foreground">AutoParts Pro</h1>
               <p className="text-xs text-muted-foreground">Premium Auto Parts</p>
             </div>
