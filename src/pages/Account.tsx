@@ -137,6 +137,14 @@ const Account = () => {
       setSellerExistsForAdmin(count > 0);
     }
   }, []);
+  
+  const checkIfAuthUserExists = useCallback(async (email: string) => {
+    // This function is for demonstration and would require server-side logic and admin privileges
+    // to access the auth.users table directly and securely.
+    // In a real-world scenario, you would handle this on the client side by
+    // attempting to sign up and then handling the 'User already registered' error.
+    return null;
+  }, []);
 
   const fetchAndSetUserData = useCallback(async (userId: string) => {
     setIsLoading(true);
