@@ -538,7 +538,6 @@ const Account = () => {
         }
     }
     
-    // Call the RPC function to handle the entire insert process on the backend
     const { data, error: rpcError } = await supabase.rpc('publish_new_product', {
         p_name: productName,
         p_description: productDescription,
