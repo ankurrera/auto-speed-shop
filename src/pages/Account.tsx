@@ -308,60 +308,82 @@ const Account = () => {
     e.preventDefault();
 
     let userId = null;
+    let signUpError = null;
+
+    // First, try to sign up the user. This is the primary action.
+    const { data: newUserData, error: userSignUpError } = await supabase.auth.signUp({
+      email: newSellerEmail,
+      password: newSellerPassword,
+      options: {
+        data: {
+          first_name: newSellerName,
+          is_seller: true, // ✅ Set is_seller in metadata for the new trigger
+        },
+      },
+    });
+    signUpError = userSignUpError;
     
-    // Check if a profile with the email already exists
-    const { data: existingProfile, error: profileError } = await supabase
+    // Check if the user already exists in auth.users
+    if (signUpError && signUpError.message.includes("User already registered")) {
+      // User exists, so retrieve their profile data
+      const { data: existingProfileData, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id')
+        .select('user_id, email')
         .eq('email', newSellerEmail)
         .maybeSingle();
-
-    if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error checking for existing profile:', profileError.message);
-        alert('An error occurred while checking for an existing profile. Please try again.');
+      
+      if (profileError) {
+        console.error("Error retrieving existing user profile:", profileError.message);
+        alert("Failed to create seller account. User exists but profile could not be retrieved.");
         return;
-    }
-    
-    if (existingProfile) {
-        userId = existingProfile.user_id;
-    } else {
-        // No existing profile, attempt to sign up a new user
-        const { data: newUserData, error: userSignUpError } = await supabase.auth.signUp({
-            email: newSellerEmail,
-            password: newSellerPassword,
-            options: {
-                data: {
-                    first_name: newSellerName,
-                },
-            },
+      }
+      if (existingProfileData) {
+        userId = existingProfileData.user_id;
+      } else {
+        // User exists in auth but not profiles, which is an edge case. We proceed
+        // with the user ID from auth and create the profile.
+        // We'll need to sign in to get the user data in a secure way.
+        const { data: signedInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: newSellerEmail,
+          password: newSellerPassword
         });
-        
-        if (userSignUpError) {
-          console.error('Seller account creation error:', userSignUpError.message);
-          alert("Failed to create seller account: " + userSignUpError.message);
+        if (signInError) {
+          console.error("Failed to sign in existing user:", signInError.message);
+          alert("A user with this email exists, but we couldn't sign in. Please log in directly.");
           return;
         }
-        userId = newUserData?.user?.id;
-    }
-    
-    if (!userId) {
-      alert("User ID could not be determined. Seller creation failed.");
+        userId = signedInData.user.id;
+      }
+    } else if (signUpError) {
+      // A different signup error occurred
+      console.error('Seller account creation error:', signUpError.message);
+      alert("Failed to create seller account: " + signUpError.message);
       return;
+    } else {
+      // New user successfully signed up
+      userId = newUserData?.user?.id;
     }
     
-    // Now that we have a userId, use an upsert to reliably update/create the profile
-    const { error: upsertError } = await supabase
-        .from('profiles')
-        .upsert({ 
-            user_id: userId, 
-            is_seller: true,
-            email: newSellerEmail,
-            first_name: newSellerName
-        }, { onConflict: 'user_id' });
+    // Now that we have a userId, we can update or insert the profile
+    if (userId) {
+        // This upsert is now for handling the edge case where a user already existed
+        // but had no profile, or for updating an existing profile if needed.
+        const { error: upsertError } = await supabase
+            .from('profiles')
+            .upsert({ 
+                user_id: userId, 
+                is_seller: true,
+                email: newSellerEmail,
+                first_name: newSellerName
+            }, { onConflict: 'user_id' });
 
-    if (upsertError) {
-        console.error('Error upserting profiles table:', upsertError.message);
-        alert('Error updating profiles table. Please try again.');
+        if (upsertError) {
+            console.error('Error upserting profiles table:', upsertError.message);
+            alert('Error updating profiles table. Please try again.');
+            return;
+        }
+    } else {
+        alert("User ID could not be determined. Seller creation failed.");
         return;
     }
 
