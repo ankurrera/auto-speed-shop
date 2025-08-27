@@ -129,7 +129,7 @@ const Home = () => {
             <br />
             <span className="bg-gradient-primary bg-clip-text text-transparent">Auto Parts Destination</span>
           </h1>
-          <p className="text-lg md:text-xl mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100 text-yellow-200">
+          <p className="text-lg md:text-xl mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100 text-white">
             Discover premium parts and accessories for a ride that reflects your style and performance needs.
           </p>
             
