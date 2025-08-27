@@ -296,11 +296,12 @@ const Account = () => {
           .update({ is_admin: true })
           .eq('user_id', data.user.id);
         setAdminExists(true);
-        navigate("/sell");
+        // Removed the navigate("/sell") call
+        alert("Admin account created. Please log in to your account page.");
+      } else {
+        alert("Please check your email to confirm your account!");
       }
-
       setView("login");
-      alert("Please check your email to confirm your account!");
     }
   };
 
@@ -404,13 +405,29 @@ const Account = () => {
       return;
     }
     
+    // Update the profiles table to set is_seller to true
+    const { error: profileUpdateError } = await supabase
+      .from('profiles')
+      .update({ is_seller: true })
+      .eq('user_id', userId);
+
+    if (profileUpdateError) {
+      console.error("Error updating profile with seller status:", profileUpdateError.message);
+    }
+    
     alert(`Seller account created successfully for ${newSellerEmail}!`);
     setNewSellerName("");
     setNewSellerAddress("");
     setNewSellerEmail("");
     setNewSellerPassword("");
     setNewSellerPhoneNumber("");
-    setSellerExistsForAdmin(true);
+    
+    // Updated logic: Check for the current user's session and refresh data
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      // Refresh the entire user's data to reflect the new seller status
+      await fetchAndSetUserData(session.user.id);
+    }
   };
   
   const handlePublishNewProduct = async (e) => {
