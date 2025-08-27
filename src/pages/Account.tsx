@@ -343,6 +343,11 @@ const Account = () => {
         return;
       }
       userId = newUserData.user.id;
+      // Explicitly update the profiles table for the newly created user
+      await supabase
+        .from('profiles')
+        .update({ is_seller: true })
+        .eq('user_id', userId);
     }
     
     const { error: sellerError } = await supabase
