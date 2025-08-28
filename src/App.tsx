@@ -14,10 +14,11 @@ import Wishlist from "./pages/Wishlist";
 import Account from "./pages/Account";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
-import ProductDetails from "./pages/ProductDetails"; // Import the new ProductDetails component
+import ProductDetails from "./pages/ProductDetails";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
+import ScrollToTop from "./components/ScrollToTop"; // Import the new component
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop /> {/* Add the ScrollToTop component here */}
           <CartProvider>
             <WishlistProvider>
               <div className="min-h-screen flex flex-col">
@@ -42,11 +44,7 @@ const App = () => (
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/account" element={<Account />} />
                     <Route path="/account/reset-password" element={<ResetPassword />} />
-                    {/* New route for a dynamic product details page */}
                     <Route path="/products/:id" element={<ProductDetails />} />
-                    {/* The route for "/sell" is removed as the functionality is now in the Account page */}
-                    
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
