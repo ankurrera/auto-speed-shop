@@ -459,7 +459,6 @@ const SellerDashboard = () => {
                       onChange={handleImageUpload}
                     />
                   </div>
-
                   {listingType === "part" && (
                     <>
                       <Separator className="my-8" />
@@ -513,7 +512,6 @@ const SellerDashboard = () => {
                       </div>
                     </>
                   )}
-
                   <div className="space-y-2">
                     <Label htmlFor="product-specs">Specifications</Label>
                     <Textarea
@@ -529,7 +527,6 @@ const SellerDashboard = () => {
                       placeholder={listingType === "part" ? "Additional specifications, e.g., 'Color: Black'" : "List specifications here."}
                     />
                   </div>
-                  
                   <div className="flex space-x-2">
                     <Button type="submit">
                       {editingProductId ? "Update" : "List"} {listingType === "part" ? "Part" : "Product"}
@@ -558,9 +555,7 @@ const SellerDashboard = () => {
                 </form>
               </CardContent>
             </Card>
-            
             <Separator className="my-8" />
-            
             <h2 className="text-2xl font-bold mb-4">Your Listed Products</h2>
             <div className="space-y-4">
               {products.length === 0 ? (
@@ -698,7 +693,6 @@ const SellerDashboard = () => {
           </div>
         </Card>
       </div>
-
       <div className="flex-1">
         {renderContent()}
       </div>
