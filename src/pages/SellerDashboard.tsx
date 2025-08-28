@@ -79,14 +79,14 @@ const dashboardNavItems = [
     href: "products",
   },
   {
-  icon: <ShoppingCart className="h-4 w-4" />,
+    icon: <ShoppingCart className="h-4 w-4" />,
     label: "Orders",
     href: "orders",
   },
   {
     icon: <TrendingUp className="h-4 w-4" />,
     label: "Analytics",
-    href: "/analytics", // Changed to an absolute path
+    href: "/analytics",
   },
 ];
 
@@ -96,7 +96,8 @@ const SellerDashboard = () => {
   const [user, setUser] = useState(null);
   const [sellerId, setSellerId] = useState(null);
   const [editingProductId, setEditingProductId] = useState(null);
-  const [activeTab, setActiveTab] = useState("products"); // Default tab to "products"
+  const [activeTab, setActiveTab] = useState("products");
+  const [listingType, setListingType] = useState("part");
   const [sellerInfo, setSellerInfo] = useState({
     name: "",
     email: "",
@@ -284,6 +285,7 @@ const SellerDashboard = () => {
       year_range: product.year_range,
       vin: product.vin,
     });
+    setListingType(product.make ? "part" : "product");
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -354,7 +356,6 @@ const SellerDashboard = () => {
   };
 
   const renderContent = () => {
-    console.log(`Current activeTab: ${activeTab}`);
     switch (activeTab) {
       case "products":
         return (
@@ -362,12 +363,28 @@ const SellerDashboard = () => {
             <h1 className="text-3xl font-bold mb-8">Seller Dashboard</h1>
             <Card>
               <CardHeader>
-                <CardTitle>{editingProductId ? "Edit Product" : "List a New Product"}</CardTitle>
+                <div className="flex items-center gap-4">
+                  <h2 className="text-xl font-bold">List a New...</h2>
+                  <Button
+                    variant={listingType === "part" ? "default" : "outline"}
+                    onClick={() => setListingType("part")}
+                  >
+                    Part
+                  </Button>
+                  <Button
+                    variant={listingType === "product" ? "default" : "outline"}
+                    onClick={() => setListingType("product")}
+                  >
+                    Product
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleProductSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="product-name">Product Name</Label>
+                    <Label htmlFor="product-name">
+                      {listingType === "part" ? "Part Name" : "Product Name"}
+                    </Label>
                     <Input
                       id="product-name"
                       value={productInfo.name}
@@ -433,55 +450,6 @@ const SellerDashboard = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Separator className="my-8" />
-                  <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="part-make">Make</Label>
-                      <Input
-                        id="part-make"
-                        value={productInfo.make}
-                        onChange={(e) =>
-                          setProductInfo({ ...productInfo, make: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="part-model">Model</Label>
-                      <Input
-                        id="part-model"
-                        value={productInfo.model}
-                        onChange={(e) =>
-                          setProductInfo({ ...productInfo, model: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="part-year-range">Year(s)</Label>
-                      <Input
-                        id="part-year-range"
-                        value={productInfo.year_range}
-                        onChange={(e) =>
-                          setProductInfo({ ...productInfo, year_range: e.target.value })
-                        }
-                        placeholder="e.g., 2018-2024 or 2020"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="part-vin">VIN (Optional)</Label>
-                      <Input
-                        id="part-vin"
-                        value={productInfo.vin}
-                        onChange={(e) =>
-                          setProductInfo({ ...productInfo, vin: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="product-images">Product Images</Label>
                     <Input
@@ -491,6 +459,61 @@ const SellerDashboard = () => {
                       onChange={handleImageUpload}
                     />
                   </div>
+
+                  {listingType === "part" && (
+                    <>
+                      <Separator className="my-8" />
+                      <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="part-make">Make</Label>
+                          <Input
+                            id="part-make"
+                            value={productInfo.make}
+                            onChange={(e) =>
+                              setProductInfo({ ...productInfo, make: e.target.value })
+                            }
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="part-model">Model</Label>
+                          <Input
+                            id="part-model"
+                            value={productInfo.model}
+                            onChange={(e) =>
+                              setProductInfo({ ...productInfo, model: e.target.value })
+                            }
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="part-year-range">Year(s)</Label>
+                          <Input
+                            id="part-year-range"
+                            value={productInfo.year_range}
+                            onChange={(e) =>
+                              setProductInfo({ ...productInfo, year_range: e.target.value })
+                            }
+                            placeholder="e.g., 2018-2024 or 2020"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="part-vin">VIN (Optional)</Label>
+                          <Input
+                            id="part-vin"
+                            value={productInfo.vin}
+                            onChange={(e) =>
+                              setProductInfo({ ...productInfo, vin: e.target.value })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="product-specs">Specifications</Label>
                     <Textarea
@@ -503,12 +526,13 @@ const SellerDashboard = () => {
                         })
                       }
                       rows={4}
-                      placeholder="List additional specifications here."
+                      placeholder={listingType === "part" ? "Additional specifications, e.g., 'Color: Black'" : "List specifications here."}
                     />
                   </div>
+                  
                   <div className="flex space-x-2">
                     <Button type="submit">
-                      {editingProductId ? "Update Product" : "List Product"}
+                      {editingProductId ? "Update" : "List"} {listingType === "part" ? "Part" : "Product"}
                     </Button>
                     {editingProductId && (
                       <Button type="button" variant="outline" onClick={() => {
@@ -534,7 +558,7 @@ const SellerDashboard = () => {
                 </form>
               </CardContent>
             </Card>
-
+            
             <Separator className="my-8" />
             
             <h2 className="text-2xl font-bold mb-4">Your Listed Products</h2>
@@ -582,7 +606,6 @@ const SellerDashboard = () => {
           </>
         );
       case "analytics":
-        // This case is no longer needed since analytics is a separate route
         return null;
       default:
         return null;
@@ -656,13 +679,12 @@ const SellerDashboard = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 flex flex-col lg:flex-row gap-8">
-      {/* Sidebar */}
       <div className="w-full lg:w-64 flex-shrink-0">
         <Card className="p-4">
           <h2 className="text-xl font-bold mb-4">Dashboard</h2>
           <div className="space-y-2">
             {dashboardNavItems.map((item) => (
-              <Link to={item.href} key={item.label}> {/* Changed from Button to Link */}
+              <Link to={item.href} key={item.label}>
                 <Button
                   variant={activeTab === item.href ? "secondary" : "ghost"}
                   className="w-full justify-start space-x-2"
@@ -677,7 +699,6 @@ const SellerDashboard = () => {
         </Card>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1">
         {renderContent()}
       </div>
