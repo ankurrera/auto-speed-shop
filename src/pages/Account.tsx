@@ -563,18 +563,6 @@ const Account = () => {
       alert("You must be logged in to publish a product.");
       return;
     }
-
-    const { data: sellerData, error: sellerError } = await supabase
-      .from('sellers')
-      .select('id')
-      .eq('user_id', session.user.id)
-      .single();
-
-    if (sellerError || !sellerData) {
-      console.error("Error fetching seller ID:", sellerError?.message);
-      alert("Could not find seller information. Please create a seller account first.");
-      return;
-    }
     
     const imageUrls = [];
     if (genericProductImages) {
@@ -603,23 +591,22 @@ const Account = () => {
         }
     }
     
-    const { data, error: rpcError } = await supabase.rpc('publish_new_product', {
-        p_name: genericProductName,
-        p_description: genericProductDescription,
-        p_price: parseFloat(genericProductPrice),
-        p_stock_quantity: parseInt(genericProductQuantity),
-        p_category: genericProductCategory,
-        p_specifications: genericProductSpecifications,
-        p_seller_id: sellerData.id,
-        p_image_urls: imageUrls,
-        p_brand: genericProductBrand,
-        p_year: null,
-        p_make: null,
-        p_model: null,
+    const { error } = await supabase
+      .from('products')
+      .insert({
+        name: genericProductName,
+        description: genericProductDescription,
+        price: parseFloat(genericProductPrice),
+        stock_quantity: parseInt(genericProductQuantity),
+        category: genericProductCategory,
+        specifications: genericProductSpecifications,
+        seller_id: session.user.id,
+        image_urls: imageUrls,
+        brand: genericProductBrand,
     });
     
-    if (rpcError) {
-      console.error("Error publishing product:", rpcError.message);
+    if (error) {
+      console.error("Error publishing product:", error.message);
       alert("Failed to publish product. Please try again.");
     } else {
       alert("Product published successfully!");
