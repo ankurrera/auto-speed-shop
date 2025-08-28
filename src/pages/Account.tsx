@@ -135,7 +135,7 @@ const Account = () => {
     enabled: !!partMake,
   });
 
-  const fetchUserOrders = useCallback(async (userId: string) => {
+  const fetchUserOrders = useCallback(async (userId) => {
     const { data, error } = await supabase
       .from("orders")
       .select("id, created_at, order_number, status, total_amount")
@@ -155,7 +155,7 @@ const Account = () => {
     }
   }, []);
 
-  const fetchUserProfile = useCallback(async (userId: string) => {
+  const fetchUserProfile = useCallback(async (userId) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("first_name, last_name, email, phone, is_admin, is_seller")
@@ -176,7 +176,7 @@ const Account = () => {
     }
   }, []);
 
-  const fetchUserAddresses = useCallback(async (userId: string) => {
+  const fetchUserAddresses = useCallback(async (userId) => {
     const { data, error } = await supabase
       .from("addresses")
       .select("*")
@@ -190,7 +190,7 @@ const Account = () => {
     }
   }, []);
   
-  const checkSellerExists = useCallback(async (userId: string) => {
+  const checkSellerExists = useCallback(async (userId) => {
     const { data, count, error } = await supabase
       .from('sellers')
       .select('user_id', { count: 'exact' })
@@ -204,7 +204,7 @@ const Account = () => {
     }
   }, []);
 
-  const fetchAndSetUserData = useCallback(async (userId: string) => {
+  const fetchAndSetUserData = useCallback(async (userId) => {
     setIsLoading(true);
     await fetchUserProfile(userId);
     await fetchUserAddresses(userId);
@@ -285,7 +285,7 @@ const Account = () => {
     };
   }, [fetchAndSetUserData]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     
     const { error, data } = await supabase.auth.signInWithPassword({
@@ -330,7 +330,7 @@ const Account = () => {
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
 
     if (loginMode === "admin" && adminExists) {
@@ -370,7 +370,7 @@ const Account = () => {
     }
   };
 
-  const handleCreateSellerAccount = async (e: React.FormEvent) => {
+  const handleCreateSellerAccount = async (e) => {
     e.preventDefault();
 
     let userId = null;
@@ -488,18 +488,6 @@ const Account = () => {
       alert("You must be logged in to publish a part.");
       return;
     }
-
-    const { data: sellerData, error: sellerError } = await supabase
-      .from('sellers')
-      .select('id')
-      .eq('user_id', session.user.id)
-      .single();
-
-    if (sellerError || !sellerData) {
-      console.error("Error fetching seller ID:", sellerError?.message);
-      alert("Could not find seller information. Please create a seller account first.");
-      return;
-    }
     
     if (!partYear || !partMake || !partModel) {
       alert("Please select a Year, Make, and Model for the part.");
@@ -533,14 +521,13 @@ const Account = () => {
         }
     }
     
-    const { data, error: rpcError } = await supabase.rpc('publish_new_product', {
+    const { data, error: rpcError } = await supabase.rpc('publish_new_part_standalone', {
         p_name: partName,
         p_description: partDescription,
         p_price: parseFloat(partPrice),
         p_stock_quantity: parseInt(partQuantity),
-        p_category: partCategory,
         p_specifications: partSpecifications,
-        p_seller_id: sellerData.id,
+        p_seller_id: session.user.id,
         p_image_urls: imageUrls,
         p_brand: partBrand,
         p_year: partYear,
