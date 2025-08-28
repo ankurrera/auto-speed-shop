@@ -15,10 +15,11 @@ import Account from "./pages/Account";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import ProductDetails from "./pages/ProductDetails";
+import SellerDashboard from "./pages/SellerDashboard"; // New import
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
-import ScrollToTop from "./components/ScrollToTop"; // Import the new component
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -29,7 +30,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <ScrollToTop /> {/* Add the ScrollToTop component here */}
+          <ScrollToTop />
           <CartProvider>
             <WishlistProvider>
               <div className="min-h-screen flex flex-col">
@@ -45,6 +46,7 @@ const App = () => (
                     <Route path="/account" element={<Account />} />
                     <Route path="/account/reset-password" element={<ResetPassword />} />
                     <Route path="/products/:id" element={<ProductDetails />} />
+                    <Route path="/seller-dashboard" element={<SellerDashboard />} /> {/* New Route */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
