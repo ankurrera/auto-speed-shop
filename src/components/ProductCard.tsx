@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Heart, ShoppingCart, Star, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ interface ProductCardProps {
   brand: string;
   price: number;
   originalPrice?: number;
-  image_urls: string[]; // Updated to accept an array of strings
+  image_urls: string[];
   rating: number;
   reviews: number;
   inStock: boolean;
@@ -39,6 +39,7 @@ const ProductCard = ({
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [dominantColor, setDominantColor] = useState('bg-muted');
 
   // Function to handle image change on hover
   const handleImageChange = (index: number) => {
@@ -59,11 +60,47 @@ const ProductCard = ({
   // Choose the image to display. Default to the first one if the array is valid.
   const displayImage = image_urls && image_urls.length > 0 ? image_urls[currentImageIndex] : '/placeholder.svg';
 
+  // Function to extract the dominant color from an image using a temporary canvas
+  const getDominantColor = (imgSrc: string) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous'; // Required to prevent CORS errors on the canvas
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      // Draw a small version of the image to sample a color
+      canvas.width = 1;
+      canvas.height = 1;
+      ctx.drawImage(img, 0, 0, 1, 1);
+      const pixelData = ctx.getImageData(0, 0, 1, 1).data;
+      
+      const r = pixelData[0];
+      const g = pixelData[1];
+      const b = pixelData[2];
+      
+      setDominantColor(`rgb(${r}, ${g}, ${b})`);
+    };
+    img.onerror = () => {
+      // Fallback to the default muted background on error
+      setDominantColor('bg-muted');
+    };
+    img.src = imgSrc;
+  };
+
+  // Run the color extraction whenever the display image changes
+  useEffect(() => {
+    getDominantColor(displayImage);
+  }, [displayImage]);
+
   return (
     <Link to={`/products/${id}`} className={cn("block", className)}>
       <Card className={cn("group hover:shadow-md transition-all duration-300 border-border")}>
         <CardContent className="p-0">
-          <div className="relative aspect-square overflow-hidden rounded-t-lg bg-muted">
+          <div 
+            className="relative aspect-square overflow-hidden rounded-t-lg transition-colors duration-300"
+            style={{ backgroundColor: dominantColor }}
+          >
             {/* Main product image with hover effect */}
             <img
               src={displayImage}
