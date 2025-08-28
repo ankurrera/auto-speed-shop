@@ -11,7 +11,7 @@ import { useNavigate, Link } from "react-router-dom";
 import PasswordResetForm from "@/components/PasswordResetForm";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -32,20 +32,32 @@ const Account = () => {
   const [newSellerEmail, setNewSellerEmail] = useState("");
   const [newSellerPassword, setNewSellerPassword] = useState("");
   const [sellerExistsForAdmin, setSellerExistsForAdmin] = useState(false);
-  
-  const [productName, setProductName] = useState("");
-  const [productDescription, setProductDescription] = useState("");
-  const [productPrice, setProductPrice] = useState("");
-  const [productQuantity, setProductQuantity] = useState("");
-  const [productCategory, setProductCategory] = useState("");
-  const [productSpecifications, setProductSpecifications] = useState("");
-  const [productImages, setProductImages] = useState(null);
-  const [productBrand, setProductBrand] = useState("");
 
-  // New state variables for vehicle fitment
-  const [newProductYear, setNewProductYear] = useState("");
-  const [newProductMake, setNewProductMake] = useState("");
-  const [newProductModel, setNewProductModel] = useState("");
+  // State for the new part form (with vehicle fitment)
+  const [partName, setPartName] = useState("");
+  const [partDescription, setPartDescription] = useState("");
+  const [partPrice, setPartPrice] = useState("");
+  const [partQuantity, setPartQuantity] = useState("");
+  const [partCategory, setPartCategory] = useState("");
+  const [partSpecifications, setPartSpecifications] = useState("");
+  const [partImages, setPartImages] = useState(null);
+  const [partBrand, setPartBrand] = useState("");
+  const [partYear, setPartYear] = useState("");
+  const [partMake, setPartMake] = useState("");
+  const [partModel, setPartModel] = useState("");
+
+  // State for the new generic product form (without vehicle fitment)
+  const [genericProductName, setGenericProductName] = useState("");
+  const [genericProductDescription, setGenericProductDescription] = useState("");
+  const [genericProductPrice, setGenericProductPrice] = useState("");
+  const [genericProductQuantity, setGenericProductQuantity] = useState("");
+  const [genericProductCategory, setGenericProductCategory] = useState("");
+  const [genericProductSpecifications, setGenericProductSpecifications] = useState("");
+  const [genericProductImages, setGenericProductImages] = useState(null);
+  const [genericProductBrand, setGenericProductBrand] = useState("");
+
+  // State to manage view within the admin dashboard
+  const [adminView, setAdminView] = useState("menu"); // 'menu', 'part', 'product'
 
   const [userInfo, setUserInfo] = useState({
     firstName: "",
@@ -75,7 +87,7 @@ const Account = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Fetching vehicle data for the new product form
+  // Fetching vehicle data for the new part form
   const { data: vehicleYears = [] } = useQuery({
     queryKey: ['vehicle-years'],
     queryFn: async () => {
@@ -103,9 +115,9 @@ const Account = () => {
   });
 
   const { data: vehicleModels = [] } = useQuery({
-    queryKey: ['vehicle-models', newProductMake],
+    queryKey: ['vehicle-models', partMake],
     queryFn: async () => {
-      const makeId = vehicleMakes.find(make => make.name === newProductMake)?.id;
+      const makeId = vehicleMakes.find(make => make.name === partMake)?.id;
       
       if (!makeId) {
         return [];
@@ -120,7 +132,7 @@ const Account = () => {
       if (error) throw error;
       return data.map(item => item.name);
     },
-    enabled: !!newProductMake,
+    enabled: !!partMake,
   });
 
   const fetchUserOrders = useCallback(async (userId: string) => {
@@ -350,7 +362,6 @@ const Account = () => {
           .update({ is_admin: true })
           .eq('user_id', data.user.id);
         setAdminExists(true);
-        // Removed the navigate("/sell") call
         alert("Admin account created. Please log in to your account page.");
       } else {
         alert("Please check your email to confirm your account!");
@@ -365,22 +376,19 @@ const Account = () => {
     let userId = null;
     let signUpError = null;
 
-    // First, try to sign up the user. This is the primary action.
     const { data: newUserData, error: userSignUpError } = await supabase.auth.signUp({
       email: newSellerEmail,
       password: newSellerPassword,
       options: {
         data: {
           first_name: newSellerName,
-          is_seller: true, // ✅ Set is_seller in metadata for the new trigger
+          is_seller: true,
         },
       },
     });
     signUpError = userSignUpError;
     
-    // Check if the user already exists in auth.users
     if (signUpError && signUpError.message.includes("User already registered")) {
-      // User exists, so retrieve their profile data
       const { data: existingProfileData, error: profileError } = await supabase
         .from('profiles')
         .select('user_id, email')
@@ -395,9 +403,6 @@ const Account = () => {
       if (existingProfileData) {
         userId = existingProfileData.user_id;
       } else {
-        // User exists in auth but not profiles, which is an edge case. We proceed
-        // with the user ID from auth and create the profile.
-        // We'll need to sign in to get the user data in a secure way.
         const { data: signedInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: newSellerEmail,
           password: newSellerPassword
@@ -410,19 +415,14 @@ const Account = () => {
         userId = signedInData.user.id;
       }
     } else if (signUpError) {
-      // A different signup error occurred
       console.error('Seller account creation error:', signUpError.message);
       alert("Failed to create seller account: " + signUpError.message);
       return;
     } else {
-      // New user successfully signed up
       userId = newUserData?.user?.id;
     }
     
-    // Now that we have a userId, we can update or insert the profile
     if (userId) {
-        // This upsert is now for handling the edge case where a user already existed
-        // but had no profile, or for updating an existing profile if needed.
         const { error: upsertError } = await supabase
             .from('profiles')
             .upsert({ 
@@ -442,7 +442,6 @@ const Account = () => {
         return;
     }
 
-    // Finally, insert the new seller entry into the sellers table
     const { error: sellerInsertError } = await supabase
         .from('sellers')
         .insert({
@@ -459,7 +458,6 @@ const Account = () => {
       return;
     }
     
-    // Update the profiles table to set is_seller to true
     const { error: profileUpdateError } = await supabase
       .from('profiles')
       .update({ is_seller: true })
@@ -476,15 +474,101 @@ const Account = () => {
     setNewSellerPassword("");
     setNewSellerPhoneNumber("");
     
-    // Updated logic: Check for the current user's session and refresh data
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-      // Refresh the entire user's data to reflect the new seller status
       await fetchAndSetUserData(session.user.id);
     }
   };
   
-  const handlePublishNewProduct = async (e) => {
+  const handlePublishNewPart = async (e) => {
+    e.preventDefault();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      alert("You must be logged in to publish a part.");
+      return;
+    }
+
+    const { data: sellerData, error: sellerError } = await supabase
+      .from('sellers')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (sellerError || !sellerData) {
+      console.error("Error fetching seller ID:", sellerError?.message);
+      alert("Could not find seller information. Please create a seller account first.");
+      return;
+    }
+    
+    if (!partYear || !partMake || !partModel) {
+      alert("Please select a Year, Make, and Model for the part.");
+      return;
+    }
+
+    const imageUrls = [];
+    if (partImages) {
+        for (const image of partImages) {
+            const fileExt = image.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `product_images/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('products-images')
+                .upload(filePath, image);
+
+            if (uploadError) {
+                console.error("Error uploading image:", uploadError.message);
+                alert("Failed to upload part image. Please try again.");
+                return;
+            }
+
+            const { data: publicUrlData } = supabase.storage
+                .from('products-images')
+                .getPublicUrl(filePath);
+
+            if (publicUrlData) {
+                imageUrls.push(publicUrlData.publicUrl);
+            }
+        }
+    }
+    
+    const { data, error: rpcError } = await supabase.rpc('publish_new_product', {
+        p_name: partName,
+        p_description: partDescription,
+        p_price: parseFloat(partPrice),
+        p_stock_quantity: parseInt(partQuantity),
+        p_category: partCategory,
+        p_specifications: partSpecifications,
+        p_seller_id: sellerData.id,
+        p_image_urls: imageUrls,
+        p_brand: partBrand,
+        p_year: partYear,
+        p_make: partMake,
+        p_model: partModel,
+    });
+    
+    if (rpcError) {
+      console.error("Error publishing part:", rpcError.message);
+      alert("Failed to publish part. Please try again.");
+    } else {
+      alert("Part published successfully!");
+      setPartName("");
+      setPartDescription("");
+      setPartPrice("");
+      setPartQuantity("");
+      setPartCategory("");
+      setPartSpecifications("");
+      setPartImages(null);
+      setPartBrand("");
+      setPartYear("");
+      setPartMake("");
+      setPartModel("");
+      setAdminView("menu");
+    }
+  };
+
+  const handlePublishGenericProduct = async (e) => {
     e.preventDefault();
     const { data: { session } } = await supabase.auth.getSession();
 
@@ -505,15 +589,9 @@ const Account = () => {
       return;
     }
     
-    // Validate that all vehicle fitment fields are selected
-    if (!newProductYear || !newProductMake || !newProductModel) {
-      alert("Please select a Year, Make, and Model.");
-      return;
-    }
-
     const imageUrls = [];
-    if (productImages) {
-        for (const image of productImages) {
+    if (genericProductImages) {
+        for (const image of genericProductImages) {
             const fileExt = image.name.split('.').pop();
             const fileName = `${Math.random()}.${fileExt}`;
             const filePath = `product_images/${fileName}`;
@@ -539,37 +617,34 @@ const Account = () => {
     }
     
     const { data, error: rpcError } = await supabase.rpc('publish_new_product', {
-        p_name: productName,
-        p_description: productDescription,
-        p_price: parseFloat(productPrice),
-        p_stock_quantity: parseInt(productQuantity),
-        p_category: productCategory,
-        p_specifications: productSpecifications,
+        p_name: genericProductName,
+        p_description: genericProductDescription,
+        p_price: parseFloat(genericProductPrice),
+        p_stock_quantity: parseInt(genericProductQuantity),
+        p_category: genericProductCategory,
+        p_specifications: genericProductSpecifications,
         p_seller_id: sellerData.id,
         p_image_urls: imageUrls,
-        p_brand: productBrand,
-        p_year: newProductYear,
-        p_make: newProductMake,
-        p_model: newProductModel,
+        p_brand: genericProductBrand,
+        p_year: null,
+        p_make: null,
+        p_model: null,
     });
     
-
     if (rpcError) {
       console.error("Error publishing product:", rpcError.message);
       alert("Failed to publish product. Please try again.");
     } else {
       alert("Product published successfully!");
-      setProductName("");
-      setProductDescription("");
-      setProductPrice("");
-      setProductQuantity("");
-      setProductCategory("");
-      setProductSpecifications("");
-      setProductImages(null);
-      setProductBrand("");
-      setNewProductYear("");
-      setNewProductMake("");
-      setNewProductModel("");
+      setGenericProductName("");
+      setGenericProductDescription("");
+      setGenericProductPrice("");
+      setGenericProductQuantity("");
+      setGenericProductCategory("");
+      setGenericProductSpecifications("");
+      setGenericProductImages(null);
+      setGenericProductBrand("");
+      setAdminView("menu");
     }
   };
 
@@ -803,9 +878,9 @@ const Account = () => {
                     
                     <div className="mt-6 text-center space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        Don't have an account?{" "}
-                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
-                          Sign up here
+                        Already have an account?{" "}
+                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
+                          Log in here
                         </Button>
                       </p>
                     </div>
@@ -1077,7 +1152,7 @@ const Account = () => {
                     ))
                   ) : (
                     <div className="col-span-2 text-center text-muted-foreground py-8">
-                      You have no orders yet.
+                      You have no saved addresses yet.
                     </div>
                   )}
                 </div>
@@ -1104,9 +1179,9 @@ const Account = () => {
                               <span className="font-medium">{order.orderNumber}</span>
                               <span className="text-sm text-muted-foreground">{order.date}</span>
                               <span className={`text-xs px-2 py-1 rounded ${
-                                order.status === 'delivered' ? 'bg-success text-success-foreground' :
-                                order.status === 'shipped' ? 'bg-primary text-primary-foreground' :
-                                'bg-warning text-warning-foreground'
+                                order.status === 'delivered' ? 'bg-green-200 text-green-800' :
+                                order.status === 'shipped' ? 'bg-blue-200 text-blue-800' :
+                                'bg-yellow-200 text-yellow-800'
                               }`}>
                                 {order.status}
                               </span>
@@ -1162,29 +1237,6 @@ const Account = () => {
                     }}>
                       Send Password Reset Link
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Lock className="h-5 w-5 mr-2" />
-                    Account Security
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Email Address</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Your account is secured with: {userInfo.email}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Login Method</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Email and password authentication
-                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -1263,175 +1315,221 @@ const Account = () => {
 
           {userInfo.is_admin && sellerExistsForAdmin && (
             <TabsContent value="admin-dashboard">
-              <Card>
-                <CardHeader>
-                  <CardTitle>List a New Product</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handlePublishNewProduct} className="space-y-4">
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="product-year">Vehicle Year</Label>
-                        <Select value={newProductYear} onValueChange={setNewProductYear}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Year" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vehicleYears.map(year => (
-                              <SelectItem key={year} value={year.toString()}>
-                                {year}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="product-make">Vehicle Make</Label>
-                        <Select value={newProductMake} onValueChange={setNewProductMake}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Make" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vehicleMakes.map(make => (
-                              <SelectItem key={make.name} value={make.name}>
-                                {make.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="product-model">Vehicle Model</Label>
-                        <Select value={newProductModel} onValueChange={setNewProductModel}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Model" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vehicleModels.map(model => (
-                              <SelectItem key={model} value={model}>
-                                {model}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-name">Product Name</Label>
-                      <Input
-                        id="product-name"
-                        placeholder="Enter product name"
-                        value={productName}
-                        onChange={(e) => setProductName(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-description">Description</Label>
-                      <textarea
-                        id="product-description"
-                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
-                        placeholder="Enter product description"
-                        value={productDescription}
-                        onChange={(e) => setProductDescription(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="product-price">Price ($)</Label>
-                        <Input
-                          id="product-price"
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={productPrice}
-                          onChange={(e) => setProductPrice(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="product-quantity">Quantity</Label>
-                        <Input
-                          id="product-quantity"
-                          type="number"
-                          placeholder="0"
-                          value={productQuantity}
-                          onChange={(e) => setProductQuantity(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-brand">Brand</Label>
-                      <select
-                        id="product-brand"
-                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[40px]"
-                        value={productBrand}
-                        onChange={(e) => setProductBrand(e.target.value)}
-                        required
-                      >
-                        <option value="" disabled>Select a brand</option>
-                        <option value="Wagner">Wagner</option>
-                        <option value="K&N">K&N</option>
-                        <option value="Philips">Philips</option>
-                        <option value="Borla">Borla</option>
-                        <option value="Fram">Fram</option>
-                        <option value="NGK">NGK</option>
-                        <option value="Monroe">Monroe</option>
-                        <option value="Mishimoto">Mishimoto</option>
-                        <option value="Optima">Optima</option>
-                        <option value="StopTech">StopTech</option>
-                        <option value="Deatschwerks">Deatschwerks</option>
-                        <option value="BC Racing">BC Racing</option>
-                        <option value="Garrett Motion">Garrett Motion</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-category">Category</Label>
-                      <select
-                        id="product-category"
-                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[40px]"
-                        value={productCategory}
-                        onChange={(e) => setProductCategory(e.target.value)}
-                        required
-                      >
-                        <option value="" disabled>Select a category</option>
-                        <option value="Engine">Engine</option>
-                        <option value="Brakes">Brakes</option>
-                        <option value="Suspension">Suspension</option>
-                        <option value="Electrical">Electrical</option>
-                        <option value="Cooling">Cooling</option>
-                        <option value="Exhaust">Exhaust</option>
-                        <option value="Filters">Filters</option>
-                        <option value="Tools">Tools</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-images">Product Images</Label>
-                      <Input
-                        id="product-images"
-                        type="file"
-                        onChange={(e) => setProductImages(e.target.files)}
-                        multiple
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-specs">Specifications</Label>
-                      <textarea
-                        id="product-specs"
-                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
-                        placeholder='e.g., {"weight": "5 lbs", "material": "steel"}'
-                        value={productSpecifications}
-                        onChange={(e) => setProductSpecifications(e.target.value)}
-                      />
-                    </div>
-                    <Button type="submit" className="w-full">
-                      Publish New Product
+              {adminView === 'menu' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Admin Dashboard</CardTitle>
+                    <p className="text-muted-foreground">Select an action to perform.</p>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-2 gap-4">
+                    <Button onClick={() => setAdminView('part')} size="lg">
+                      <Package className="mr-2 h-4 w-4" /> List a New Part
                     </Button>
-                  </form>
-                </CardContent>
-              </Card>
+                    <Button onClick={() => setAdminView('product')} size="lg">
+                      <Package className="mr-2 h-4 w-4" /> List a New Product
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {adminView === 'part' && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>List a New Part</CardTitle>
+                      <Button variant="outline" onClick={() => setAdminView('menu')}>Back to Menu</Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handlePublishNewPart} className="space-y-4">
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="part-year">Vehicle Year</Label>
+                          <Select value={partYear} onValueChange={setPartYear}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {vehicleYears.map(year => (
+                                <SelectItem key={year} value={year.toString()}>
+                                  {year}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="part-make">Vehicle Make</Label>
+                          <Select value={partMake} onValueChange={setPartMake}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Make" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {vehicleMakes.map(make => (
+                                <SelectItem key={make.name} value={make.name}>
+                                  {make.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="part-model">Vehicle Model</Label>
+                          <Select value={partModel} onValueChange={setPartModel}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Model" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {vehicleModels.map(model => (
+                                <SelectItem key={model} value={model}>
+                                  {model}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="part-name">Part Name</Label>
+                        <Input id="part-name" value={partName} onChange={(e) => setPartName(e.target.value)} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="part-description">Description</Label>
+                        <textarea id="part-description" className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={partDescription} onChange={(e) => setPartDescription(e.target.value)} required />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="part-price">Price ($)</Label>
+                          <Input id="part-price" type="number" step="0.01" value={partPrice} onChange={(e) => setPartPrice(e.target.value)} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="part-quantity">Quantity</Label>
+                          <Input id="part-quantity" type="number" value={partQuantity} onChange={(e) => setPartQuantity(e.target.value)} required />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="part-brand">Brand</Label>
+                        <select id="part-brand" className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={partBrand} onChange={(e) => setPartBrand(e.target.value)} required >
+                          <option value="" disabled>Select a brand</option>
+                          <option value="Wagner">Wagner</option>
+                          <option value="K&N">K&N</option>
+                          <option value="Philips">Philips</option>
+                          <option value="Borla">Borla</option>
+                          <option value="Fram">Fram</option>
+                          <option value="NGK">NGK</option>
+                          <option value="Monroe">Monroe</option>
+                          <option value="Mishimoto">Mishimoto</option>
+                          <option value="Optima">Optima</option>
+                          <option value="StopTech">StopTech</option>
+                          <option value="Deatschwerks">Deatschwerks</option>
+                          <option value="BC Racing">BC Racing</option>
+                          <option value="Garrett Motion">Garrett Motion</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="part-category">Category</Label>
+                        <select id="part-category" className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={partCategory} onChange={(e) => setPartCategory(e.target.value)} required >
+                          <option value="" disabled>Select a category</option>
+                          <option value="Engine">Engine</option>
+                          <option value="Brakes">Brakes</option>
+                          <option value="Suspension">Suspension</option>
+                          <option value="Electrical">Electrical</option>
+                          <option value="Cooling">Cooling</option>
+                          <option value="Exhaust">Exhaust</option>
+                          <option value="Filters">Filters</option>
+                          <option value="Tools">Tools</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="part-images">Part Images</Label>
+                        <Input id="part-images" type="file" onChange={(e) => setPartImages(e.target.files)} multiple />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="part-specs">Specifications</Label>
+                        <textarea id="part-specs" className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={partSpecifications} onChange={(e) => setPartSpecifications(e.target.value)} />
+                      </div>
+                      <Button type="submit" className="w-full">Publish New Part</Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
+
+              {adminView === 'product' && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>List a New Product</CardTitle>
+                      <Button variant="outline" onClick={() => setAdminView('menu')}>Back to Menu</Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handlePublishGenericProduct} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="product-name">Product Name</Label>
+                        <Input id="product-name" value={genericProductName} onChange={(e) => setGenericProductName(e.target.value)} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="product-description">Description</Label>
+                        <textarea id="product-description" className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={genericProductDescription} onChange={(e) => setGenericProductDescription(e.target.value)} required />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="product-price">Price ($)</Label>
+                          <Input id="product-price" type="number" step="0.01" value={genericProductPrice} onChange={(e) => setGenericProductPrice(e.target.value)} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="product-quantity">Quantity</Label>
+                          <Input id="product-quantity" type="number" value={genericProductQuantity} onChange={(e) => setGenericProductQuantity(e.target.value)} required />
+                        </div>
+                      </div>
+                       <div className="space-y-2">
+                        <Label htmlFor="product-brand">Brand</Label>
+                        <select id="product-brand" className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={genericProductBrand} onChange={(e) => setGenericProductBrand(e.target.value)} required >
+                          <option value="" disabled>Select a brand</option>
+                          <option value="Wagner">Wagner</option>
+                          <option value="K&N">K&N</option>
+                          <option value="Philips">Philips</option>
+                          <option value="Borla">Borla</option>
+                          <option value="Fram">Fram</option>
+                          <option value="NGK">NGK</option>
+                          <option value="Monroe">Monroe</option>
+                          <option value="Mishimoto">Mishimoto</option>
+                          <option value="Optima">Optima</option>
+                          <option value="StopTech">StopTech</option>
+                          <option value="Deatschwerks">Deatschwerks</option>
+                          <option value="BC Racing">BC Racing</option>
+                          <option value="Garrett Motion">Garrett Motion</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="product-category">Category</Label>
+                        <select id="product-category" className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={genericProductCategory} onChange={(e) => setGenericProductCategory(e.target.value)} required >
+                          <option value="" disabled>Select a category</option>
+                          <option value="Engine">Engine</option>
+                          <option value="Brakes">Brakes</option>
+                          <option value="Suspension">Suspension</option>
+                          <option value="Electrical">Electrical</option>
+                          <option value="Cooling">Cooling</option>
+                          <option value="Exhaust">Exhaust</option>
+                          <option value="Filters">Filters</option>
+                          <option value="Tools">Tools</option>
+                          <option value="Merchandise">Merchandise</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="product-images">Product Images</Label>
+                        <Input id="product-images" type="file" onChange={(e) => setGenericProductImages(e.target.files)} multiple />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="product-specs">Specifications</Label>
+                        <textarea id="product-specs" className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={genericProductSpecifications} onChange={(e) => setGenericProductSpecifications(e.target.value)} />
+                      </div>
+                      <Button type="submit" className="w-full">Publish New Product</Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           )}
 
