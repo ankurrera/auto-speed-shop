@@ -12,6 +12,20 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 
+// Define the type for a product object to ensure type safety
+interface Product {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  originalPrice?: number;
+  image_urls: string[];
+  rating: number;
+  reviews: number;
+  inStock: boolean;
+  isOnSale?: boolean;
+}
+
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
@@ -20,7 +34,8 @@ const Home = () => {
   const navigate = useNavigate();
 
   // Fetch featured products from Supabase
-  const { data: featuredProducts = [] } = useQuery({
+  // We use the new `Product` type to ensure the data is correctly structured
+  const { data: featuredProducts = [] } = useQuery<Product[]>({
     queryKey: ['featured-products'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -42,7 +57,8 @@ const Home = () => {
         rating: 4.5,
         reviews: Math.floor(Math.random() * 200) + 50,
         inStock: product.stock_quantity > 0,
-        isOnSale: product.compare_at_price && Number(product.compare_at_price) > Number(product.price)
+        isOnSale: product.compare_at_price && Number(product.compare_at_price) > Number(product.price),
+        className: "hover:scale-105 transition-transform duration-300 animate-fade-in-up" // Add this line
       }));
     }
   });
