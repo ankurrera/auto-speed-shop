@@ -104,12 +104,24 @@ const Header = () => {
               </Link>
             </Button>
 
-            {/* Account */}
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/account">
-                <User className="h-5 w-5" />
-              </Link>
-            </Button>
+            {/* Account dropdown menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="relative">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link to="/seller-dashboard">Seller Dashboard</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/account">My Account</Link>
+                </DropdownMenuItem>
+                {/* Add more account links here as needed */}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Theme toggle */}
             <SimpleThemeToggle />

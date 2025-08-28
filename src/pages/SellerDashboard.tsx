@@ -13,14 +13,63 @@ import { useToast } from "@/components/ui/use-toast";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
 const categories = [
-  "Engine",
-  "Brakes",
+  "Engine Parts",
+  "Valvetrain",
+  "Fuel supply system",
+  "Air intake and exhaust systems",
+  "Turbochargers / Superchargers",
+  "Ignition system",
+  "Engine lubrication components",
+  "Engine cooling system",
+  "Engine electrical parts",
+  "Differential",
+  "Axle",
+  "AD / ADAS",
+  "Telematics / Car navigation",
+  "Entertainment / Audio",
+  "Keys",
+  "ECU",
+  "Motors",
+  "Interior switch",
+  "Sensor",
+  "Electrical parts",
+  "Cable / Connector",
+  "Climate control system",
+  "HVAC module",
+  "Air conditioner",
+  "Heater",
+  "EV climate control parts",
+  "Climate control peripherals",
+  "Instrument panel",
+  "Display",
+  "Airbag",
+  "Seat",
+  "Seat belt",
+  "Pedal",
+  "Interior trim",
+  "Interior parts",
+  "Lighting",
+  "Bumper",
+  "Window glass",
+  "Exterior parts",
+  "Chassis module",
+  "Brake",
+  "Sub-brake",
+  "ABS / TCS / ESC",
+  "Steering",
   "Suspension",
-  "Electrical",
-  "Cooling",
-  "Exhaust",
-  "Filters",
-  "Tools",
+  "Tire & wheel",
+  "Body panel / Frame",
+  "Body reinforcement and protector",
+  "Door",
+  "Hood",
+  "Trunk lid",
+  "Sunroof",
+  "Convertible roof",
+  "Wiper",
+  "Window washer",
+  "Fuel tank",
+  "General Parts",
 ];
 
 const dashboardNavItems = [
@@ -62,6 +111,10 @@ const SellerDashboard = () => {
     image_urls: [],
     specifications: "",
     category: "",
+    make: "",
+    model: "",
+    year_range: "",
+    vin: "",
   });
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -156,6 +209,10 @@ const SellerDashboard = () => {
       brand: sellerInfo.name,
       seller_id: sellerId,
       category: productInfo.category,
+      make: productInfo.make,
+      model: productInfo.model,
+      year_range: productInfo.year_range,
+      vin: productInfo.vin,
     };
 
     if (editingProductId) {
@@ -204,6 +261,10 @@ const SellerDashboard = () => {
       image_urls: [],
       specifications: "",
       category: "",
+      make: "",
+      model: "",
+      year_range: "",
+      vin: "",
     });
     refetchProducts();
   };
@@ -218,6 +279,10 @@ const SellerDashboard = () => {
       image_urls: product.image_urls,
       specifications: product.specifications,
       category: product.category,
+      make: product.make,
+      model: product.model,
+      year_range: product.year_range,
+      vin: product.vin,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -368,6 +433,55 @@ const SellerDashboard = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  <Separator className="my-8" />
+                  <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="part-make">Make</Label>
+                      <Input
+                        id="part-make"
+                        value={productInfo.make}
+                        onChange={(e) =>
+                          setProductInfo({ ...productInfo, make: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="part-model">Model</Label>
+                      <Input
+                        id="part-model"
+                        value={productInfo.model}
+                        onChange={(e) =>
+                          setProductInfo({ ...productInfo, model: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="part-year-range">Year(s)</Label>
+                      <Input
+                        id="part-year-range"
+                        value={productInfo.year_range}
+                        onChange={(e) =>
+                          setProductInfo({ ...productInfo, year_range: e.target.value })
+                        }
+                        placeholder="e.g., 2018-2024 or 2020"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="part-vin">VIN (Optional)</Label>
+                      <Input
+                        id="part-vin"
+                        value={productInfo.vin}
+                        onChange={(e) =>
+                          setProductInfo({ ...productInfo, vin: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="product-images">Product Images</Label>
                     <Input
@@ -389,7 +503,7 @@ const SellerDashboard = () => {
                         })
                       }
                       rows={4}
-                      placeholder="List specifications, e.g., 'Make: Toyota', 'Model: Camry', 'Year: 2018-2024'"
+                      placeholder="List additional specifications here."
                     />
                   </div>
                   <div className="flex space-x-2">
@@ -407,6 +521,10 @@ const SellerDashboard = () => {
                           image_urls: [],
                           specifications: "",
                           category: "",
+                          make: "",
+                          model: "",
+                          year_range: "",
+                          vin: "",
                         });
                       }}>
                         Cancel Edit
