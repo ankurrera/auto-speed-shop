@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent, ChangeEvent } from "react";
+import { useState, useEffect, FormEvent, ChangeEvent, useCallback } from "react"; // 1. Import useCallback
 import { Link, useNavigate } from "react-router-dom";
 import { Box, Package, ShoppingCart, User as UserIcon, TrendingUp, Archive, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,29 @@ interface Product {
   model?: string;
   year_range?: string;
   vin?: string;
+}
+
+// 2. Define a specific type for part specifications to replace 'any'
+interface PartSpecifications {
+  category?: string;
+  make?: string;
+  model?: string;
+  year_range?: string;
+  vin?: string;
+  additional?: string;
+}
+
+interface Part {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock_quantity: number;
+  image_urls: string[];
+  specifications: PartSpecifications | null; // 3. Use the specific type here
+  brand: string;
+  part_number?: string;
+  sku?: string;
 }
 
 const categories = [
@@ -82,17 +105,23 @@ const SellerDashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const checkUserAndSeller = async () => {
+  // 4. Wrap checkUserAndSeller in useCallback
+  const checkUserAndSeller = useCallback(async () => {
+    try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        console.log('User is authenticated. User ID:', session.user.id);
         setIsLoggedIn(true);
         setUser(session.user);
+        
         const { data: sellerData, error } = await supabase
           .from("sellers")
           .select("id, name")
           .eq("user_id", session.user.id)
           .maybeSingle();
+        
         if (sellerData) {
+          console.log('Seller found:', sellerData);
           setIsSeller(true);
           setSellerId(sellerData.id);
           setSellerInfo(prev => ({ ...prev, name: sellerData.name }));
@@ -103,12 +132,16 @@ const SellerDashboard = () => {
         setIsLoggedIn(false);
         navigate("/account");
       }
-  };
+    } catch (error) {
+      console.error("Error in checkUserAndSeller:", error);
+    }
+  }, [navigate]);
 
   useEffect(() => {
     checkUserAndSeller();
-  }, [navigate]);
+  }, [checkUserAndSeller]); // 5. Use the memoized function in the dependency array
 
+  // Query for products
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['seller-products', sellerId],
     queryFn: async () => {
@@ -125,35 +158,66 @@ const SellerDashboard = () => {
     enabled: !!sellerId,
   });
 
+  // Query for parts
+  const { data: parts = [] } = useQuery<Part[]>({
+    queryKey: ['seller-parts', sellerId],
+    queryFn: async () => {
+      if (!sellerId) return [];
+      const { data, error } = await supabase
+        .from('parts')
+        .select('*')
+        .eq('seller_id', sellerId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!sellerId,
+  });
+
   const handleSellerSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const { error } = await supabase.from("sellers").insert([
-      { name: sellerInfo.name, email: user.email, phone: sellerInfo.phone, address: sellerInfo.address, user_id: user.id },
-    ]);
+    try {
+      const { error } = await supabase.from("sellers").insert([
+        { 
+          name: sellerInfo.name, 
+          email: user.email, 
+          phone: sellerInfo.phone, 
+          address: sellerInfo.address, 
+          user_id: user.id 
+        },
+      ]);
 
-    if (error) {
-      toast({ title: "Error", description: "Failed to create seller account.", variant: "destructive" });
-    } else {
-      toast({ title: "Success!", description: "Your seller account has been created." });
-      checkUserAndSeller();
+      if (error) {
+        console.error("Error creating seller account:", error);
+        toast({ title: "Error", description: "Failed to create seller account.", variant: "destructive" });
+      } else {
+        toast({ title: "Success!", description: "Your seller account has been created." });
+        checkUserAndSeller();
+      }
+    } catch (error) {
+      console.error("Unexpected error in handleSellerSignup:", error);
+      toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     }
   };
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // --- THIS IS THE FIX ---
-    // Add a guard clause to ensure the seller ID is loaded before proceeding.
     if (!user || !sellerId) {
         toast({
             title: "Please wait",
             description: "Your seller information is still loading. Please try again in a moment.",
             variant: "destructive",
         });
-        return; // Stop the function here if data isn't ready
+        return;
     }
+
+    console.log('User is authenticated. User ID:', user.id);
+    console.log('Seller ID:', sellerId);
+    console.log('Listing type:', listingType);
 
     const cleanupAndRefetch = () => {
         setEditingProductId(null);
@@ -162,48 +226,109 @@ const SellerDashboard = () => {
             specifications: "", category: "", make: "", model: "", year_range: "", vin: "",
         });
         queryClient.invalidateQueries({ queryKey: ['seller-products'] });
+        queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     };
 
-    if (listingType === 'part') {
-        const partData = {
-            ...productInfo, price: parseFloat(productInfo.price) || 0, stock_quantity: Number(productInfo.stock_quantity) || 0,
-            seller_id: sellerId, brand: sellerInfo.name, is_active: productInfo.stock_quantity > 0,
-        };
-        const { error } = await supabase.rpc('create_part_with_fitment', { part_data: partData });
-        if (error) {
-            toast({ title: "Error", description: "Failed to list part.", variant: "destructive" });
-        } else {
+    try {
+        if (listingType === 'part') {
+            // 6. Send the specifications as a structured object, not a JSON string.
+            // Supabase client libraries handle the serialization automatically.
+            const partData = {
+                name: productInfo.name,
+                description: productInfo.description,
+                price: parseFloat(productInfo.price) || 0,
+                stock_quantity: Number(productInfo.stock_quantity) || 0,
+                brand: sellerInfo.name,
+                seller_id: sellerId,
+                specifications: {
+                    category: productInfo.category,
+                    make: productInfo.make,
+                    model: productInfo.model,
+                    year_range: productInfo.year_range,
+                    vin: productInfo.vin,
+                    additional: productInfo.specifications
+                },
+                image_urls: productInfo.image_urls,
+            };
+
+            console.log('Inserting part data:', partData);
+
+            const { data, error } = await supabase
+                .from('parts')
+                .insert([partData])
+                .select();
+
+            if (error) {
+                console.error('Error saving part:', error);
+                toast({ 
+                    title: "Error", 
+                    description: `Failed to list part: ${error.message}`, 
+                    variant: "destructive" 
+                });
+                return;
+            }
+
+            console.log('Part saved successfully:', data);
             toast({ title: "Success!", description: "Your part has been listed." });
             cleanupAndRefetch();
+            return;
         }
-        return;
-    }
 
-    const productData = {
-        name: productInfo.name, description: productInfo.description, price: parseFloat(productInfo.price) || 0,
-        stock_quantity: Number(productInfo.stock_quantity) || 0, is_active: productInfo.stock_quantity > 0,
-        image_urls: productInfo.image_urls, specifications: productInfo.specifications, is_featured: false,
-        brand: sellerInfo.name, seller_id: sellerId, category: productInfo.category, product_type: 'GENERIC',
-    };
+        // For products - ensure we have the seller_id in the data
+        const productData = {
+            name: productInfo.name,
+            description: productInfo.description,
+            price: parseFloat(productInfo.price) || 0,
+            stock_quantity: Number(productInfo.stock_quantity) || 0,
+            is_active: productInfo.stock_quantity > 0,
+            image_urls: productInfo.image_urls,
+            specifications: productInfo.specifications,
+            is_featured: false,
+            brand: sellerInfo.name,
+            seller_id: sellerId, // This is crucial for RLS policies
+            category: productInfo.category,
+            product_type: 'GENERIC',
+        };
 
-    let error;
-    if (editingProductId) {
-        const { error: updateError } = await supabase.from("products").update(productData).eq("id", editingProductId);
-        error = updateError;
-    } else {
-        const { error: insertError } = await supabase.from("products").insert([productData]);
-        error = insertError;
-    }
+        console.log('Product data:', productData);
 
-    if (error) {
-        toast({ title: "Error", description: `Failed to ${editingProductId ? 'update' : 'add'} product.`, variant: "destructive"});
-    } else {
-        toast({ title: "Success!", description: `Product ${editingProductId ? 'updated' : 'listed'}.`});
-        cleanupAndRefetch();
+        let error;
+        if (editingProductId) {
+            const { error: updateError } = await supabase
+                .from("products")
+                .update(productData)
+                .eq("id", editingProductId)
+                .eq("seller_id", sellerId); // Ensure seller can only update their own products
+            error = updateError;
+        } else {
+            const { error: insertError } = await supabase
+                .from("products")
+                .insert([productData]);
+            error = insertError;
+        }
+
+        if (error) {
+            console.error('Error saving product:', error);
+            toast({ 
+                title: "Error", 
+                description: `Failed to ${editingProductId ? 'update' : 'add'} product: ${error.message}`, 
+                variant: "destructive"
+            });
+        } else {
+            console.log('Product saved successfully');
+            toast({ title: "Success!", description: `Product ${editingProductId ? 'updated' : 'listed'} successfully.`});
+            cleanupAndRefetch();
+        }
+    } catch (error) {
+        console.error('Unexpected error:', error);
+        toast({ 
+            title: "Error", 
+            description: "An unexpected error occurred. Please try again.", 
+            variant: "destructive" 
+        });
     }
   };
-
 
   const handleEditProduct = (product: Product) => {
     setEditingProductId(product.id);
@@ -224,6 +349,27 @@ const SellerDashboard = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleEditPart = (part: Part) => {
+    setEditingProductId(part.id);
+    // 7. Directly use the specifications object, as it's now properly typed and parsed.
+    const specs = part.specifications;
+    setProductInfo({
+      name: part.name,
+      description: part.description,
+      price: String(part.price),
+      stock_quantity: part.stock_quantity,
+      image_urls: part.image_urls || [],
+      specifications: specs?.additional || "",
+      category: specs?.category || "",
+      make: specs?.make || "",
+      model: specs?.model || "",
+      year_range: specs?.year_range || "",
+      vin: specs?.vin || "",
+    });
+    setListingType("part");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
       const { error } = await supabase.from("products").delete().eq("id", productId);
@@ -238,9 +384,29 @@ const SellerDashboard = () => {
     },
   });
 
+  const deletePartMutation = useMutation({
+    mutationFn: async (partId: string) => {
+      const { error } = await supabase.from("parts").delete().eq("id", partId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Success!", description: "Part has been deleted." });
+      queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: "Failed to delete part.", variant: "destructive" });
+    },
+  });
+
   const handleDeleteProduct = (productId: string) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       deleteProductMutation.mutate(productId);
+    }
+  };
+
+  const handleDeletePart = (partId: string) => {
+    if (window.confirm("Are you sure you want to delete this part?")) {
+      deletePartMutation.mutate(partId);
     }
   };
 
@@ -361,6 +527,35 @@ const SellerDashboard = () => {
               </CardContent>
             </Card>
             <Separator className="my-8" />
+            
+            {/* Parts Section */}
+            <h2 className="text-2xl font-bold mb-4">Your Listed Parts</h2>
+            <div className="space-y-4">
+              {parts.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">You have no parts listed yet.</div>
+              ) : (
+                parts.map((part) => (
+                  <Card key={part.id}>
+                    <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+                      <div className="flex-1 space-y-1">
+                        <h3 className="font-semibold text-lg">{part.name} (Part)</h3>
+                        <p className="text-muted-foreground text-sm">{part.brand}</p>
+                        <p className="text-lg font-bold">${part.price}</p>
+                        <p className="text-sm">In Stock: {part.stock_quantity}</p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEditPart(part)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeletePart(part.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+
+            <Separator className="my-8" />
+            
+            {/* Products Section */}
             <h2 className="text-2xl font-bold mb-4">Your Listed Products</h2>
             <div className="space-y-4">
               {products.length === 0 ? (
@@ -370,7 +565,7 @@ const SellerDashboard = () => {
                   <Card key={product.id}>
                     <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
                       <div className="flex-1 space-y-1">
-                        <h3 className="font-semibold text-lg">{product.name} ({product.product_type === 'PART' ? 'Part' : 'Product'})</h3>
+                        <h3 className="font-semibold text-lg">{product.name} (Product)</h3>
                         <p className="text-muted-foreground text-sm">{product.category}</p>
                         <p className="text-lg font-bold">${product.price}</p>
                         <p className="text-sm">In Stock: {product.stock_quantity}</p>
