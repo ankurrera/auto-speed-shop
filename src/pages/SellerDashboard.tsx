@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Box, Package, ShoppingCart, User, TrendingUp, Archive, Edit, Trash2 } from "lucide-react";
+import { Box, Package, ShoppingCart, User as UserIcon, TrendingUp, Archive, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,89 +11,50 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import type { User } from '@supabase/supabase-js';
+
+// Defines the shape of a product object for type safety
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock_quantity: number;
+  image_urls: string[];
+  specifications: string;
+  category: string;
+  is_active: boolean;
+  product_type: 'PART' | 'GENERIC';
+  make?: string;
+  model?: string;
+  year_range?: string;
+  vin?: string;
+}
 
 const categories = [
-  "Engine Parts",
-  "Valvetrain",
-  "Fuel supply system",
-  "Air intake and exhaust systems",
-  "Turbochargers / Superchargers",
-  "Ignition system",
-  "Engine lubrication components",
-  "Engine cooling system",
-  "Engine electrical parts",
-  "Differential",
-  "Axle",
-  "AD / ADAS",
-  "Telematics / Car navigation",
-  "Entertainment / Audio",
-  "Keys",
-  "ECU",
-  "Motors",
-  "Interior switch",
-  "Sensor",
-  "Electrical parts",
-  "Cable / Connector",
-  "Climate control system",
-  "HVAC module",
-  "Air conditioner",
-  "Heater",
-  "EV climate control parts",
-  "Climate control peripherals",
-  "Instrument panel",
-  "Display",
-  "Airbag",
-  "Seat",
-  "Seat belt",
-  "Pedal",
-  "Interior trim",
-  "Interior parts",
-  "Lighting",
-  "Bumper",
-  "Window glass",
-  "Exterior parts",
-  "Chassis module",
-  "Brake",
-  "Sub-brake",
-  "ABS / TCS / ESC",
-  "Steering",
-  "Suspension",
-  "Tire & wheel",
-  "Body panel / Frame",
-  "Body reinforcement and protector",
-  "Door",
-  "Hood",
-  "Trunk lid",
-  "Sunroof",
-  "Convertible roof",
-  "Wiper",
-  "Window washer",
-  "Fuel tank",
-  "General Parts",
+  "Engine Parts", "Valvetrain", "Fuel supply system", "Air intake and exhaust systems",
+  "Turbochargers / Superchargers", "Ignition system", "Engine lubrication components",
+  "Engine cooling system", "Engine electrical parts", "Differential", "Axle", "AD / ADAS",
+  "Telematics / Car navigation", "Entertainment / Audio", "Keys", "ECU", "Motors",
+  "Interior switch", "Sensor", "Electrical parts", "Cable / Connector", "Climate control system",
+  "HVAC module", "Air conditioner", "Heater", "EV climate control parts", "Climate control peripherals",
+  "Instrument panel", "Display", "Airbag", "Seat", "Seat belt", "Pedal", "Interior trim",
+  "Interior parts", "Lighting", "Bumper", "Window glass", "Exterior parts", "Chassis module",
+  "Brake", "Sub-brake", "ABS / TCS / ESC", "Steering", "Suspension", "Tire & wheel",
+  "Body panel / Frame", "Body reinforcement and protector", "Door", "Hood", "Trunk lid",
+  "Sunroof", "Convertible roof", "Wiper", "Window washer", "Fuel tank", "General Parts",
 ];
 
 const dashboardNavItems = [
-  {
-    icon: <Package className="h-4 w-4" />,
-    label: "Products",
-    href: "products",
-  },
-  {
-    icon: <ShoppingCart className="h-4 w-4" />,
-    label: "Orders",
-    href: "orders",
-  },
-  {
-    icon: <TrendingUp className="h-4 w-4" />,
-    label: "Analytics",
-    href: "/analytics",
-  },
+  { icon: <Package className="h-4 w-4" />, label: "Products", href: "products" },
+  { icon: <ShoppingCart className="h-4 w-4" />, label: "Orders", href: "orders" },
+  { icon: <TrendingUp className="h-4 w-4" />, label: "Analytics", href: "/analytics" },
 ];
 
 const SellerDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSeller, setIsSeller] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("products");
@@ -122,286 +82,6 @@ const SellerDashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const checkUserAndSeller = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setIsLoggedIn(true);
-        setUser(session.user);
-        const { data: sellerData, error } = await supabase
-          .from("sellers")
-          .select("id, name")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-        if (sellerData) {
-          setIsSeller(true);
-          setSellerId(sellerData.id);
-          // Set seller name for use as brand
-          setSellerInfo(prev => ({ ...prev, name: sellerData.name }));
-        } else if (error) {
-          console.error("Error checking seller status:", error.message);
-        }
-      } else {
-        setIsLoggedIn(false);
-        navigate("/account");
-      }
-    };
-    checkUserAndSeller();
-  }, [navigate]);
-
-  const { data: products = [] } = useQuery({
-    queryKey: ['seller-products', sellerId],
-    queryFn: async () => {
-      if (!sellerId) return [];
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('seller_id', sellerId)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!sellerId,
-  });
-
-  const handleSellerSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    const { error } = await supabase.from("sellers").insert([
-      {
-        name: sellerInfo.name,
-        email: user.email,
-        phone: sellerInfo.phone,
-        address: sellerInfo.address,
-        user_id: user.id,
-      },
-    ]).select().single();
-
-    if (error) {
-      console.error("Error creating seller account:", error.message);
-      toast({
-        title: "Error",
-        description: "Failed to create seller account. Please try again.",
-        variant: "destructive",
-      });
-    } else {
-      setIsSeller(true);
-      toast({
-        title: "Success!",
-        description: "Your seller account has been created successfully.",
-      });
-      // Re-run the user check to get the new seller ID
-      checkUserAndSeller();
-    }
-  };
-
-  // --- UPDATED SUBMIT HANDLER ---
-  const handleProductSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !sellerId) return;
-
-    // Helper function to reset form and refetch data
-    const cleanupAndRefetch = () => {
-        setEditingProductId(null);
-        setProductInfo({
-            name: "",
-            description: "",
-            price: "",
-            stock_quantity: 0,
-            image_urls: [],
-            specifications: "",
-            category: "",
-            make: "",
-            model: "",
-            year_range: "",
-            vin: "",
-        });
-        queryClient.invalidateQueries({ queryKey: ['seller-products'] });
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-    };
-
-    // --- LOGIC FOR 'PART' LISTING ---
-    // If we are listing a part, we call our special database function
-    if (listingType === 'part') {
-        const partData = {
-            ...productInfo,
-            price: parseFloat(productInfo.price) || 0,
-            stock_quantity: Number(productInfo.stock_quantity) || 0,
-            seller_id: sellerId,
-            brand: sellerInfo.name,
-            is_active: productInfo.stock_quantity > 0,
-        };
-
-        // Call the RPC function to handle inserting into two tables
-        const { error } = await supabase.rpc('create_part_with_fitment', { part_data: partData });
-
-        if (error) {
-            console.error("Error creating part:", error.message);
-            toast({
-                title: "Error",
-                description: "Failed to list part. Please check the form and try again.",
-                variant: "destructive",
-            });
-        } else {
-            toast({
-                title: "Success!",
-                description: "Your part has been listed successfully.",
-            });
-            cleanupAndRefetch();
-        }
-        return; // Stop execution here for parts
-    }
-
-    // --- LOGIC FOR GENERIC 'PRODUCT' LISTING ---
-    // This is the original logic, now just for generic products
-    const productData = {
-        name: productInfo.name,
-        description: productInfo.description,
-        price: parseFloat(productInfo.price) || 0,
-        stock_quantity: Number(productInfo.stock_quantity) || 0,
-        is_active: productInfo.stock_quantity > 0,
-        image_urls: productInfo.image_urls,
-        specifications: productInfo.specifications,
-        is_featured: false,
-        brand: sellerInfo.name,
-        seller_id: sellerId,
-        category: productInfo.category,
-        product_type: 'GENERIC', // Set the type to distinguish from parts
-    };
-
-    let error;
-    if (editingProductId) {
-        const { error: updateError } = await supabase
-            .from("products")
-            .update(productData)
-            .eq("id", editingProductId);
-        error = updateError;
-    } else {
-        const { error: insertError } = await supabase.from("products").insert([productData]);
-        error = insertError;
-    }
-
-    if (error) {
-        console.error("Error saving product:", error.message);
-        toast({
-            title: "Error",
-            description: `Failed to ${editingProductId ? 'update' : 'add'} product.`,
-            variant: "destructive",
-        });
-    } else {
-        toast({
-            title: "Success!",
-            description: `Your product has been ${editingProductId ? 'updated' : 'listed'} successfully.`,
-        });
-        cleanupAndRefetch();
-    }
-  };
-
-
-  const handleEditProduct = (product: any) => {
-    // NOTE: This function will work for generic products, but not for parts
-    // To edit parts, you would need to:
-    // 1. Fetch the associated fitment data from the `part_fitments` table.
-    // 2. Populate the form with both product and fitment data.
-    // 3. Create a new RPC function `update_part_with_fitment` to handle the update across two tables.
-    
-    setEditingProductId(product.id);
-    setProductInfo({
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      stock_quantity: product.stock_quantity,
-      image_urls: product.image_urls || [],
-      specifications: product.specifications || "",
-      category: product.category || "",
-      // These will be empty for generic products, which is correct.
-      // For parts, this data needs to be fetched separately.
-      make: product.make || "",
-      model: product.model || "",
-      year_range: product.year_range || "",
-      vin: product.vin || "",
-    });
-    // Determine listing type based on the product_type field from the DB
-    setListingType(product.product_type === "PART" ? "part" : "product");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const deleteProductMutation = useMutation({
-    mutationFn: async (productId: string) => {
-      const { error } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", productId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success!",
-        description: "Product has been deleted.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
-    },
-    onError: (error: any) => {
-      console.error("Error deleting product:", error.message);
-      toast({
-        title: "Error",
-        description: "Failed to delete product.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleDeleteProduct = (productId: string) => {
-    if (window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
-      deleteProductMutation.mutate(productId);
-    }
-  };
-
-  const archiveProductMutation = useMutation({
-    mutationFn: async ({ productId, is_active }: { productId: string, is_active: boolean }) => {
-      // The logic is to toggle the current state.
-      const { error } = await supabase
-        .from("products")
-        .update({ is_active: !is_active })
-        .eq("id", productId);
-      if (error) throw error;
-    },
-    onSuccess: (_, variables) => {
-      toast({
-        // The description should reflect the *new* state.
-        // If it *was* active, it's now archived. If it *was not* active, it's now unarchived.
-        title: "Success!",
-        description: `Product has been ${variables.is_active ? 'archived' : 'unarchived'}.`,
-      });
-      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onError: (error: any) => {
-      console.error("Error archiving product:", error.message);
-      toast({
-        title: "Error",
-        description: "Failed to update product status.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleArchiveProduct = (productId: string, is_active: boolean) => {
-    archiveProductMutation.mutate({ productId, is_active });
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    // Note: createObjectURL is for temporary client-side previews.
-    // For persistent storage, you'd need to upload these files to Supabase Storage
-    // and save the public URLs. This implementation is for demonstration.
-    const imageUrls = files.map(file => URL.createObjectURL(file));
-    setProductInfo({ ...productInfo, image_urls: imageUrls });
-  };
-  
-  // Minor fix to checkUserAndSeller for re-usability
   const checkUserAndSeller = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -423,10 +103,171 @@ const SellerDashboard = () => {
         setIsLoggedIn(false);
         navigate("/account");
       }
+  };
+
+  useEffect(() => {
+    checkUserAndSeller();
+  }, [navigate]);
+
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ['seller-products', sellerId],
+    queryFn: async () => {
+      if (!sellerId) return [];
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('seller_id', sellerId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!sellerId,
+  });
+
+  const handleSellerSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    const { error } = await supabase.from("sellers").insert([
+      { name: sellerInfo.name, email: user.email, phone: sellerInfo.phone, address: sellerInfo.address, user_id: user.id },
+    ]);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to create seller account.", variant: "destructive" });
+    } else {
+      toast({ title: "Success!", description: "Your seller account has been created." });
+      checkUserAndSeller();
+    }
+  };
+
+  const handleProductSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // --- THIS IS THE FIX ---
+    // Add a guard clause to ensure the seller ID is loaded before proceeding.
+    if (!user || !sellerId) {
+        toast({
+            title: "Please wait",
+            description: "Your seller information is still loading. Please try again in a moment.",
+            variant: "destructive",
+        });
+        return; // Stop the function here if data isn't ready
+    }
+
+    const cleanupAndRefetch = () => {
+        setEditingProductId(null);
+        setProductInfo({
+            name: "", description: "", price: "", stock_quantity: 0, image_urls: [],
+            specifications: "", category: "", make: "", model: "", year_range: "", vin: "",
+        });
+        queryClient.invalidateQueries({ queryKey: ['seller-products'] });
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     };
 
-  // The rest of your component remains the same...
+    if (listingType === 'part') {
+        const partData = {
+            ...productInfo, price: parseFloat(productInfo.price) || 0, stock_quantity: Number(productInfo.stock_quantity) || 0,
+            seller_id: sellerId, brand: sellerInfo.name, is_active: productInfo.stock_quantity > 0,
+        };
+        const { error } = await supabase.rpc('create_part_with_fitment', { part_data: partData });
+        if (error) {
+            toast({ title: "Error", description: "Failed to list part.", variant: "destructive" });
+        } else {
+            toast({ title: "Success!", description: "Your part has been listed." });
+            cleanupAndRefetch();
+        }
+        return;
+    }
 
+    const productData = {
+        name: productInfo.name, description: productInfo.description, price: parseFloat(productInfo.price) || 0,
+        stock_quantity: Number(productInfo.stock_quantity) || 0, is_active: productInfo.stock_quantity > 0,
+        image_urls: productInfo.image_urls, specifications: productInfo.specifications, is_featured: false,
+        brand: sellerInfo.name, seller_id: sellerId, category: productInfo.category, product_type: 'GENERIC',
+    };
+
+    let error;
+    if (editingProductId) {
+        const { error: updateError } = await supabase.from("products").update(productData).eq("id", editingProductId);
+        error = updateError;
+    } else {
+        const { error: insertError } = await supabase.from("products").insert([productData]);
+        error = insertError;
+    }
+
+    if (error) {
+        toast({ title: "Error", description: `Failed to ${editingProductId ? 'update' : 'add'} product.`, variant: "destructive"});
+    } else {
+        toast({ title: "Success!", description: `Product ${editingProductId ? 'updated' : 'listed'}.`});
+        cleanupAndRefetch();
+    }
+  };
+
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProductId(product.id);
+    setProductInfo({
+      name: product.name,
+      description: product.description,
+      price: String(product.price),
+      stock_quantity: product.stock_quantity,
+      image_urls: product.image_urls || [],
+      specifications: product.specifications || "",
+      category: product.category || "",
+      make: product.make || "",
+      model: product.model || "",
+      year_range: product.year_range || "",
+      vin: product.vin || "",
+    });
+    setListingType(product.product_type === "PART" ? "part" : "product");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      const { error } = await supabase.from("products").delete().eq("id", productId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Success!", description: "Product has been deleted." });
+      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: "Failed to delete product.", variant: "destructive" });
+    },
+  });
+
+  const handleDeleteProduct = (productId: string) => {
+    if (window.confirm("Are you sure you want to delete this product?")) {
+      deleteProductMutation.mutate(productId);
+    }
+  };
+
+  const archiveProductMutation = useMutation({
+    mutationFn: async ({ productId, is_active }: { productId: string; is_active: boolean }) => {
+      const { error } = await supabase.from("products").update({ is_active: !is_active }).eq("id", productId);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: "Success!", description: `Product has been ${variables.is_active ? 'archived' : 'unarchived'}.` });
+      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: "Failed to update product status.", variant: "destructive" });
+    },
+  });
+
+  const handleArchiveProduct = (productId: string, is_active: boolean) => {
+    archiveProductMutation.mutate({ productId, is_active });
+  };
+
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const imageUrls = files.map(file => URL.createObjectURL(file));
+    setProductInfo({ ...productInfo, image_urls: imageUrls });
+  };
+  
   const renderContent = () => {
     switch (activeTab) {
       case "products":
@@ -437,100 +278,42 @@ const SellerDashboard = () => {
               <CardHeader>
                 <div className="flex items-center gap-4">
                   <h2 className="text-xl font-bold">{editingProductId ? 'Edit' : 'List a New...'}</h2>
-                  <Button
-                    variant={listingType === "part" ? "default" : "outline"}
-                    onClick={() => setListingType("part")}
-                  >
-                    Part
-                  </Button>
-                  <Button
-                    variant={listingType === "product" ? "default" : "outline"}
-                    onClick={() => setListingType("product")}
-                  >
-                    Product
-                  </Button>
+                  <Button variant={listingType === "part" ? "default" : "outline"} onClick={() => setListingType("part")}>Part</Button>
+                  <Button variant={listingType === "product" ? "default" : "outline"} onClick={() => setListingType("product")}>Product</Button>
                 </div>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleProductSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="product-name">
-                      {listingType === "part" ? "Part Name" : "Product Name"}
-                    </Label>
-                    <Input
-                      id="product-name"
-                      value={productInfo.name}
-                      onChange={(e) =>
-                        setProductInfo({ ...productInfo, name: e.target.value })
-                      }
-                      required
-                    />
+                    <Label htmlFor="product-name">{listingType === "part" ? "Part Name" : "Product Name"}</Label>
+                    <Input id="product-name" value={productInfo.name} onChange={(e) => setProductInfo({ ...productInfo, name: e.target.value })} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="product-description">Description</Label>
-                    <Textarea
-                      id="product-description"
-                      value={productInfo.description}
-                      onChange={(e) =>
-                        setProductInfo({
-                          ...productInfo,
-                          description: e.target.value,
-                        })
-                      }
-                      rows={4}
-                      required
-                    />
+                    <Textarea id="product-description" value={productInfo.description} onChange={(e) => setProductInfo({ ...productInfo, description: e.target.value })} rows={4} required />
                   </div>
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="product-price">Price ($)</Label>
-                      <Input
-                        id="product-price"
-                        type="number"
-                        step="0.01"
-                        value={productInfo.price}
-                        onChange={(e) =>
-                          setProductInfo({ ...productInfo, price: e.target.value })
-                        }
-                        required
-                      />
+                      <Input id="product-price" type="number" step="0.01" value={productInfo.price} onChange={(e) => setProductInfo({ ...productInfo, price: e.target.value })} required />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="product-quantity">Quantity</Label>
-                      <Input
-                        id="product-quantity"
-                        type="number"
-                        value={productInfo.stock_quantity.toString()}
-                        onChange={(e) =>
-                          setProductInfo({ ...productInfo, stock_quantity: parseInt(e.target.value, 10) || 0 })
-                        }
-                        required
-                      />
+                      <Input id="product-quantity" type="number" value={productInfo.stock_quantity.toString()} onChange={(e) => setProductInfo({ ...productInfo, stock_quantity: parseInt(e.target.value, 10) || 0 })} required />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="product-category">Category</Label>
                     <Select value={productInfo.category} onValueChange={(value) => setProductInfo({ ...productInfo, category: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
                       <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
+                        {categories.map((category) => (<SelectItem key={category} value={category}>{category}</SelectItem>))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="product-images">Product Images</Label>
-                    <Input
-                      id="product-images"
-                      type="file"
-                      multiple
-                      onChange={handleImageUpload}
-                    />
+                    <Input id="product-images" type="file" multiple onChange={handleImageUpload} />
                   </div>
                   {listingType === "part" && (
                     <>
@@ -539,90 +322,39 @@ const SellerDashboard = () => {
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="part-make">Make</Label>
-                          <Input
-                            id="part-make"
-                            value={productInfo.make}
-                            onChange={(e) =>
-                              setProductInfo({ ...productInfo, make: e.target.value })
-                            }
-                            required
-                          />
+                          <Input id="part-make" value={productInfo.make} onChange={(e) => setProductInfo({ ...productInfo, make: e.target.value })} required />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="part-model">Model</Label>
-                          <Input
-                            id="part-model"
-                            value={productInfo.model}
-                            onChange={(e) =>
-                              setProductInfo({ ...productInfo, model: e.target.value })
-                            }
-                            required
-                          />
+                          <Input id="part-model" value={productInfo.model} onChange={(e) => setProductInfo({ ...productInfo, model: e.target.value })} required />
                         </div>
                       </div>
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="part-year-range">Year(s)</Label>
-                          <Input
-                            id="part-year-range"
-                            value={productInfo.year_range}
-                            onChange={(e) =>
-                              setProductInfo({ ...productInfo, year_range: e.target.value })
-                            }
-                            placeholder="e.g., 2018-2024 or 2020"
-                          />
+                          <Input id="part-year-range" value={productInfo.year_range} onChange={(e) => setProductInfo({ ...productInfo, year_range: e.target.value })} placeholder="e.g., 2018-2024 or 2020" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="part-vin">VIN (Optional)</Label>
-                          <Input
-                            id="part-vin"
-                            value={productInfo.vin}
-                            onChange={(e) =>
-                              setProductInfo({ ...productInfo, vin: e.target.value })
-                            }
-                          />
+                          <Input id="part-vin" value={productInfo.vin} onChange={(e) => setProductInfo({ ...productInfo, vin: e.target.value })} />
                         </div>
                       </div>
                     </>
                   )}
                   <div className="space-y-2">
                     <Label htmlFor="product-specs">Specifications</Label>
-                    <Textarea
-                      id="product-specs"
-                      value={productInfo.specifications}
-                      onChange={(e) =>
-                        setProductInfo({
-                          ...productInfo,
-                          specifications: e.target.value,
-                        })
-                      }
-                      rows={4}
-                      placeholder={listingType === "part" ? "Additional specifications, e.g., 'Color: Black'" : "List specifications here."}
-                    />
+                    <Textarea id="product-specs" value={productInfo.specifications} onChange={(e) => setProductInfo({ ...productInfo, specifications: e.target.value })} rows={4} placeholder={listingType === "part" ? "Additional specifications, e.g., 'Color: Black'" : "List specifications here."} />
                   </div>
                   <div className="flex space-x-2">
-                    <Button type="submit">
-                      {editingProductId ? "Update" : "List"} {listingType === "part" ? "Part" : "Product"}
-                    </Button>
+                    <Button type="submit">{editingProductId ? "Update" : "List"} {listingType === "part" ? "Part" : "Product"}</Button>
                     {editingProductId && (
                       <Button type="button" variant="outline" onClick={() => {
                         setEditingProductId(null);
                         setProductInfo({
-                          name: "",
-                          description: "",
-                          price: "",
-                          stock_quantity: 0,
-                          image_urls: [],
-                          specifications: "",
-                          category: "",
-                          make: "",
-                          model: "",
-                          year_range: "",
-                          vin: "",
+                            name: "", description: "", price: "", stock_quantity: 0, image_urls: [],
+                            specifications: "", category: "", make: "", model: "", year_range: "", vin: "",
                         });
-                      }}>
-                        Cancel Edit
-                      </Button>
+                      }}>Cancel Edit</Button>
                     )}
                   </div>
                 </form>
@@ -632,9 +364,7 @@ const SellerDashboard = () => {
             <h2 className="text-2xl font-bold mb-4">Your Listed Products</h2>
             <div className="space-y-4">
               {products.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  You have no products listed yet.
-                </div>
+                <div className="text-center text-muted-foreground py-8">You have no products listed yet.</div>
               ) : (
                 products.map((product) => (
                   <Card key={product.id}>
@@ -644,27 +374,12 @@ const SellerDashboard = () => {
                         <p className="text-muted-foreground text-sm">{product.category}</p>
                         <p className="text-lg font-bold">${product.price}</p>
                         <p className="text-sm">In Stock: {product.stock_quantity}</p>
-                        <p className={`text-sm font-medium ${product.is_active ? 'text-green-500' : 'text-yellow-500'}`}>
-                          Status: {product.is_active ? 'Active' : 'Archived'}
-                        </p>
+                        <p className={`text-sm font-medium ${product.is_active ? 'text-green-500' : 'text-yellow-500'}`}>Status: {product.is_active ? 'Active' : 'Archived'}</p>
                       </div>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleArchiveProduct(product.id, product.is_active)}
-                        >
-                          <Archive className="h-4 w-4 mr-2" />
-                          {product.is_active ? 'Archive' : 'Unarchive'}
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}>
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleArchiveProduct(product.id, product.is_active)}><Archive className="h-4 w-4 mr-2" />{product.is_active ? 'Archive' : 'Unarchive'}</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -673,12 +388,9 @@ const SellerDashboard = () => {
             </div>
           </>
         );
-      case "analytics":
-        return <div>Analytics Coming Soon...</div>;
-      case "orders":
-        return <div>Order Management Coming Soon...</div>;
-      default:
-        return <div>Select a tab</div>;
+      case "analytics": return <div>Analytics Coming Soon...</div>;
+      case "orders": return <div>Order Management Coming Soon...</div>;
+      default: return <div>Select a tab</div>;
     }
   };
 
@@ -696,49 +408,22 @@ const SellerDashboard = () => {
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-md mx-auto">
           <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Become a Seller</CardTitle>
-            </CardHeader>
+            <CardHeader className="text-center"><CardTitle className="text-2xl">Become a Seller</CardTitle></CardHeader>
             <CardContent>
               <form onSubmit={handleSellerSignup} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="seller-name">Store Name</Label>
-                  <Input
-                    id="seller-name"
-                    placeholder="Enter your store name"
-                    value={sellerInfo.name}
-                    onChange={(e) =>
-                      setSellerInfo({ ...sellerInfo, name: e.target.value })
-                    }
-                    required
-                  />
+                  <Input id="seller-name" placeholder="Enter your store name" value={sellerInfo.name} onChange={(e) => setSellerInfo({ ...sellerInfo, name: e.target.value })} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="seller-phone">Phone</Label>
-                  <Input
-                    id="seller-phone"
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    value={sellerInfo.phone}
-                    onChange={(e) =>
-                      setSellerInfo({ ...sellerInfo, phone: e.target.value })
-                    }
-                  />
+                  <Input id="seller-phone" type="tel" placeholder="Enter your phone number" value={sellerInfo.phone} onChange={(e) => setSellerInfo({ ...sellerInfo, phone: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="seller-address">Address</Label>
-                  <Textarea
-                    id="seller-address"
-                    placeholder="Enter your address"
-                    value={sellerInfo.address}
-                    onChange={(e) =>
-                      setSellerInfo({ ...sellerInfo, address: e.target.value })
-                    }
-                  />
+                  <Textarea id="seller-address" placeholder="Enter your address" value={sellerInfo.address} onChange={(e) => setSellerInfo({ ...sellerInfo, address: e.target.value })} />
                 </div>
-                <Button type="submit" className="w-full">
-                  Create Seller Account
-                </Button>
+                <Button type="submit" className="w-full">Create Seller Account</Button>
               </form>
             </CardContent>
           </Card>
@@ -754,24 +439,16 @@ const SellerDashboard = () => {
           <h2 className="text-xl font-bold mb-4">Dashboard</h2>
           <div className="space-y-2">
             {dashboardNavItems.map((item) => (
-                <Button
-                  key={item.label}
-                  variant={activeTab === item.href ? "secondary" : "ghost"}
-                  className="w-full justify-start space-x-2"
-                  onClick={() => setActiveTab(item.href)}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
+                <Button key={item.label} variant={activeTab === item.href ? "secondary" : "ghost"} className="w-full justify-start space-x-2" onClick={() => setActiveTab(item.href)}>
+                  {item.icon}<span>{item.label}</span>
                 </Button>
             ))}
           </div>
         </Card>
       </div>
-      <div className="flex-1">
-        {renderContent()}
-      </div>
+      <div className="flex-1">{renderContent()}</div>
     </div>
   );
 };
 
-export default SellerDashboard ;
+export default SellerDashboard;
