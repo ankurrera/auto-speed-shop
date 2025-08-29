@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-// Note: You will need a multi-select component for vehicle compatibility.
-// For example: import { MultiSelect } from "@/components/ui/multi-select";
+// Note: You will need to add a multi-select component for vehicle selection.
+// This is a placeholder for where you would import it.
+// import { MultiSelect } from "@/components/ui/multi-select";
 
 const categories = [
   "Engine Parts", "Valvetrain", "Fuel supply system", "Air intake and exhaust systems",
@@ -127,10 +128,18 @@ const SellerDashboard = () => {
     }]);
     if (error) {
         toast({ title: "Error", description: "Failed to create seller account.", variant: "destructive" });
-    } else {
-        setIsSeller(true);
-        toast({ title: "Success!", description: "Your seller account has been created." });
-    }
+      e.preventDefault();
+      if (!user) return;
+      const { error } = await supabase.from("sellers").insert([{ 
+          name: sellerInfo.name, email: user.email, phone: sellerInfo.phone, 
+          address: sellerInfo.address, user_id: user.id 
+      }]);
+      if (error) {
+          toast({ title: "Error", description: "Failed to create seller account.", variant: "destructive" });
+      } else {
+          setIsSeller(true);
+          toast({ title: "Success!", description: "Your seller account has been created." });
+      }
   };
 
   const handlePartSubmit = async (e: React.FormEvent) => {
@@ -192,8 +201,6 @@ const SellerDashboard = () => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
     if (!files.length) return;
-
-    // Explicitly type `file` as `File` to fix the TypeScript error.
     const imageUrls = files.map((file: File) => URL.createObjectURL(file));
     
     if (listingType === 'part') {
