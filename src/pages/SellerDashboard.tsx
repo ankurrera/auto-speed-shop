@@ -774,4 +774,4 @@ const SellerDashboard = () => {
   );
 };
 
-export default SellerDashboard;
+export default SellerDashboard ;
