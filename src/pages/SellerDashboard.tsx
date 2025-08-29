@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent, ChangeEvent, useCallback } from "react";
+import { useState, useEffect, FormEvent, ChangeEvent, useCallback } from "react"; // 1. Import useCallback
 import { Link, useNavigate } from "react-router-dom";
 import { Box, Package, ShoppingCart, User as UserIcon, TrendingUp, Archive, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ interface Product {
   vin?: string;
 }
 
+// 2. Define a specific type for part specifications to replace 'any'
 interface PartSpecifications {
   category?: string;
   make?: string;
@@ -47,9 +48,8 @@ interface Part {
   price: number;
   stock_quantity: number;
   image_urls: string[];
-  specifications: PartSpecifications | null;
+  specifications: PartSpecifications | null; // 3. Use the specific type here
   brand: string;
-  is_active: boolean; // ✅ ADDED: is_active property for parts
   part_number?: string;
   sku?: string;
 }
@@ -105,10 +105,12 @@ const SellerDashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // 4. Wrap checkUserAndSeller in useCallback
   const checkUserAndSeller = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        console.log('User is authenticated. User ID:', session.user.id);
         setIsLoggedIn(true);
         setUser(session.user);
         
@@ -119,6 +121,7 @@ const SellerDashboard = () => {
           .maybeSingle();
         
         if (sellerData) {
+          console.log('Seller found:', sellerData);
           setIsSeller(true);
           setSellerId(sellerData.id);
           setSellerInfo(prev => ({ ...prev, name: sellerData.name }));
@@ -136,7 +139,7 @@ const SellerDashboard = () => {
 
   useEffect(() => {
     checkUserAndSeller();
-  }, [checkUserAndSeller]);
+  }, [checkUserAndSeller]); // 5. Use the memoized function in the dependency array
 
   // Query for products
   const { data: products = [] } = useQuery<Product[]>({
@@ -211,7 +214,11 @@ const SellerDashboard = () => {
         });
         return;
     }
-    
+
+    console.log('User is authenticated. User ID:', user.id);
+    console.log('Seller ID:', sellerId);
+    console.log('Listing type:', listingType);
+
     const cleanupAndRefetch = () => {
         setEditingProductId(null);
         setProductInfo({
@@ -225,6 +232,8 @@ const SellerDashboard = () => {
 
     try {
         if (listingType === 'part') {
+            // 6. Send the specifications as a structured object, not a JSON string.
+            // Supabase client libraries handle the serialization automatically.
             const partData = {
                 name: productInfo.name,
                 description: productInfo.description,
@@ -232,7 +241,6 @@ const SellerDashboard = () => {
                 stock_quantity: Number(productInfo.stock_quantity) || 0,
                 brand: sellerInfo.name,
                 seller_id: sellerId,
-                // is_active will default to true in the database, no need to set it here on creation
                 specifications: {
                     category: productInfo.category,
                     make: productInfo.make,
@@ -243,7 +251,9 @@ const SellerDashboard = () => {
                 },
                 image_urls: productInfo.image_urls,
             };
-            
+
+            console.log('Inserting part data:', partData);
+
             const { data, error } = await supabase
                 .from('parts')
                 .insert([partData])
@@ -258,12 +268,14 @@ const SellerDashboard = () => {
                 });
                 return;
             }
-            
+
+            console.log('Part saved successfully:', data);
             toast({ title: "Success!", description: "Your part has been listed." });
             cleanupAndRefetch();
             return;
         }
-        
+
+        // For products - ensure we have the seller_id in the data
         const productData = {
             name: productInfo.name,
             description: productInfo.description,
@@ -274,18 +286,20 @@ const SellerDashboard = () => {
             specifications: productInfo.specifications,
             is_featured: false,
             brand: sellerInfo.name,
-            seller_id: sellerId,
+            seller_id: sellerId, // This is crucial for RLS policies
             category: productInfo.category,
             product_type: 'GENERIC',
         };
-        
+
+        console.log('Product data:', productData);
+
         let error;
         if (editingProductId) {
             const { error: updateError } = await supabase
                 .from("products")
                 .update(productData)
                 .eq("id", editingProductId)
-                .eq("seller_id", sellerId);
+                .eq("seller_id", sellerId); // Ensure seller can only update their own products
             error = updateError;
         } else {
             const { error: insertError } = await supabase
@@ -302,6 +316,7 @@ const SellerDashboard = () => {
                 variant: "destructive"
             });
         } else {
+            console.log('Product saved successfully');
             toast({ title: "Success!", description: `Product ${editingProductId ? 'updated' : 'listed'} successfully.`});
             cleanupAndRefetch();
         }
@@ -336,6 +351,7 @@ const SellerDashboard = () => {
 
   const handleEditPart = (part: Part) => {
     setEditingProductId(part.id);
+    // 7. Directly use the specifications object, as it's now properly typed and parsed.
     const specs = part.specifications;
     setProductInfo({
       name: part.name,
@@ -411,25 +427,6 @@ const SellerDashboard = () => {
   const handleArchiveProduct = (productId: string, is_active: boolean) => {
     archiveProductMutation.mutate({ productId, is_active });
   };
-  
-  // ✅ ADDED: New mutation and handler for archiving/unarchiving parts
-  const archivePartMutation = useMutation({
-    mutationFn: async ({ partId, is_active }: { partId: string; is_active: boolean }) => {
-      const { error } = await supabase.from("parts").update({ is_active: !is_active }).eq("id", partId);
-      if (error) throw error;
-    },
-    onSuccess: (_, variables) => {
-      toast({ title: "Success!", description: `Part has been ${variables.is_active ? 'archived' : 'unarchived'}.` });
-      queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: "Failed to update part status.", variant: "destructive" });
-    },
-  });
-
-  const handleArchivePart = (partId: string, is_active: boolean) => {
-    archivePartMutation.mutate({ partId, is_active });
-  };
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -453,7 +450,6 @@ const SellerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleProductSubmit} className="space-y-6">
-                  {/* Form fields... */}
                   <div className="space-y-2">
                     <Label htmlFor="product-name">{listingType === "part" ? "Part Name" : "Product Name"}</Label>
                     <Input id="product-name" value={productInfo.name} onChange={(e) => setProductInfo({ ...productInfo, name: e.target.value })} required />
@@ -546,18 +542,9 @@ const SellerDashboard = () => {
                         <p className="text-muted-foreground text-sm">{part.brand}</p>
                         <p className="text-lg font-bold">${part.price}</p>
                         <p className="text-sm">In Stock: {part.stock_quantity}</p>
-                        {/* ✅ ADDED: Display for part status */}
-                        <p className={`text-sm font-medium ${part.is_active ? 'text-green-500' : 'text-yellow-500'}`}>
-                          Status: {part.is_active ? 'Active' : 'Archived'}
-                        </p>
                       </div>
                       <div className="flex space-x-2">
                         <Button variant="outline" size="sm" onClick={() => handleEditPart(part)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
-                        {/* ✅ ADDED: Archive/Unarchive button for parts */}
-                        <Button variant="ghost" size="sm" onClick={() => handleArchivePart(part.id, part.is_active)}>
-                          <Archive className="h-4 w-4 mr-2" />
-                          {part.is_active ? 'Archive' : 'Unarchive'}
-                        </Button>
                         <Button variant="destructive" size="sm" onClick={() => handleDeletePart(part.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
                       </div>
                     </CardContent>
