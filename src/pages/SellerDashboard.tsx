@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 // Note: You will need to install and import a multi-select component for vehicle selection.
-// import { MultiSelect } from "@/components/ui/multi-select";
+// For example: import { MultiSelect } from "@/components/ui/multi-select";
 
 const categories = [
   "Engine Parts", "Valvetrain", "Fuel supply system", "General Parts", // (and so on...)
@@ -107,7 +107,7 @@ const SellerDashboard = () => {
     },
   });
 
-  // --- SUBMIT HANDLERS ---
+  // --- HANDLERS & MUTATIONS ---
   const handleSellerSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -123,14 +123,13 @@ const SellerDashboard = () => {
     }
   };
 
-  // ✅ This function now sends data in the correct format
   const handlePartSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !sellerId) return;
 
     const { selected_vehicles, ...partDetails } = partInfo;
     
-    // Bundle all part details into a single object
+    // This object bundles the data correctly for the RPC call
     const partDataForRpc = {
       name: partDetails.name,
       description: partDetails.description,
@@ -144,7 +143,7 @@ const SellerDashboard = () => {
       seller_id: sellerId,
     };
     
-    // Call the function with the two required arguments
+    // This is the corrected RPC call that will fix the error
     const { error } = await supabase.rpc('publish_new_part_standalone', {
       part_data: partDataForRpc,
       vehicle_ids: selected_vehicles,
@@ -183,43 +182,42 @@ const SellerDashboard = () => {
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files ? Array.from(e.target.files) : [];
-      if (!files.length) return;
-      const imageUrls = files.map((file: File) => URL.createObjectURL(file));
-      
-      if (listingType === 'part') {
-        setPartInfo(prev => ({ ...prev, image_urls: imageUrls }));
-      } else {
-        setProductInfo(prev => ({ ...prev, image_urls: imageUrls }));
-      }
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (!files.length) return;
+    const imageUrls = files.map((file: File) => URL.createObjectURL(file));
+    
+    if (listingType === 'part') {
+      setPartInfo(prev => ({ ...prev, image_urls: imageUrls }));
+    } else {
+      setProductInfo(prev => ({ ...prev, image_urls: imageUrls }));
+    }
   };
   
-  // --- RENDER LOGIC ---
   const renderContent = () => {
     if (!isSeller) {
       return (
-          <div className="max-w-md mx-auto">
-              <Card>
-                  <CardHeader className="text-center"><CardTitle className="text-2xl">Become a Seller</CardTitle></CardHeader>
-                  <CardContent>
-                      <form onSubmit={handleSellerSignup} className="space-y-4">
-                          <div className="space-y-2">
-                              <Label htmlFor="seller-name">Store Name</Label>
-                              <Input id="seller-name" value={sellerInfo.name} onChange={(e) => setSellerInfo({ ...sellerInfo, name: e.target.value })} required />
-                          </div>
-                          <div className="space-y-2">
-                              <Label htmlFor="seller-phone">Phone</Label>
-                              <Input id="seller-phone" type="tel" value={sellerInfo.phone} onChange={(e) => setSellerInfo({ ...sellerInfo, phone: e.target.value })}/>
-                          </div>
-                          <div className="space-y-2">
-                              <Label htmlFor="seller-address">Address</Label>
-                              <Textarea id="seller-address" value={sellerInfo.address} onChange={(e) => setSellerInfo({ ...sellerInfo, address: e.target.value })}/>
-                          </div>
-                          <Button type="submit" className="w-full">Create Seller Account</Button>
-                      </form>
-                  </CardContent>
-              </Card>
-          </div>
+        <div className="max-w-md mx-auto">
+          <Card>
+            <CardHeader className="text-center"><CardTitle className="text-2xl">Become a Seller</CardTitle></CardHeader>
+            <CardContent>
+              <form onSubmit={handleSellerSignup} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="seller-name">Store Name</Label>
+                  <Input id="seller-name" value={sellerInfo.name} onChange={(e) => setSellerInfo({ ...sellerInfo, name: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="seller-phone">Phone</Label>
+                  <Input id="seller-phone" type="tel" value={sellerInfo.phone} onChange={(e) => setSellerInfo({ ...sellerInfo, phone: e.target.value })}/>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="seller-address">Address</Label>
+                  <Textarea id="seller-address" value={sellerInfo.address} onChange={(e) => setSellerInfo({ ...sellerInfo, address: e.target.value })}/>
+                </div>
+                <Button type="submit" className="w-full">Create Seller Account</Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       );
     }
 
@@ -240,14 +238,14 @@ const SellerDashboard = () => {
                 <div className="space-y-2"><Label>Part Name</Label><Input value={partInfo.name} onChange={e => setPartInfo({...partInfo, name: e.target.value})} required/></div>
                 <div className="space-y-2"><Label>Description</Label><Textarea value={partInfo.description} onChange={e => setPartInfo({...partInfo, description: e.target.value})} required/></div>
                 <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2"><Label>Price ($)</Label><Input type="number" step="0.01" value={partInfo.price} onChange={e => setPartInfo({...partInfo, price: e.target.value})} required/></div>
-                    <div className="space-y-2"><Label>Quantity</Label><Input type="number" value={partInfo.stock_quantity} onChange={e => setPartInfo({...partInfo, stock_quantity: parseInt(e.target.value, 10) || 0})} required/></div>
+                  <div className="space-y-2"><Label>Price ($)</Label><Input type="number" step="0.01" value={partInfo.price} onChange={e => setPartInfo({...partInfo, price: e.target.value})} required/></div>
+                  <div className="space-y-2"><Label>Quantity</Label><Input type="number" value={partInfo.stock_quantity} onChange={e => setPartInfo({...partInfo, stock_quantity: parseInt(e.target.value, 10) || 0})} required/></div>
                 </div>
                 <div className="space-y-2">
-                    <Label>Vehicle Compatibility</Label>
-                    <div className="p-3 border rounded-md bg-muted">
-                        <p className="text-sm text-muted-foreground">This is where you would place a multi-select component to choose compatible vehicles.</p>
-                    </div>
+                  <Label>Vehicle Compatibility</Label>
+                  <div className="p-3 border rounded-md bg-muted">
+                    <p className="text-sm text-muted-foreground">This is where you would place a multi-select component to choose compatible vehicles.</p>
+                  </div>
                 </div>
                 <div className="space-y-2"><Label>Images</Label><Input type="file" multiple onChange={handleImageUpload}/></div>
                 <Button type="submit">List Part</Button>
@@ -256,9 +254,9 @@ const SellerDashboard = () => {
               <form onSubmit={handleProductSubmit} className="space-y-6">
                 <div className="space-y-2"><Label>Product Name</Label><Input value={productInfo.name} onChange={e => setProductInfo({...productInfo, name: e.target.value})} required/></div>
                 <div className="space-y-2"><Label>Description</Label><Textarea value={productInfo.description} onChange={e => setProductInfo({...productInfo, description: e.target.value})} required/></div>
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2"><Label>Price ($)</Label><Input type="number" step="0.01" value={productInfo.price} onChange={e => setProductInfo({...productInfo, price: e.target.value})} required/></div>
-                    <div className="space-y-2"><Label>Quantity</Label><Input type="number" value={productInfo.stock_quantity} onChange={e => setProductInfo({...productInfo, stock_quantity: parseInt(e.target.value, 10) || 0})} required/></div>
+                 <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2"><Label>Price ($)</Label><Input type="number" step="0.01" value={productInfo.price} onChange={e => setProductInfo({...productInfo, price: e.target.value})} required/></div>
+                  <div className="space-y-2"><Label>Quantity</Label><Input type="number" value={productInfo.stock_quantity} onChange={e => setProductInfo({...productInfo, stock_quantity: parseInt(e.target.value, 10) || 0})} required/></div>
                 </div>
                 <div className="space-y-2"><Label>Images</Label><Input type="file" multiple onChange={handleImageUpload}/></div>
                 <Button type="submit">List Product</Button>
