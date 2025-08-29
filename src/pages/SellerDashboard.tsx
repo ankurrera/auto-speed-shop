@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Box, Package, ShoppingCart, User, TrendingUp, Archive, Edit, Trash2 } from "lucide-react";
@@ -94,9 +93,9 @@ const dashboardNavItems = [
 const SellerDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSeller, setIsSeller] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [sellerId, setSellerId] = useState<string | null>(null);
-  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [user, setUser] = useState(null);
+  const [sellerId, setSellerId] = useState(null);
+  const [editingProductId, setEditingProductId] = useState(null);
   const [activeTab, setActiveTab] = useState("products");
   const [listingType, setListingType] = useState("part");
   const [sellerInfo, setSellerInfo] = useState({
@@ -110,7 +109,7 @@ const SellerDashboard = () => {
     description: "",
     price: "",
     stock_quantity: 0,
-    image_urls: [] as string[],
+    image_urls: [],
     specifications: "",
     category: "",
     make: "",
@@ -125,7 +124,7 @@ const SellerDashboard = () => {
   useEffect(() => {
     const checkUserAndSeller = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+      if (session) {
         setIsLoggedIn(true);
         setUser(session.user);
         const { data: sellerData, error } = await supabase
@@ -136,8 +135,6 @@ const SellerDashboard = () => {
         if (sellerData) {
           setIsSeller(true);
           setSellerId(sellerData.id);
-          // Set seller name for use as brand
-          setSellerInfo(prev => ({ ...prev, name: sellerData.name }));
         } else if (error) {
           console.error("Error checking seller status:", error.message);
         }
@@ -149,7 +146,7 @@ const SellerDashboard = () => {
     checkUserAndSeller();
   }, [navigate]);
 
-  const { data: products = [] } = useQuery({
+  const { data: products = [], refetch: refetchProducts } = useQuery({
     queryKey: ['seller-products', sellerId],
     queryFn: async () => {
       if (!sellerId) return [];
@@ -169,7 +166,7 @@ const SellerDashboard = () => {
     e.preventDefault();
     if (!user) return;
 
-    const { error } = await supabase.from("sellers").insert([
+    const { data, error } = await supabase.from("sellers").insert([
       {
         name: sellerInfo.name,
         email: user.email,
@@ -177,7 +174,7 @@ const SellerDashboard = () => {
         address: sellerInfo.address,
         user_id: user.id,
       },
-    ]).select().single();
+    ]);
 
     if (error) {
       console.error("Error creating seller account:", error.message);
@@ -192,139 +189,103 @@ const SellerDashboard = () => {
         title: "Success!",
         description: "Your seller account has been created successfully.",
       });
-      // Re-run the user check to get the new seller ID
-      checkUserAndSeller();
     }
   };
 
-  // --- UPDATED SUBMIT HANDLER ---
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !sellerId) return;
 
-    // Helper function to reset form and refetch data
-    const cleanupAndRefetch = () => {
-        setEditingProductId(null);
-        setProductInfo({
-            name: "",
-            description: "",
-            price: "",
-            stock_quantity: 0,
-            image_urls: [],
-            specifications: "",
-            category: "",
-            make: "",
-            model: "",
-            year_range: "",
-            vin: "",
-        });
-        queryClient.invalidateQueries({ queryKey: ['seller-products'] });
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-    };
+    const isActive = productInfo.stock_quantity > 0;
 
-    // --- LOGIC FOR 'PART' LISTING ---
-    // If we are listing a part, we call our special database function
-    if (listingType === 'part') {
-        const partData = {
-            ...productInfo,
-            price: parseFloat(productInfo.price) || 0,
-            stock_quantity: Number(productInfo.stock_quantity) || 0,
-            seller_id: sellerId,
-            brand: sellerInfo.name,
-            is_active: productInfo.stock_quantity > 0,
-        };
-
-        // Call the RPC function to handle inserting into two tables
-        const { error } = await supabase.rpc('create_part_with_fitment', { part_data: partData });
-
-        if (error) {
-            console.error("Error creating part:", error.message);
-            toast({
-                title: "Error",
-                description: "Failed to list part. Please check the form and try again.",
-                variant: "destructive",
-            });
-        } else {
-            toast({
-                title: "Success!",
-                description: "Your part has been listed successfully.",
-            });
-            cleanupAndRefetch();
-        }
-        return; // Stop execution here for parts
-    }
-
-    // --- LOGIC FOR GENERIC 'PRODUCT' LISTING ---
-    // This is the original logic, now just for generic products
     const productData = {
-        name: productInfo.name,
-        description: productInfo.description,
-        price: parseFloat(productInfo.price) || 0,
-        stock_quantity: Number(productInfo.stock_quantity) || 0,
-        is_active: productInfo.stock_quantity > 0,
-        image_urls: productInfo.image_urls,
-        specifications: productInfo.specifications,
-        is_featured: false,
-        brand: sellerInfo.name,
-        seller_id: sellerId,
-        category: productInfo.category,
-        product_type: 'GENERIC', // Set the type to distinguish from parts
+      name: productInfo.name,
+      description: productInfo.description,
+      price: productInfo.price,
+      stock_quantity: productInfo.stock_quantity,
+      is_active: isActive,
+      image_urls: productInfo.image_urls,
+      specifications: productInfo.specifications,
+      is_featured: false,
+      brand: sellerInfo.name,
+      seller_id: sellerId,
+      category: productInfo.category,
+      make: productInfo.make,
+      model: productInfo.model,
+      year_range: productInfo.year_range,
+      vin: productInfo.vin,
     };
 
-    let error;
     if (editingProductId) {
-        const { error: updateError } = await supabase
-            .from("products")
-            .update(productData)
-            .eq("id", editingProductId);
-        error = updateError;
-    } else {
-        const { error: insertError } = await supabase.from("products").insert([productData]);
-        error = insertError;
-    }
+      const { error } = await supabase
+        .from("products")
+        .update(productData)
+        .eq("id", editingProductId);
 
-    if (error) {
-        console.error("Error saving product:", error.message);
+      if (error) {
+        console.error("Error updating product:", error.message);
         toast({
-            title: "Error",
-            description: `Failed to ${editingProductId ? 'update' : 'add'} product.`,
-            variant: "destructive",
+          title: "Error",
+          description: "Failed to update product. Please check the form and try again.",
+          variant: "destructive",
         });
+      } else {
+        toast({
+          title: "Success!",
+          description: "Your product has been updated successfully.",
+        });
+        setEditingProductId(null);
+      }
     } else {
+      const { error } = await supabase.from("products").insert([productData]);
+
+      if (error) {
+        console.error("Error adding product:", error.message);
         toast({
-            title: "Success!",
-            description: `Your product has been ${editingProductId ? 'updated' : 'listed'} successfully.`,
+          title: "Error",
+          description: "Failed to add product. Please check the form and try again.",
+          variant: "destructive",
         });
-        cleanupAndRefetch();
+      } else {
+        toast({
+          title: "Success!",
+          description: "Your product has been listed successfully.",
+        });
+      }
     }
+    
+    setProductInfo({
+      name: "",
+      description: "",
+      price: "",
+      stock_quantity: 0,
+      image_urls: [],
+      specifications: "",
+      category: "",
+      make: "",
+      model: "",
+      year_range: "",
+      vin: "",
+    });
+    refetchProducts();
   };
 
-
-  const handleEditProduct = (product: any) => {
-    // NOTE: This function will work for generic products, but not for parts
-    // To edit parts, you would need to:
-    // 1. Fetch the associated fitment data from the `part_fitments` table.
-    // 2. Populate the form with both product and fitment data.
-    // 3. Create a new RPC function `update_part_with_fitment` to handle the update across two tables.
-    
+  const handleEditProduct = (product) => {
     setEditingProductId(product.id);
     setProductInfo({
       name: product.name,
       description: product.description,
       price: product.price,
       stock_quantity: product.stock_quantity,
-      image_urls: product.image_urls || [],
-      specifications: product.specifications || "",
-      category: product.category || "",
-      // These will be empty for generic products, which is correct.
-      // For parts, this data needs to be fetched separately.
-      make: product.make || "",
-      model: product.model || "",
-      year_range: product.year_range || "",
-      vin: product.vin || "",
+      image_urls: product.image_urls,
+      specifications: product.specifications,
+      category: product.category,
+      make: product.make,
+      model: product.model,
+      year_range: product.year_range,
+      vin: product.vin,
     });
-    // Determine listing type based on the product_type field from the DB
-    setListingType(product.product_type === "PART" ? "part" : "product");
+    setListingType(product.make ? "part" : "product");
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -343,7 +304,7 @@ const SellerDashboard = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['seller-products'] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error("Error deleting product:", error.message);
       toast({
         title: "Error",
@@ -361,7 +322,6 @@ const SellerDashboard = () => {
 
   const archiveProductMutation = useMutation({
     mutationFn: async ({ productId, is_active }: { productId: string, is_active: boolean }) => {
-      // The logic is to toggle the current state.
       const { error } = await supabase
         .from("products")
         .update({ is_active: !is_active })
@@ -370,19 +330,16 @@ const SellerDashboard = () => {
     },
     onSuccess: (_, variables) => {
       toast({
-        // The description should reflect the *new* state.
-        // If it *was* active, it's now archived. If it *was not* active, it's now unarchived.
         title: "Success!",
-        description: `Product has been ${variables.is_active ? 'archived' : 'unarchived'}.`,
+        description: `Product has been ${variables.is_active ? 'unarchived' : 'archived'}.`,
       });
       queryClient.invalidateQueries({ queryKey: ['seller-products'] });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onError: (error: any) => {
+    onError: (error) => {
       console.error("Error archiving product:", error.message);
       toast({
         title: "Error",
-        description: "Failed to update product status.",
+        description: "Failed to archive product.",
         variant: "destructive",
       });
     },
@@ -394,38 +351,9 @@ const SellerDashboard = () => {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    // Note: createObjectURL is for temporary client-side previews.
-    // For persistent storage, you'd need to upload these files to Supabase Storage
-    // and save the public URLs. This implementation is for demonstration.
     const imageUrls = files.map(file => URL.createObjectURL(file));
     setProductInfo({ ...productInfo, image_urls: imageUrls });
   };
-  
-  // Minor fix to checkUserAndSeller for re-usability
-  const checkUserAndSeller = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setIsLoggedIn(true);
-        setUser(session.user);
-        const { data: sellerData, error } = await supabase
-          .from("sellers")
-          .select("id, name")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-        if (sellerData) {
-          setIsSeller(true);
-          setSellerId(sellerData.id);
-          setSellerInfo(prev => ({ ...prev, name: sellerData.name }));
-        } else if (error) {
-          console.error("Error checking seller status:", error.message);
-        }
-      } else {
-        setIsLoggedIn(false);
-        navigate("/account");
-      }
-    };
-
-  // The rest of your component remains the same...
 
   const renderContent = () => {
     switch (activeTab) {
@@ -436,7 +364,7 @@ const SellerDashboard = () => {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-4">
-                  <h2 className="text-xl font-bold">{editingProductId ? 'Edit' : 'List a New...'}</h2>
+                  <h2 className="text-xl font-bold">List a New...</h2>
                   <Button
                     variant={listingType === "part" ? "default" : "outline"}
                     onClick={() => setListingType("part")}
@@ -487,7 +415,6 @@ const SellerDashboard = () => {
                       <Input
                         id="product-price"
                         type="number"
-                        step="0.01"
                         value={productInfo.price}
                         onChange={(e) =>
                           setProductInfo({ ...productInfo, price: e.target.value })
@@ -502,7 +429,7 @@ const SellerDashboard = () => {
                         type="number"
                         value={productInfo.stock_quantity.toString()}
                         onChange={(e) =>
-                          setProductInfo({ ...productInfo, stock_quantity: parseInt(e.target.value, 10) || 0 })
+                          setProductInfo({ ...productInfo, stock_quantity: parseInt(e.target.value) })
                         }
                         required
                       />
@@ -640,7 +567,7 @@ const SellerDashboard = () => {
                   <Card key={product.id}>
                     <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
                       <div className="flex-1 space-y-1">
-                        <h3 className="font-semibold text-lg">{product.name} ({product.product_type === 'PART' ? 'Part' : 'Product'})</h3>
+                        <h3 className="font-semibold text-lg">{product.name}</h3>
                         <p className="text-muted-foreground text-sm">{product.category}</p>
                         <p className="text-lg font-bold">${product.price}</p>
                         <p className="text-sm">In Stock: {product.stock_quantity}</p>
@@ -674,11 +601,9 @@ const SellerDashboard = () => {
           </>
         );
       case "analytics":
-        return <div>Analytics Coming Soon...</div>;
-      case "orders":
-        return <div>Order Management Coming Soon...</div>;
+        return null;
       default:
-        return <div>Select a tab</div>;
+        return null;
     }
   };
 
@@ -754,8 +679,8 @@ const SellerDashboard = () => {
           <h2 className="text-xl font-bold mb-4">Dashboard</h2>
           <div className="space-y-2">
             {dashboardNavItems.map((item) => (
+              <Link to={item.href} key={item.label}>
                 <Button
-                  key={item.label}
                   variant={activeTab === item.href ? "secondary" : "ghost"}
                   className="w-full justify-start space-x-2"
                   onClick={() => setActiveTab(item.href)}
@@ -763,6 +688,7 @@ const SellerDashboard = () => {
                   {item.icon}
                   <span>{item.label}</span>
                 </Button>
+              </Link>
             ))}
           </div>
         </Card>
@@ -774,4 +700,4 @@ const SellerDashboard = () => {
   );
 };
 
-export default SellerDashboard ;
+export default SellerDashboard;
