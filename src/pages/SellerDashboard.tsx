@@ -120,14 +120,6 @@ const SellerDashboard = () => {
 
   // --- HANDLERS & MUTATIONS ---
   const handleSellerSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    const { error } = await supabase.from("sellers").insert([{ 
-        name: sellerInfo.name, email: user.email, phone: sellerInfo.phone, 
-        address: sellerInfo.address, user_id: user.id 
-    }]);
-    if (error) {
-        toast({ title: "Error", description: "Failed to create seller account.", variant: "destructive" });
       e.preventDefault();
       if (!user) return;
       const { error } = await supabase.from("sellers").insert([{ 
