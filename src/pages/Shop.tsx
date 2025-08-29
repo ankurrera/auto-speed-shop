@@ -15,6 +15,17 @@ import { Database } from "@/database.types";
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
 
+// ✅ STEP 1: Create a new type that includes the joined data
+type PartWithFitment = Part & {
+  part_vehicle_compatibility: {
+    vehicles: {
+      make: string;
+      model: string;
+      year: number;
+    } | null;
+  }[];
+};
+
 // Define types for the vehicle data
 interface VehicleMake {
   id: string;
@@ -47,7 +58,6 @@ const formatCardData = (item: Product | Part) => {
 
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  // ✅ FIXED: Corrected typo from 'search-params' to 'searchParams'
   const initialYear = searchParams.get('year') || '';
   const initialMake = searchParams.get('make') || '';
   const initialModel = searchParams.get('model') || '';
@@ -107,23 +117,34 @@ const Shop = () => {
 
   // --- Queries for Parts and Products ---
 
-  const { data: parts = [], isLoading: isLoadingParts, isError: isErrorParts } = useQuery({
+  // ✅ STEP 2: Fix the useQuery for parts to handle the type correctly
+  const { data: parts = [], isLoading: isLoadingParts, isError: isErrorParts } = useQuery<PartWithFitment[]>({
     queryKey: ['shop-parts', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
-      let query = supabase.from('parts').select(`
+      const hasVehicleFilter = !!(selectedYear || selectedMakeName || selectedModel);
+      const joinType = hasVehicleFilter ? '!inner' : '!left';
+
+      const selectString = `
         *,
-        part_vehicle_compatibility!inner (
+        part_vehicle_compatibility${joinType} (
           vehicles!inner (
             make,
             model,
             year
           )
         )
-      `).eq('is_active', true);
+      `;
 
-      if (selectedYear) query = query.filter('part_vehicle_compatibility.vehicles.year', 'eq', selectedYear);
-      if (selectedMakeName) query = query.filter('part_vehicle_compatibility.vehicles.make', 'eq', selectedMakeName);
-      if (selectedModel) query = query.filter('part_vehicle_compatibility.vehicles.model', 'eq', selectedModel);
+      let query = supabase.from('parts').select(selectString);
+
+      // Add this filter back if the 'is_active' column exists on your 'parts' table
+      // query = query.eq('is_active', true);
+      
+      if (hasVehicleFilter) {
+        if (selectedYear) query = query.filter('part_vehicle_compatibility.vehicles.year', 'eq', selectedYear);
+        if (selectedMakeName) query = query.filter('part_vehicle_compatibility.vehicles.make', 'eq', selectedMakeName);
+        if (selectedModel) query = query.filter('part_vehicle_compatibility.vehicles.model', 'eq', selectedModel);
+      }
       
       if (searchQuery) query = query.textSearch('fts', `'${searchQuery}'`);
       
@@ -132,11 +153,11 @@ const Shop = () => {
         console.error("Error fetching parts:", error);
         throw error;
       }
-      return data || [];
+      return (data || []) as unknown as PartWithFitment[];
     },
   });
 
-  const { data: generalProducts = [], isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery({
+  const { data: generalProducts = [], isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<Product[]>({
     queryKey: ['shop-general-products', searchQuery],
     queryFn: async () => {
       let query = supabase
@@ -199,7 +220,6 @@ const Shop = () => {
             <Select value={selectedYear} onValueChange={handleYearChange}>
               <SelectTrigger id="year-filter"><SelectValue placeholder="All Years" /></SelectTrigger>
               <SelectContent>
-                {/* ✅ FIXED: Ensure value is always a string */}
                 {vehicleYears.map(year => <SelectItem key={year} value={year.toString()}>{year}</SelectItem>)}
               </SelectContent>
             </Select>
