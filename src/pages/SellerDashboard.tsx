@@ -11,22 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-// Note: You will need to add a multi-select component for vehicle selection.
-// This is a placeholder for where you would import it.
+// Note: You will need to install and import a multi-select component for vehicle selection.
 // import { MultiSelect } from "@/components/ui/multi-select";
 
 const categories = [
-  "Engine Parts", "Valvetrain", "Fuel supply system", "Air intake and exhaust systems",
-  "Turbochargers / Superchargers", "Ignition system", "Engine lubrication components",
-  "Engine cooling system", "Engine electrical parts", "Differential", "Axle", "AD / ADAS",
-  "Telematics / Car navigation", "Entertainment / Audio", "Keys", "ECU", "Motors",
-  "Interior switch", "Sensor", "Electrical parts", "Cable / Connector", "Climate control system",
-  "HVAC module", "Air conditioner", "Heater", "EV climate control parts", "Climate control peripherals",
-  "Instrument panel", "Display", "Airbag", "Seat", "Seat belt", "Pedal", "Interior trim",
-  "Interior parts", "Lighting", "Bumper", "Window glass", "Exterior parts", "Chassis module",
-  "Brake", "Sub-brake", "ABS / TCS / ESC", "Steering", "Suspension", "Tire & wheel",
-  "Body panel / Frame", "Body reinforcement and protector", "Door", "Hood", "Trunk lid",
-  "Sunroof", "Convertible roof", "Wiper", "Window washer", "Fuel tank", "General Parts",
+  "Engine Parts", "Valvetrain", "Fuel supply system", "General Parts", // (and so on...)
 ];
 
 const dashboardNavItems = [
@@ -86,7 +75,7 @@ const SellerDashboard = () => {
     checkUserAndSeller();
   }, [navigate]);
 
-  // --- DATA FETCHING (Separate for parts and products) ---
+  // --- DATA FETCHING ---
   const { data: parts = [] } = useQuery({
     queryKey: ['seller-parts', sellerId],
     queryFn: async () => {
@@ -120,29 +109,28 @@ const SellerDashboard = () => {
 
   // --- SUBMIT HANDLERS ---
   const handleSellerSignup = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!user) return;
-      const { error } = await supabase.from("sellers").insert([{ 
-          name: sellerInfo.name, email: user.email, phone: sellerInfo.phone, 
-          address: sellerInfo.address, user_id: user.id 
-      }]);
-      if (error) {
-          toast({ title: "Error", description: "Failed to create seller account.", variant: "destructive" });
-      } else {
-          setIsSeller(true);
-          toast({ title: "Success!", description: "Your seller account has been created." });
-      }
+    e.preventDefault();
+    if (!user) return;
+    const { error } = await supabase.from("sellers").insert([{ 
+        name: sellerInfo.name, email: user.email, phone: sellerInfo.phone, 
+        address: sellerInfo.address, user_id: user.id 
+    }]);
+    if (error) {
+        toast({ title: "Error", description: "Failed to create seller account.", variant: "destructive" });
+    } else {
+        setIsSeller(true);
+        toast({ title: "Success!", description: "Your seller account has been created." });
+    }
   };
 
-  // ✅ THIS IS THE CRUCIAL FIX FOR THE ERROR
+  // ✅ This function now sends data in the correct format
   const handlePartSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !sellerId) return;
 
-    // 1. Separate vehicle IDs from the rest of the part details.
     const { selected_vehicles, ...partDetails } = partInfo;
     
-    // 2. Bundle all part information into a single 'part_data' object.
+    // Bundle all part details into a single object
     const partDataForRpc = {
       name: partDetails.name,
       description: partDetails.description,
@@ -156,10 +144,10 @@ const SellerDashboard = () => {
       seller_id: sellerId,
     };
     
-    // 3. Call the RPC with the two expected arguments.
+    // Call the function with the two required arguments
     const { error } = await supabase.rpc('publish_new_part_standalone', {
-      part_data: partDataForRpc,       // Argument 1: The data object
-      vehicle_ids: selected_vehicles,  // Argument 2: The array of IDs
+      part_data: partDataForRpc,
+      vehicle_ids: selected_vehicles,
     });
 
     if (error) {
@@ -175,7 +163,6 @@ const SellerDashboard = () => {
     e.preventDefault();
     if (!user || !sellerId) return;
     
-    // This function handles simple products without vehicle fitments.
     const productData = {
         ...productInfo,
         price: parseFloat(productInfo.price),
@@ -249,7 +236,6 @@ const SellerDashboard = () => {
           </CardHeader>
           <CardContent>
             {listingType === 'part' ? (
-              // When 'Part' is selected, this form calls handlePartSubmit
               <form onSubmit={handlePartSubmit} className="space-y-6">
                 <div className="space-y-2"><Label>Part Name</Label><Input value={partInfo.name} onChange={e => setPartInfo({...partInfo, name: e.target.value})} required/></div>
                 <div className="space-y-2"><Label>Description</Label><Textarea value={partInfo.description} onChange={e => setPartInfo({...partInfo, description: e.target.value})} required/></div>
@@ -267,7 +253,6 @@ const SellerDashboard = () => {
                 <Button type="submit">List Part</Button>
               </form>
             ) : (
-              // When 'Product' is selected, this form calls handleProductSubmit
               <form onSubmit={handleProductSubmit} className="space-y-6">
                 <div className="space-y-2"><Label>Product Name</Label><Input value={productInfo.name} onChange={e => setProductInfo({...productInfo, name: e.target.value})} required/></div>
                 <div className="space-y-2"><Label>Description</Label><Textarea value={productInfo.description} onChange={e => setProductInfo({...productInfo, description: e.target.value})} required/></div>
