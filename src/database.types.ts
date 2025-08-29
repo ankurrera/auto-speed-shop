@@ -282,9 +282,124 @@ export type Database = {
         }
         Relationships: []
       }
+      part_fitments: {
+        Row: {
+          part_id: string
+          vehicle_id: string
+        }
+        Insert: {
+          part_id: string
+          vehicle_id: string
+        }
+        Update: {
+          part_id?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "part_fitments_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "part_fitments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parts: {
+        Row: {
+          brand: string | null
+          created_at: string
+          description: string | null
+          fts: unknown | null
+          id: string
+          image_urls: string[] | null
+          is_active: boolean
+          name: string
+          part_number: string | null
+          price: number
+          seller_id: string | null
+          sku: string | null
+          specifications: Json | null
+          stock_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          description?: string | null
+          fts?: unknown | null
+          id?: string
+          image_urls?: string[] | null
+          is_active?: boolean
+          name: string
+          part_number?: string | null
+          price: number
+          seller_id?: string | null
+          sku?: string | null
+          specifications?: Json | null
+          stock_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          description?: string | null
+          fts?: unknown | null
+          id?: string
+          image_urls?: string[] | null
+          is_active?: boolean
+          name?: string
+          part_number?: string | null
+          price?: number
+          seller_id?: string | null
+          sku?: string | null
+          specifications?: Json | null
+          stock_quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_fitments: {
+        Row: {
+          product_id: string
+          vehicle_id: string
+        }
+        Insert: {
+          product_id: string
+          vehicle_id: string
+        }
+        Update: {
+          product_id?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_fitments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_fitments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           brand: string | null
+          category: string | null
           category_id: string | null
           compare_at_price: number | null
           created_at: string
@@ -296,22 +411,21 @@ export type Database = {
           image_urls: string[] | null
           is_active: boolean
           is_featured: boolean
-          make: string | null
           min_stock_level: number | null
-          model: string | null
           name: string
           part_number: string | null
           price: number
+          seller_id: string | null
           sku: string | null
+          specifications: string | null
           stock_quantity: number
           tags: string[] | null
           updated_at: string
           weight: number | null
-          year_from: number | null
-          year_to: number | null
         }
         Insert: {
           brand?: string | null
+          category?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
@@ -323,22 +437,21 @@ export type Database = {
           image_urls?: string[] | null
           is_active?: boolean
           is_featured?: boolean
-          make?: string | null
           min_stock_level?: number | null
-          model?: string | null
           name: string
           part_number?: string | null
           price: number
+          seller_id?: string | null
           sku?: string | null
+          specifications?: string | null
           stock_quantity?: number
           tags?: string[] | null
           updated_at?: string
           weight?: number | null
-          year_from?: number | null
-          year_to?: number | null
         }
         Update: {
           brand?: string | null
+          category?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
@@ -350,19 +463,17 @@ export type Database = {
           image_urls?: string[] | null
           is_active?: boolean
           is_featured?: boolean
-          make?: string | null
           min_stock_level?: number | null
-          model?: string | null
           name?: string
           part_number?: string | null
           price?: number
+          seller_id?: string | null
           sku?: string | null
+          specifications?: string | null
           stock_quantity?: number
           tags?: string[] | null
           updated_at?: string
           weight?: number | null
-          year_from?: number | null
-          year_to?: number | null
         }
         Relationships: [
           {
@@ -382,6 +493,8 @@ export type Database = {
           email: string | null
           first_name: string | null
           id: string
+          is_admin: boolean | null
+          is_seller: boolean | null
           last_name: string | null
           phone: string | null
           updated_at: string
@@ -394,6 +507,8 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id?: string
+          is_admin?: boolean | null
+          is_seller?: boolean | null
           last_name?: string | null
           phone?: string | null
           updated_at?: string
@@ -406,10 +521,134 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id?: string
+          is_admin?: boolean | null
+          is_seller?: boolean | null
           last_name?: string | null
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      sellers: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string | null
+          phone: string | null
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vehicle_makes: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vehicle_models: {
+        Row: {
+          created_at: string
+          id: string
+          make_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          make_id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          make_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_models_make_id_fkey"
+            columns: ["make_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_makes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_years: {
+        Row: {
+          created_at: string
+          id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          id: string
+          make: string
+          model: string
+          year: number
+        }
+        Insert: {
+          id?: string
+          make: string
+          model: string
+          year: number
+        }
+        Update: {
+          id?: string
+          make?: string
+          model?: string
+          year?: number
         }
         Relationships: []
       }
@@ -449,6 +688,56 @@ export type Database = {
     Functions: {
       generate_order_number: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      publish_new_part_standalone: {
+        Args: {
+          p_brand: string
+          p_description: string
+          p_image_urls: string[]
+          p_make: string
+          p_model: string
+          p_name: string
+          p_price: number
+          p_seller_id: string
+          p_specifications: Json
+          p_stock_quantity: number
+          p_year: number
+        }
+        Returns: string
+      }
+      publish_new_product: {
+        Args: {
+          p_brand: string
+          p_category: string
+          p_description: string
+          p_image_urls: string[]
+          p_make: string
+          p_model: string
+          p_name: string
+          p_price: number
+          p_seller_id: string
+          p_specifications: string
+          p_stock_quantity: number
+          p_year: string
+        }
+        Returns: string
+      }
+      publish_new_vehicle_part: {
+        Args: {
+          p_brand: string
+          p_category: string
+          p_description: string
+          p_image_urls: string[]
+          p_make: string
+          p_model: string
+          p_name: string
+          p_price: number
+          p_seller_id: number
+          p_specifications: Json
+          p_stock_quantity: number
+          p_year: number
+        }
         Returns: string
       }
     }

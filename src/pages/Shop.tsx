@@ -11,7 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Database } from "@/database.types";
 
+// Define the specific types from your generated database types
 type Product = Database['public']['Tables']['products']['Row'];
+type Part = Database['public']['Tables']['parts']['Row'];
 
 // Define types for the vehicle data
 interface VehicleMake {
@@ -23,19 +25,27 @@ interface VehicleModel {
   name: string;
 }
 
-// Helper function to format product data to avoid repetition
-const formatProductData = (product: Product) => ({
-  id: product.id,
-  name: product.name,
-  brand: product.brand || 'Unknown',
-  price: Number(product.price),
-  originalPrice: product.compare_at_price ? Number(product.compare_at_price) : undefined,
-  image_urls: product.image_urls || [],
-  rating: 4.5, // Dummy data
-  reviews: Math.floor(Math.random() * 200) + 50, // Dummy data
-  inStock: product.stock_quantity > 0,
-  isOnSale: product.compare_at_price && Number(product.compare_at_price) > Number(product.price),
-});
+// ✅ UPDATED HELPER FUNCTION
+// This function now safely handles items that may not have a 'compare_at_price' field.
+const formatCardData = (item: Product | Part) => {
+  // Check if 'compare_at_price' exists and has a value
+  const compareAtPrice = 'compare_at_price' in item && item.compare_at_price 
+    ? Number(item.compare_at_price) 
+    : undefined;
+
+  return {
+    id: item.id,
+    name: item.name,
+    brand: item.brand || 'Unknown',
+    price: Number(item.price),
+    originalPrice: compareAtPrice,
+    image_urls: item.image_urls || [],
+    rating: 4.5, // Dummy data
+    reviews: Math.floor(Math.random() * 200) + 50, // Dummy data
+    inStock: item.stock_quantity > 0,
+    isOnSale: compareAtPrice ? compareAtPrice > Number(item.price) : false,
+  };
+};
 
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,13 +59,13 @@ const Shop = () => {
   const [searchText, setSearchText] = useState(searchParams.get('query') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('query') || '');
 
-  // Query 1: Fetch Parts (Products with vehicle fitments)
+  // Query 1: Fetch from the 'parts' table using a many-to-many relationship
   const { data: parts = [], isLoading: isLoadingParts, isError: isErrorParts } = useQuery({
     queryKey: ['shop-parts', selectedYear, selectedMake, selectedModel, searchQuery],
     queryFn: async () => {
-      let query = supabase.from('products').select(`
+      let query = supabase.from('parts').select(`
         *,
-        product_fitments!inner (
+        part_fitments!inner (
           vehicles!inner (
             make,
             model,
@@ -64,10 +74,10 @@ const Shop = () => {
         )
       `).eq('is_active', true);
 
-      if (selectedYear) query = query.eq('product_fitments.vehicles.year', parseInt(selectedYear));
-      if (selectedMake) query = query.eq('product_fitments.vehicles.make', selectedMake);
-      if (selectedModel) query = query.eq('product_fitments.vehicles.model', selectedModel);
-      if (searchQuery) query = query.textSearch('name_description_tsv', `'${searchQuery}'`);
+      if (selectedYear) query = query.eq('part_fitments.vehicles.year', parseInt(selectedYear));
+      if (selectedMake) query = query.eq('part_fitments.vehicles.make', selectedMake);
+      if (selectedModel) query = query.eq('part_fitments.vehicles.model', selectedModel);
+      if (searchQuery) query = query.textSearch('fts', `'${searchQuery}'`);
       
       const { data, error } = await query;
       if (error) throw error;
@@ -75,7 +85,7 @@ const Shop = () => {
     },
   });
 
-  // Query 2: Fetch General Products (Products WITHOUT vehicle fitments)
+  // Query 2: Fetch 'products' that do NOT have vehicle fitments
   const { data: generalProducts = [], isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery({
     queryKey: ['shop-general-products', searchQuery],
     queryFn: async () => {
@@ -95,15 +105,11 @@ const Shop = () => {
     },
   });
 
-  // --- Queries for Filter Dropdowns (Fully Implemented) ---
+  // --- Queries for Filter Dropdowns (Unchanged) ---
   const { data: vehicleYears = [] } = useQuery<number[]>({
     queryKey: ['vehicle-years'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vehicle_years')
-        .select('year')
-        .order('year', { ascending: false });
-      
+      const { data, error } = await supabase.from('vehicle_years').select('year').order('year', { ascending: false });
       if (error) throw error;
       return data.map(item => item.year);
     }
@@ -112,11 +118,7 @@ const Shop = () => {
   const { data: vehicleMakes = [] } = useQuery<VehicleMake[]>({
     queryKey: ['vehicle-makes'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vehicle_makes')
-        .select('id, name')
-        .order('name');
-      
+      const { data, error } = await supabase.from('vehicle_makes').select('id, name').order('name');
       if (error) throw error;
       return data;
     }
@@ -125,58 +127,40 @@ const Shop = () => {
   const { data: vehicleModels = [] } = useQuery<VehicleModel[]>({
     queryKey: ['vehicle-models', selectedMake],
     queryFn: async () => {
-      const makeId = (vehicleMakes as VehicleMake[]).find(make => make.name === selectedMake)?.id;
+      const makeId = vehicleMakes.find(make => make.name === selectedMake)?.id;
       if (!makeId) return [];
-
-      const { data, error } = await supabase
-        .from('vehicle_models')
-        .select('name')
-        .eq('make_id', makeId)
-        .order('name');
-      
+      const { data, error } = await supabase.from('vehicle_models').select('name').eq('make_id', makeId).order('name');
       if (error) throw error;
       return data;
     },
     enabled: !!selectedMake,
   });
 
-  // --- Event Handlers ---
+  // --- Event Handlers (Unchanged) ---
   const handleYearChange = (value: string) => {
     setSelectedYear(value);
-    setSearchParams(prev => {
-      prev.set('year', value);
-      return prev;
-    });
+    setSearchParams(prev => { prev.set('year', value); return prev; });
   };
 
   const handleMakeChange = (value: string) => {
     setSelectedMake(value);
     setSelectedModel('');
-    setSearchParams(prev => {
-      prev.set('make', value);
-      prev.delete('model');
-      return prev;
-    });
+    setSearchParams(prev => { prev.set('make', value); prev.delete('model'); return prev; });
   };
 
   const handleModelChange = (value: string) => {
     setSelectedModel(value);
-    setSearchParams(prev => {
-      prev.set('model', value);
-      return prev;
-    });
+    setSearchParams(prev => { prev.set('model', value); return prev; });
   };
   
   const handleTextSearch = () => {
     setSearchQuery(searchText);
-    setSearchParams(prev => {
-      prev.set('query', searchText);
-      return prev;
-    });
+    setSearchParams(prev => { prev.set('query', searchText); return prev; });
   };
   
-  const formattedParts = parts.map(formatProductData);
-  const formattedGeneralProducts = generalProducts.map(formatProductData);
+  // Format data using the generic helper
+  const formattedParts = parts.map(formatCardData);
+  const formattedGeneralProducts = generalProducts.map(formatCardData);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -211,7 +195,7 @@ const Shop = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2 col-span-1 md:col-span-2">
+          <div className="space-y-2 col-span-1 md:grid-cols-2">
             <Label htmlFor="search-filter">Search Parts & Products</Label>
             <div className="flex space-x-2">
               <Input
@@ -234,7 +218,7 @@ const Shop = () => {
         {!isLoadingParts && !isErrorParts && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {formattedParts.length > 0 ? (
-              formattedParts.map((product) => <ProductCard key={product.id} {...product} />)
+              formattedParts.map((part) => <ProductCard key={part.id} {...part} />)
             ) : (
               <p className="col-span-full text-center text-muted-foreground">No parts found matching your criteria.</p>
             )}
