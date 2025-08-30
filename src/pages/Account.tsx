@@ -543,6 +543,24 @@ const Account = () => {
       }
       setSellerId(sellerData.id);
     }
+
+    let vehicleId = null;
+    if (productInfo.year && productInfo.make && productInfo.model) {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('id')
+        .eq('year', parseInt(productInfo.year))
+        .eq('make', productInfo.make)
+        .eq('model', productInfo.model)
+        .single();
+      
+      if (error) {
+        console.error("Error fetching vehicle:", error);
+        toast({ title: "Error", description: "Failed to find matching vehicle.", variant: "destructive" });
+        return;
+      }
+      vehicleId = data?.id;
+    }
     
     const imageUrls = [];
     // Assuming productImages state handles file objects
@@ -596,24 +614,46 @@ const Account = () => {
         product_type: 'GENERIC',
       };
 
+      let itemId = null;
       if (editingProductId) {
         if (isPart) {
           const { error } = await supabase.from('parts').update(payload).eq('id', editingProductId);
           if (error) throw error;
+          itemId = editingProductId;
         } else {
           const { error } = await supabase.from('products').update(payload).eq('id', editingProductId);
           if (error) throw error;
+          itemId = editingProductId;
         }
         toast({ title: "Success!", description: `${isPart ? 'Part' : 'Product'} updated successfully.`});
       } else {
         if (isPart) {
-          const { error } = await supabase.from('parts').insert([payload]);
+          const { data, error } = await supabase.from('parts').insert([payload]).select().single();
           if (error) throw error;
+          itemId = data.id;
         } else {
-          const { error } = await supabase.from('products').insert([payload]);
+          const { data, error } = await supabase.from('products').insert([payload]).select().single();
           if (error) throw error;
+          itemId = data.id;
         }
         toast({ title: "Success!", description: `${isPart ? 'Part' : 'Product'} listed successfully.`});
+      }
+      
+      // ✅ NEW LOGIC: Insert into the correct join table
+      if (itemId && vehicleId) {
+        if (isPart) {
+          const { error } = await supabase.from('part_vehicle_compatibility').insert([{ part_id: itemId, vehicle_id: vehicleId }]);
+          if (error) {
+            console.error("Error inserting into part_vehicle_compatibility:", error);
+            // Don't throw here, as the part is already created.
+          }
+        } else {
+          const { error } = await supabase.from('product_fitments').insert([{ product_id: itemId, vehicle_id: vehicleId }]);
+          if (error) {
+            console.error("Error inserting into product_fitments:", error);
+            // Don't throw here, as the product is already created.
+          }
+        }
       }
       
       cleanupAndRefetch();
@@ -629,7 +669,16 @@ const Account = () => {
 
   const handleEditProduct = (product: Product) => {
     setEditingProductId(product.id);
-    const specs = product.specifications as unknown as PartSpecifications;
+    let specs: PartSpecifications = {};
+    if (typeof product.specifications === 'string' && product.specifications.trim() !== '') {
+        try {
+            specs = JSON.parse(product.specifications);
+        } catch (e) {
+            console.error("Failed to parse product specifications as JSON:", e);
+        }
+    } else if (typeof product.specifications === 'object' && product.specifications !== null) {
+        specs = product.specifications;
+    }
     setProductInfo({
       name: product.name,
       description: product.description,
