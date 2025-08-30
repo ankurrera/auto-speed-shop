@@ -15,9 +15,19 @@ import { Database } from "@/database.types";
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
 
-// ✅ STEP 1: Create a new type that includes the joined data
-type PartWithFitment = Part & {
+// Create a type that includes the joined data
+type PartWithVehicles = Part & {
   part_vehicle_compatibility: {
+    vehicles: {
+      make: string;
+      model: string;
+      year: number;
+    } | null;
+  }[];
+};
+
+type ProductWithFitments = Product & {
+  product_fitments: {
     vehicles: {
       make: string;
       model: string;
@@ -63,20 +73,14 @@ const Shop = () => {
   const initialModel = searchParams.get('model') || '';
   const initialQuery = searchParams.get('query') || '';
 
-  // State for search text input
   const [searchText, setSearchText] = useState(initialQuery);
-  // State for the active search query
   const [searchQuery, setSearchQuery] = useState(initialQuery);
-
-  // State for filter selections
   const [selectedYear, setSelectedYear] = useState(initialYear);
   const [selectedModel, setSelectedModel] = useState(initialModel);
-  
-  // State for Make selection
   const [selectedMakeId, setSelectedMakeId] = useState('');
   const [selectedMakeName, setSelectedMakeName] = useState(initialMake);
 
-  // --- Queries for Filter Dropdowns ---
+  // Queries for Filter Dropdowns
   const { data: vehicleYears = [] } = useQuery<number[]>({
     queryKey: ['vehicle-years'],
     queryFn: async () => {
@@ -117,28 +121,17 @@ const Shop = () => {
 
   // --- Queries for Parts and Products ---
 
-  // ✅ STEP 2: Fix the useQuery for parts to handle the type correctly
-  const { data: parts = [], isLoading: isLoadingParts, isError: isErrorParts } = useQuery<PartWithFitment[]>({
+  const { data: parts = [], isLoading: isLoadingParts, isError: isErrorParts } = useQuery<PartWithVehicles[]>({
     queryKey: ['shop-parts', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
       const hasVehicleFilter = !!(selectedYear || selectedMakeName || selectedModel);
-      const joinType = hasVehicleFilter ? '!inner' : '!left';
-
-      const selectString = `
+      
+      let query = supabase.from('parts').select(`
         *,
-        part_vehicle_compatibility${joinType} (
-          vehicles!inner (
-            make,
-            model,
-            year
-          )
+        part_vehicle_compatibility!inner(
+          vehicles!inner(make, model, year)
         )
-      `;
-
-      let query = supabase.from('parts').select(selectString);
-
-      // Add this filter back if the 'is_active' column exists on your 'parts' table
-      // query = query.eq('is_active', true);
+      `);
       
       if (hasVehicleFilter) {
         if (selectedYear) query = query.filter('part_vehicle_compatibility.vehicles.year', 'eq', selectedYear);
@@ -153,19 +146,31 @@ const Shop = () => {
         console.error("Error fetching parts:", error);
         throw error;
       }
-      return (data || []) as unknown as PartWithFitment[];
+      return (data || []) as unknown as PartWithVehicles[];
     },
   });
 
-  const { data: generalProducts = [], isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<Product[]>({
-    queryKey: ['shop-general-products', searchQuery],
+  const { data: generalProducts = [], isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<ProductWithFitments[]>({
+    queryKey: ['shop-general-products', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
+      const hasVehicleFilter = !!(selectedYear || selectedMakeName || selectedModel);
+      
       let query = supabase
         .from('products')
-        .select('*, product_fitments!left(product_id)')
-        .eq('is_active', true)
-        .is('product_fitments.product_id', null);
+        .select(`
+          *,
+          product_fitments!inner(
+            vehicles!inner(make, model, year)
+          )
+        `)
+        .eq('is_active', true);
         
+      if (hasVehicleFilter) {
+        if (selectedYear) query = query.filter('product_fitments.vehicles.year', 'eq', selectedYear);
+        if (selectedMakeName) query = query.filter('product_fitments.vehicles.make', 'eq', selectedMakeName);
+        if (selectedModel) query = query.filter('product_fitments.vehicles.model', 'eq', selectedModel);
+      }
+
       if (searchQuery) {
         query = query.textSearch('name_description_tsv', `'${searchQuery}'`);
       }
@@ -176,7 +181,6 @@ const Shop = () => {
     },
   });
 
-  // --- Event Handlers ---
   const handleYearChange = (value: string) => {
     setSelectedYear(value);
     setSearchParams(prev => { prev.set('year', value); return prev; }, { replace: true });
@@ -186,7 +190,7 @@ const Shop = () => {
     const makeName = vehicleMakes.find(m => m.id === makeId)?.name || '';
     setSelectedMakeId(makeId);
     setSelectedMakeName(makeName);
-    setSelectedModel(''); // Reset model
+    setSelectedModel('');
     setSearchParams(prev => { 
       prev.set('make', makeName); 
       prev.delete('model'); 
@@ -204,7 +208,6 @@ const Shop = () => {
     setSearchParams(prev => { prev.set('query', searchText); return prev; }, { replace: true });
   };
   
-  // Format data for display
   const formattedParts = parts.map(formatCardData);
   const formattedGeneralProducts = generalProducts.map(formatCardData);
 
@@ -214,7 +217,6 @@ const Shop = () => {
       
       <div className="bg-card p-6 rounded-lg shadow-sm mb-8">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-          {/* Year Filter */}
           <div className="space-y-2">
             <Label htmlFor="year-filter">Year</Label>
             <Select value={selectedYear} onValueChange={handleYearChange}>
@@ -224,7 +226,6 @@ const Shop = () => {
               </SelectContent>
             </Select>
           </div>
-          {/* Make Filter */}
           <div className="space-y-2">
             <Label htmlFor="make-filter">Make</Label>
             <Select value={selectedMakeId} onValueChange={handleMakeChange}>
@@ -234,7 +235,6 @@ const Shop = () => {
               </SelectContent>
             </Select>
           </div>
-          {/* Model Filter */}
           <div className="space-y-2">
             <Label htmlFor="model-filter">Model</Label>
             <Select value={selectedModel} onValueChange={handleModelChange} disabled={!selectedMakeId}>
@@ -244,7 +244,6 @@ const Shop = () => {
               </SelectContent>
             </Select>
           </div>
-          {/* Search Input */}
           <div className="space-y-2 col-span-1 md:col-span-2">
             <Label htmlFor="search-filter">Search Parts & Products</Label>
             <div className="flex space-x-2">
