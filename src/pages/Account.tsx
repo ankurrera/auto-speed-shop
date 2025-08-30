@@ -563,6 +563,15 @@ const Account = () => {
 
     try {
       const isPart = listingType === 'part';
+      const specificationsPayload = {
+        category: productInfo.category,
+        make: productInfo.make,
+        model: productInfo.model,
+        year: productInfo.year,
+        vin: productInfo.vin,
+        additional: productInfo.specifications
+      };
+      
       const payload = isPart ? {
         name: productInfo.name,
         description: productInfo.description,
@@ -570,14 +579,7 @@ const Account = () => {
         stock_quantity: Number(productInfo.stock_quantity) || 0,
         brand: userInfo.firstName || 'Unknown',
         seller_id: sellerId,
-        specifications: {
-          category: productInfo.category,
-          make: productInfo.make,
-          model: productInfo.model,
-          year: productInfo.year,
-          vin: productInfo.vin,
-          additional: productInfo.specifications
-        },
+        specifications: specificationsPayload,
         image_urls: productInfo.image_urls,
       } : {
         name: productInfo.name,
@@ -586,7 +588,7 @@ const Account = () => {
         stock_quantity: Number(productInfo.stock_quantity) || 0,
         is_active: productInfo.stock_quantity > 0,
         image_urls: productInfo.image_urls,
-        specifications: productInfo.specifications,
+        specifications: specificationsPayload,
         is_featured: false,
         brand: userInfo.firstName || 'Unknown',
         seller_id: sellerId,
@@ -627,18 +629,19 @@ const Account = () => {
 
   const handleEditProduct = (product: Product) => {
     setEditingProductId(product.id);
+    const specs = product.specifications as unknown as PartSpecifications;
     setProductInfo({
       name: product.name,
       description: product.description,
       price: String(product.price),
       stock_quantity: product.stock_quantity,
       image_urls: product.image_urls || [],
-      specifications: product.specifications || "",
-      category: product.category || "",
-      make: "",
-      model: "",
-      year: "",
-      vin: "",
+      specifications: specs?.additional || "",
+      category: specs?.category || "",
+      make: specs?.make || "",
+      model: specs?.model || "",
+      year: specs?.year || "",
+      vin: specs?.vin || "",
     });
     setListingType("product");
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1455,59 +1458,56 @@ const Account = () => {
                       <Label htmlFor="product-images">Product Images</Label>
                       <Input id="product-images" type="file" multiple onChange={handleImageUpload} />
                     </div>
-                    {listingType === "part" && (
-                      <>
-                        <Separator className="my-8" />
-                        <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
-                        <div className="grid md:grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="part-year">Vehicle Year</Label>
-                            <Select value={productInfo.year} onValueChange={(value) => setProductInfo({ ...productInfo, year: value, make: '', model: '' })}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Year" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {vehicleYears.map(year => (
-                                  <SelectItem key={year} value={year.toString()}>
-                                    {year}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="part-make">Vehicle Make</Label>
-                            <Select value={productInfo.make} onValueChange={(value) => setProductInfo({ ...productInfo, make: value, model: '' })}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Make" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {vehicleMakes.map(make => (
-                                  <SelectItem key={make.name} value={make.name}>
-                                    {make.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="part-model">Vehicle Model</Label>
-                            <Select value={productInfo.model} onValueChange={(value) => setProductInfo({ ...productInfo, model: value })} disabled={!productInfo.make}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Model" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {vehicleModels.map(model => (
-                                  <SelectItem key={model.name} value={model.name}>
-                                    {model.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                    {/* Vehicle Compatibility fields for both parts and products */}
+                    <Separator className="my-8" />
+                    <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="part-year">Vehicle Year</Label>
+                        <Select value={productInfo.year} onValueChange={(value) => setProductInfo({ ...productInfo, year: value, make: '', model: '' })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vehicleYears.map(year => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="part-make">Vehicle Make</Label>
+                        <Select value={productInfo.make} onValueChange={(value) => setProductInfo({ ...productInfo, make: value, model: '' })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Make" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vehicleMakes.map(make => (
+                              <SelectItem key={make.name} value={make.name}>
+                                {make.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="part-model">Vehicle Model</Label>
+                        <Select value={productInfo.model} onValueChange={(value) => setProductInfo({ ...productInfo, model: value })} disabled={!productInfo.make}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Model" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vehicleModels.map(model => (
+                              <SelectItem key={model.name} value={model.name}>
+                                {model.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="product-specs">Specifications</Label>
                       <Textarea id="product-specs" value={productInfo.specifications} onChange={(e) => setProductInfo({ ...productInfo, specifications: e.target.value })} rows={4} placeholder={listingType === "part" ? "Additional specifications, e.g., 'Color: Black'" : "List specifications here."} />
