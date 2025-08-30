@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, ChangeEvent, FormEvent } from "react";
-import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff, Lock, TrendingUp, Archive, Trash2 } from "lucide-react";
+import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff, Lock, TrendingUp, Archive, Trash2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Database } from "@/database.types";
+import { v4 as uuidv4 } from 'uuid';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -27,10 +28,9 @@ interface PartSpecifications {
   year?: string;
   vin?: string;
   additional?: string;
-  [key: string]: unknown; // Added to make it compatible with `Json` type
+  [key: string]: unknown;
 }
 
-// Fixed the type incompatibility by overriding the specifications property
 interface PartWithSpecs extends Omit<Part, 'specifications'> {
   specifications: PartSpecifications | null;
 }
@@ -68,7 +68,7 @@ const Account = () => {
   const [newSellerEmail, setNewSellerEmail] = useState("");
   const [newSellerPassword, setNewSellerPassword] = useState("");
   const [sellerExistsForAdmin, setSellerExistsForAdmin] = useState(false);
-  
+
   const [userInfo, setUserInfo] = useState({
     firstName: "",
     lastName: "",
@@ -115,6 +115,7 @@ const Account = () => {
     year: "",
     vin: "",
   });
+  const [productFiles, setProductFiles] = useState<File[]>([]);
   const [sellerId, setSellerId] = useState<string | null>(null);
 
   // Queries for Filter Dropdowns
@@ -219,20 +220,20 @@ const Account = () => {
       .select("*")
       .eq("user_id", userId)
       .order("is_default", { ascending: false });
-      
+
     if (error) {
       console.error("Error fetching addresses:", error.message);
     } else {
       setAddresses(data);
     }
   }, []);
-  
+
   const checkSellerExists = useCallback(async (userId) => {
     const { data, count, error } = await supabase
       .from('sellers')
       .select('user_id', { count: 'exact' })
       .eq('user_id', userId);
-    
+
     if (error) {
       console.error("Error checking seller status:", error.message);
       setSellerExistsForAdmin(false);
@@ -282,7 +283,7 @@ const Account = () => {
       setIsEditing(false);
     }
   };
-  
+
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
@@ -324,20 +325,20 @@ const Account = () => {
 
     initialCheck();
     checkAdminExists();
-    
+
     return () => {
       authListener.subscription.unsubscribe();
     };
   }, [fetchAndSetUserData]);
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-  
+
     if (error) {
       console.error("Login failed:", error.message);
       alert("Login failed: " + error.message);
@@ -347,13 +348,13 @@ const Account = () => {
         .select("is_admin")
         .eq("user_id", data.user.id)
         .single();
-      
+
       const { data: sellerData, error: sellerError } = await supabase
         .from("sellers")
         .select("user_id")
         .eq("user_id", data.user.id)
         .single();
-        
+
       if (profileError) {
         console.error("Error fetching profile:", profileError.message);
         alert("Login failed: Could not retrieve profile information.");
@@ -375,7 +376,7 @@ const Account = () => {
     }
   };
 
-  const handleSignup = async (e) => {
+  const handleSignup = async (e: FormEvent) => {
     e.preventDefault();
 
     if (loginMode === "admin" && adminExists) {
@@ -400,7 +401,7 @@ const Account = () => {
       alert("Signup failed: " + error.message);
     } else {
       console.log('Signup successful, user:', data.user);
-      
+
       if (loginMode === "admin") {
         await supabase
           .from('profiles')
@@ -415,7 +416,7 @@ const Account = () => {
     }
   };
 
-  const handleCreateSellerAccount = async (e) => {
+  const handleCreateSellerAccount = async (e: FormEvent) => {
     e.preventDefault();
 
     let userId = null;
@@ -432,14 +433,14 @@ const Account = () => {
       },
     });
     signUpError = userSignUpError;
-    
+
     if (signUpError && signUpError.message.includes("User already registered")) {
       const { data: existingProfileData, error: profileError } = await supabase
         .from('profiles')
         .select('user_id, email')
         .eq('email', newSellerEmail)
         .maybeSingle();
-      
+
       if (profileError) {
         console.error("Error retrieving existing user profile:", profileError.message);
         alert("Failed to create seller account. User exists but profile could not be retrieved.");
@@ -466,12 +467,12 @@ const Account = () => {
     } else {
       userId = newUserData?.user?.id;
     }
-    
+
     if (userId) {
         const { error: upsertError } = await supabase
             .from('profiles')
-            .upsert({ 
-                user_id: userId, 
+            .upsert({
+                user_id: userId,
                 is_seller: true,
                 email: newSellerEmail,
                 first_name: newSellerName
@@ -502,7 +503,7 @@ const Account = () => {
       alert('Error creating seller account. Please try again.');
       return;
     }
-    
+
     const { error: profileUpdateError } = await supabase
       .from('profiles')
       .update({ is_seller: true })
@@ -511,20 +512,20 @@ const Account = () => {
     if (profileUpdateError) {
       console.error("Error updating profile with seller status:", profileUpdateError.message);
     }
-    
+
     alert(`Seller account created successfully for ${newSellerEmail}!`);
     setNewSellerName("");
     setNewSellerAddress("");
     setNewSellerEmail("");
     setNewSellerPassword("");
     setNewSellerPhoneNumber("");
-    
+
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       await fetchAndSetUserData(session.user.id);
     }
   };
-  
+
   const handleProductSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const { data: { session } } = await supabase.auth.getSession();
@@ -533,7 +534,6 @@ const Account = () => {
       return;
     }
 
-    // Ensure sellerId is fetched
     if (!sellerId) {
       const { data: sellerData, error } = await supabase.from('sellers').select('id').eq('user_id', session.user.id).single();
       if (error) {
@@ -544,6 +544,32 @@ const Account = () => {
       setSellerId(sellerData.id);
     }
 
+    const imageUrls: string[] = [];
+    if (productFiles.length > 0) {
+      const bucketName = listingType === 'part' ? 'part_images' : 'product_images';
+      for (const file of productFiles) {
+        const fileExtension = file.name.split('.').pop();
+        const filePath = `${session.user.id}/${uuidv4()}.${fileExtension}`;
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file, { upsert: true });
+
+        if (uploadError) {
+          console.error('Image upload failed:', uploadError);
+          toast({ title: "Error", description: `Failed to upload image to ${bucketName} bucket.`, variant: "destructive" });
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+
+        imageUrls.push(publicUrlData.publicUrl);
+      }
+    }
+
+    const finalImageUrls = editingProductId ? [...productInfo.image_urls, ...imageUrls] : imageUrls;
+
     let vehicleId = null;
     if (productInfo.year && productInfo.make && productInfo.model) {
       const { data, error } = await supabase
@@ -553,7 +579,7 @@ const Account = () => {
         .eq('make', productInfo.make)
         .eq('model', productInfo.model)
         .single();
-      
+
       if (error) {
         console.error("Error fetching vehicle:", error);
         toast({ title: "Error", description: "Failed to find matching vehicle.", variant: "destructive" });
@@ -561,13 +587,6 @@ const Account = () => {
       }
       vehicleId = data?.id;
     }
-    
-    const imageUrls = [];
-    // Assuming productImages state handles file objects
-    // The previous implementation used URL.createObjectURL, which is not what you need for a database upload
-    // You need to upload to storage first.
-    // This part of the code needs to be adjusted based on how you handle image uploads.
-    // For now, I'll keep the logic that assumes imageUrls are already available.
 
     const cleanupAndRefetch = () => {
       setEditingProductId(null);
@@ -575,6 +594,7 @@ const Account = () => {
         name: "", description: "", price: "", stock_quantity: 0, image_urls: [],
         specifications: "", category: "", make: "", model: "", year: "", vin: "",
       });
+      setProductFiles([]);
       queryClient.invalidateQueries({ queryKey: ['seller-products'] });
       queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
     };
@@ -589,7 +609,7 @@ const Account = () => {
         vin: productInfo.vin,
         additional: productInfo.specifications
       };
-      
+
       const payload = isPart ? {
         name: productInfo.name,
         description: productInfo.description,
@@ -598,14 +618,14 @@ const Account = () => {
         brand: userInfo.firstName || 'Unknown',
         seller_id: sellerId,
         specifications: specificationsPayload,
-        image_urls: productInfo.image_urls,
+        image_urls: finalImageUrls,
       } : {
         name: productInfo.name,
         description: productInfo.description,
         price: parseFloat(productInfo.price) || 0,
         stock_quantity: Number(productInfo.stock_quantity) || 0,
         is_active: productInfo.stock_quantity > 0,
-        image_urls: productInfo.image_urls,
+        image_urls: finalImageUrls,
         specifications: specificationsPayload,
         is_featured: false,
         brand: userInfo.firstName || 'Unknown',
@@ -638,24 +658,21 @@ const Account = () => {
         }
         toast({ title: "Success!", description: `${isPart ? 'Part' : 'Product'} listed successfully.`});
       }
-      
-      // ✅ NEW LOGIC: Insert into the correct join table
+
       if (itemId && vehicleId) {
         if (isPart) {
           const { error } = await supabase.from('part_vehicle_compatibility').insert([{ part_id: itemId, vehicle_id: vehicleId }]);
           if (error) {
             console.error("Error inserting into part_vehicle_compatibility:", error);
-            // Don't throw here, as the part is already created.
           }
         } else {
           const { error } = await supabase.from('product_fitments').insert([{ product_id: itemId, vehicle_id: vehicleId }]);
           if (error) {
             console.error("Error inserting into product_fitments:", error);
-            // Don't throw here, as the product is already created.
           }
         }
       }
-      
+
       cleanupAndRefetch();
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -755,7 +772,7 @@ const Account = () => {
       deletePartMutation.mutate(partId);
     }
   };
-  
+
   const archiveProductMutation = useMutation({
     mutationFn: async ({ productId, is_active }: { productId: string; is_active: boolean }) => {
       const { error } = await supabase.from("products").update({ is_active: !is_active }).eq("id", productId);
@@ -794,8 +811,25 @@ const Account = () => {
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    setProductFiles(files);
     const imageUrls = files.map(file => URL.createObjectURL(file));
-    setProductInfo({ ...productInfo, image_urls: imageUrls });
+    setProductInfo(prev => ({
+        ...prev,
+        image_urls: [...prev.image_urls, ...imageUrls]
+    }));
+  };
+
+  const removeImage = (index: number) => {
+      setProductInfo(prev => {
+          const newUrls = [...prev.image_urls];
+          newUrls.splice(index, 1);
+          return { ...prev, image_urls: newUrls };
+      });
+      setProductFiles(prev => {
+          const newFiles = [...prev];
+          newFiles.splice(index, 1);
+          return newFiles;
+      });
   };
 
   const handleLogout = async () => {
@@ -805,7 +839,7 @@ const Account = () => {
     setSellerExistsForAdmin(false);
     navigate("/");
   };
-  
+
   const handleEditAddress = (address) => {
     setEditingAddressId(address.id);
     setFormAddress(address);
@@ -829,7 +863,7 @@ const Account = () => {
     }
   };
 
-  const handleAddressFormSubmit = async (e) => {
+  const handleAddressFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
@@ -841,7 +875,7 @@ const Account = () => {
         .from("addresses")
         .update(addressToSave)
         .eq("id", editingAddressId);
-      
+
       if (error) {
       console.error("Error updating address:", error.message);
         alert("Failed to update address.");
@@ -899,7 +933,7 @@ const Account = () => {
                           Admin Login
                         </Button>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
                         <Input
@@ -937,7 +971,7 @@ const Account = () => {
                         Login
                       </Button>
                     </form>
-                    
+
                     <div className="mt-6 text-center space-y-2">
                       <Button variant="link" className="text-sm" onClick={() => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
@@ -1025,7 +1059,7 @@ const Account = () => {
                         Sign Up
                       </Button>
                     </form>
-                    
+
                     <div className="mt-6 text-center space-y-2">
                       <p className="text-sm text-muted-foreground">
                         Already have an account?{" "}
@@ -1178,7 +1212,7 @@ const Account = () => {
                   Add New Address
                 </Button>
               </div>
-              
+
               {showAddressForm ? (
                 <Card>
                   <CardHeader>
@@ -1475,7 +1509,6 @@ const Account = () => {
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleProductSubmit} className="space-y-6">
-                    {/* Form fields... */}
                     <div className="space-y-2">
                       <Label htmlFor="product-name">{listingType === "part" ? "Part Name" : "Product Name"}</Label>
                       <Input id="product-name" value={productInfo.name} onChange={(e) => setProductInfo({ ...productInfo, name: e.target.value })} required />
@@ -1507,7 +1540,24 @@ const Account = () => {
                       <Label htmlFor="product-images">Product Images</Label>
                       <Input id="product-images" type="file" multiple onChange={handleImageUpload} />
                     </div>
-                    {/* Vehicle Compatibility fields for both parts and products */}
+                    {productInfo.image_urls.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-4">
+                            {productInfo.image_urls.map((url, index) => (
+                                <div key={index} className="relative w-24 h-24 border rounded overflow-hidden">
+                                    <img src={url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="destructive"
+                                        className="absolute top-1 right-1 w-6 h-6 p-0"
+                                        onClick={() => removeImage(index)}
+                                    >
+                                        <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                     <Separator className="my-8" />
                     <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
                     <div className="grid md:grid-cols-3 gap-4">
@@ -1609,9 +1659,9 @@ const Account = () => {
                   ))
                 )}
               </div>
-              
+
               <Separator className="my-8" />
-              
+
               <h2 className="text-2xl font-bold mb-4">Your Listed Products</h2>
               <div className="space-y-4">
                 {products.length === 0 ? (
