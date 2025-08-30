@@ -547,24 +547,30 @@ const Account = () => {
     const imageUrls: string[] = [];
     if (productFiles.length > 0) {
       const bucketName = listingType === 'part' ? 'part_images' : 'product_images';
-      for (const file of productFiles) {
-        const fileExtension = file.name.split('.').pop();
-        const filePath = `${session.user.id}/${uuidv4()}.${fileExtension}`;
-        const { error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(filePath, file, { upsert: true });
+      try {
+        for (const file of productFiles) {
+          const fileExtension = file.name.split('.').pop();
+          const filePath = `${session.user.id}/${uuidv4()}.${fileExtension}`;
+          const { error: uploadError } = await supabase.storage
+            .from(bucketName)
+            .upload(filePath, file, { upsert: true });
 
-        if (uploadError) {
-          console.error('Image upload failed:', uploadError);
-          toast({ title: "Error", description: `Failed to upload image to ${bucketName} bucket.`, variant: "destructive" });
-          return;
+          if (uploadError) {
+            console.error('Image upload failed:', uploadError);
+            toast({ title: "Error", description: `Failed to upload image to ${bucketName} bucket.`, variant: "destructive" });
+            return;
+          }
+
+          const { data: publicUrlData } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(filePath);
+
+          imageUrls.push(publicUrlData.publicUrl);
         }
-
-        const { data: publicUrlData } = supabase.storage
-          .from(bucketName)
-          .getPublicUrl(filePath);
-
-        imageUrls.push(publicUrlData.publicUrl);
+      } catch (error) {
+        console.error('Image upload failed:', error);
+        toast({ title: "Error", description: `An unexpected error occurred during image upload: ${error.message}`, variant: "destructive" });
+        return;
       }
     }
 
