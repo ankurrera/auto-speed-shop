@@ -104,19 +104,18 @@ const Shop = () => {
   const getVehicleId = async () => {
     if (!selectedYear || !selectedMakeName || !selectedModel) return null;
 
-    const { data: vehicle, error } = await supabase
+    const { data: vehicles, error } = await supabase
       .from('vehicles')
       .select('id')
       .eq('year', parseInt(selectedYear))
       .eq('make', selectedMakeName)
-      .eq('model', selectedModel)
-      .maybeSingle(); // Use maybeSingle to handle no results gracefully
+      .eq('model', selectedModel);
 
     if (error) {
       console.error('Error fetching vehicle ID:', error);
       return null;
     }
-    return vehicle?.id || null;
+    return vehicles?.[0]?.id || null;
   };
 
   const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
