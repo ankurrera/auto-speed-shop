@@ -196,7 +196,7 @@ const Home = () => {
                   
                   <Button size="lg" className="h-12 shadow-primary hover:shadow-lg transition-all duration-300" onClick={handleSearch}>
                     <Search className="h-5 w-5 mr-2" />
-                    Search Parts
+                    Search Items
                   </Button>
                 </div>
               </CardContent>
