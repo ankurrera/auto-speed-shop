@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,27 +14,7 @@ import { Database } from "@/database.types";
 // Define the specific types from your generated database types
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
-
-// Create a new type that includes the joined data
-type PartWithVehicles = Part & {
-  part_vehicle_compatibility: {
-    vehicles: {
-      make: string;
-      model: string;
-      year: number;
-    } | null;
-  }[];
-};
-
-type ProductWithFitments = Product & {
-  product_fitments: {
-    vehicles: {
-      make: string;
-      model: string;
-      year: number;
-    } | null;
-  }[];
-};
+type Vehicle = Database['public']['Tables']['vehicles']['Row'];
 
 // Define types for the vehicle data
 interface VehicleMake {
@@ -79,6 +59,7 @@ const Shop = () => {
   const [selectedModel, setSelectedModel] = useState(initialModel);
   const [selectedMakeId, setSelectedMakeId] = useState('');
   const [selectedMakeName, setSelectedMakeName] = useState(initialMake);
+  const [filterMode, setFilterMode] = useState<'all' | 'parts' | 'products'>('all');
 
   // Queries for Filter Dropdowns
   const { data: vehicleYears = [] } = useQuery<number[]>({
@@ -121,57 +102,70 @@ const Shop = () => {
 
   // --- Queries for Parts and Products ---
 
-  const { data: parts = [], isLoading: isLoadingParts, isError: isErrorParts } = useQuery<PartWithVehicles[]>({
+  const getVehicleFilter = async () => {
+    if (!selectedYear || !selectedMakeName || !selectedModel) {
+      return null;
+    }
+    const { data: vehicleData, error: vehicleError } = await supabase
+      .from('vehicles')
+      .select('id')
+      .eq('year', selectedYear)
+      .eq('make', selectedMakeName)
+      .eq('model', selectedModel)
+      .maybeSingle();
+
+    if (vehicleError) throw vehicleError;
+    return vehicleData?.id || null;
+  };
+
+  const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
     queryKey: ['shop-parts', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
-      const hasVehicleFilter = !!(selectedYear || selectedMakeName || selectedModel);
-      
-      let query = supabase.from('parts').select(`
-        *,
-        part_vehicle_compatibility!inner(
-          vehicles(make, model, year)
-        )
-      `);
-      
-      if (hasVehicleFilter) {
-        if (selectedYear) query = query.filter('part_vehicle_compatibility.vehicles.year', 'eq', selectedYear);
-        if (selectedMakeName) query = query.filter('part_vehicle_compatibility.vehicles.make', 'eq', selectedMakeName);
-        if (selectedModel) query = query.filter('part_vehicle_compatibility.vehicles.model', 'eq', selectedModel);
+      const vehicleId = await getVehicleFilter();
+      let query = supabase.from('parts').select('*, part_vehicle_compatibility(part_id)');
+      if (vehicleId) {
+        query = query.filter('part_vehicle_compatibility.vehicle_id', 'eq', vehicleId);
       }
-      
-      if (searchQuery) query = query.textSearch('fts', `'${searchQuery}'`);
-      
-      const { data, error } = await query;
-      if (error) {
-        console.error("Error fetching parts:", error);
-        throw error;
-      }
-      return (data || []) as unknown as PartWithVehicles[];
-    },
-  });
-
-  const { data: generalProducts = [], isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<ProductWithFitments[]>({
-    queryKey: ['shop-general-products', selectedYear, selectedMakeName, selectedModel, searchQuery],
-    queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select(`
-          *,
-          product_fitments!left(
-            vehicles!inner(make, model, year)
-          )
-        `)
-        .eq('is_active', true);
-        
       if (searchQuery) {
-        query = query.textSearch('name_description_tsv', `'${searchQuery}'`);
+        query = query.textSearch('fts', `'${searchQuery}'`);
       }
-
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
+    enabled: filterMode === 'all' || filterMode === 'parts',
   });
+
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
+    queryKey: ['shop-products', selectedYear, selectedMakeName, selectedModel, searchQuery],
+    queryFn: async () => {
+      const vehicleId = await getVehicleFilter();
+      let query = supabase.from('products').select('*, product_fitments(product_id)');
+      if (vehicleId) {
+        query = query.filter('product_fitments.vehicle_id', 'eq', vehicleId);
+      }
+      if (searchQuery) {
+        query = query.textSearch('fts', `'${searchQuery}'`);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: filterMode === 'all' || filterMode === 'products',
+  });
+
+  const allResults = useMemo(() => {
+    const combined = [];
+    if (filterMode === 'all' || filterMode === 'parts') {
+      combined.push(...(parts || []).map(p => ({ ...p, type: 'part' })));
+    }
+    if (filterMode === 'all' || filterMode === 'products') {
+      combined.push(...(products || []).map(p => ({ ...p, type: 'product' })));
+    }
+    return combined;
+  }, [parts, products, filterMode]);
+
+  const isLoading = isLoadingParts || isLoadingProducts;
 
   const handleYearChange = (value: string) => {
     setSelectedYear(value);
@@ -200,15 +194,13 @@ const Shop = () => {
     setSearchParams(prev => { prev.set('query', searchText); return prev; }, { replace: true });
   };
   
-  const formattedParts = parts.map(formatCardData);
-  const formattedGeneralProducts = generalProducts.map(formatCardData);
-
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold mb-8 text-center">Shop</h1>
       
       <div className="bg-card p-6 rounded-lg shadow-sm mb-8">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+          {/* Year Filter */}
           <div className="space-y-2">
             <Label htmlFor="year-filter">Year</Label>
             <Select value={selectedYear} onValueChange={handleYearChange}>
@@ -218,6 +210,7 @@ const Shop = () => {
               </SelectContent>
             </Select>
           </div>
+          {/* Make Filter */}
           <div className="space-y-2">
             <Label htmlFor="make-filter">Make</Label>
             <Select value={selectedMakeId} onValueChange={handleMakeChange}>
@@ -227,6 +220,7 @@ const Shop = () => {
               </SelectContent>
             </Select>
           </div>
+          {/* Model Filter */}
           <div className="space-y-2">
             <Label htmlFor="model-filter">Model</Label>
             <Select value={selectedModel} onValueChange={handleModelChange} disabled={!selectedMakeId}>
@@ -252,35 +246,37 @@ const Shop = () => {
         </div>
       </div>
       
-      <section className="mb-12">
-        <h2 className="text-3xl font-semibold mb-6">Shop All Parts</h2>
-        {isLoadingParts && <p>Loading parts...</p>}
-        {isErrorParts && <p className="text-red-500">Error fetching parts.</p>}
-        {!isLoadingParts && !isErrorParts && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {formattedParts.length > 0 ? (
-              formattedParts.map((part) => <ProductCard key={part.id} {...part} />)
-            ) : (
-              <p className="col-span-full text-center text-muted-foreground">No parts found matching your criteria.</p>
-            )}
-          </div>
-        )}
-      </section>
-
-      <Separator className="my-8" />
+      <div className="flex space-x-4 mb-8 justify-center">
+        <Button
+          variant={filterMode === 'all' ? 'default' : 'outline'}
+          onClick={() => setFilterMode('all')}
+        >
+          All Items
+        </Button>
+        <Button
+          variant={filterMode === 'parts' ? 'default' : 'outline'}
+          onClick={() => setFilterMode('parts')}
+        >
+          Parts
+        </Button>
+        <Button
+          variant={filterMode === 'products' ? 'default' : 'outline'}
+          onClick={() => setFilterMode('products')}
+        >
+          Products
+        </Button>
+      </div>
 
       <section>
-        <h2 className="text-3xl font-semibold mb-6">Shop All Products</h2>
-        {isLoadingProducts && <p>Loading products...</p>}
-        {isErrorProducts && <p className="text-red-500">Error fetching products.</p>}
-        {!isLoadingProducts && !isErrorProducts && (
+        {isLoading && <p>Loading items...</p>}
+        {!isLoading && allResults.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {formattedGeneralProducts.length > 0 ? (
-              formattedGeneralProducts.map((product) => <ProductCard key={product.id} {...product} />)
-            ) : (
-              <p className="col-span-full text-center text-muted-foreground">No general products found.</p>
-            )}
+            {allResults.map((item) => (
+              <ProductCard key={item.id} {...formatCardData(item)} />
+            ))}
           </div>
+        ) : (
+          !isLoading && <p className="col-span-full text-center text-muted-foreground">No items found matching your criteria.</p>
         )}
       </section>
     </div>
