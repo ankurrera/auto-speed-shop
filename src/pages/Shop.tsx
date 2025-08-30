@@ -15,7 +15,7 @@ import { Database } from "@/database.types";
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
 
-// Create a type that includes the joined data
+// Create a new type that includes the joined data
 type PartWithVehicles = Part & {
   part_vehicle_compatibility: {
     vehicles: {
@@ -129,7 +129,7 @@ const Shop = () => {
       let query = supabase.from('parts').select(`
         *,
         part_vehicle_compatibility!inner(
-          vehicles!inner(make, model, year)
+          vehicles(make, model, year)
         )
       `);
       
@@ -153,24 +153,16 @@ const Shop = () => {
   const { data: generalProducts = [], isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<ProductWithFitments[]>({
     queryKey: ['shop-general-products', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
-      const hasVehicleFilter = !!(selectedYear || selectedMakeName || selectedModel);
-      
       let query = supabase
         .from('products')
         .select(`
           *,
-          product_fitments!inner(
+          product_fitments!left(
             vehicles!inner(make, model, year)
           )
         `)
         .eq('is_active', true);
         
-      if (hasVehicleFilter) {
-        if (selectedYear) query = query.filter('product_fitments.vehicles.year', 'eq', selectedYear);
-        if (selectedMakeName) query = query.filter('product_fitments.vehicles.make', 'eq', selectedMakeName);
-        if (selectedModel) query = query.filter('product_fitments.vehicles.model', 'eq', selectedModel);
-      }
-
       if (searchQuery) {
         query = query.textSearch('name_description_tsv', `'${searchQuery}'`);
       }
