@@ -110,13 +110,13 @@ const Shop = () => {
       .eq('year', parseInt(selectedYear))
       .eq('make', selectedMakeName)
       .eq('model', selectedModel)
-      .single();
+      .maybeSingle(); // Use maybeSingle to handle no results gracefully
 
     if (error) {
       console.error('Error fetching vehicle ID:', error);
       return null;
     }
-    return vehicle?.id;
+    return vehicle?.id || null;
   };
 
   const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
