@@ -101,37 +101,44 @@ const Shop = () => {
 
 
   // --- Queries for Parts and Products ---
+  const getVehicleId = async () => {
+    if (!selectedYear || !selectedMakeName || !selectedModel) return null;
 
-  const getVehicleFilter = async () => {
-    if (!selectedYear || !selectedMakeName || !selectedModel) {
-      return null;
-    }
-    const { data: vehicleData, error: vehicleError } = await supabase
+    const { data: vehicle, error } = await supabase
       .from('vehicles')
       .select('id')
-      .eq('year', selectedYear)
+      .eq('year', parseInt(selectedYear))
       .eq('make', selectedMakeName)
       .eq('model', selectedModel)
-      .maybeSingle();
+      .single();
 
-    if (vehicleError) throw vehicleError;
-    return vehicleData?.id || null;
+    if (error) {
+      console.error('Error fetching vehicle ID:', error);
+      return null;
+    }
+    return vehicle?.id;
   };
 
   const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
     queryKey: ['shop-parts', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
-      const vehicleId = await getVehicleFilter();
-      let query = supabase.from('parts').select('*, part_vehicle_compatibility(part_id)');
-      if (vehicleId) {
-        query = query.filter('part_vehicle_compatibility.vehicle_id', 'eq', vehicleId);
+      const vehicleId = await getVehicleId();
+      const { data, error } = await supabase.rpc('search_parts_with_fitment', {
+        search_query: searchQuery,
+        vehicle_id_param: vehicleId
+      });
+      if (error) {
+        console.error('Error with RPC for parts:', error);
+        throw error;
       }
-      if (searchQuery) {
-        query = query.textSearch('fts', `'${searchQuery}'`);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
+      const partIds = data.map(row => row.part_id);
+      if (partIds.length === 0) return [];
+      const { data: partsData, error: partsError } = await supabase
+        .from('parts')
+        .select('*')
+        .in('id', partIds);
+      if (partsError) throw partsError;
+      return partsData;
     },
     enabled: filterMode === 'all' || filterMode === 'parts',
   });
@@ -139,20 +146,27 @@ const Shop = () => {
   const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
     queryKey: ['shop-products', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
-      const vehicleId = await getVehicleFilter();
-      let query = supabase.from('products').select('*, product_fitments(product_id)');
-      if (vehicleId) {
-        query = query.filter('product_fitments.vehicle_id', 'eq', vehicleId);
+      const vehicleId = await getVehicleId();
+      const { data, error } = await supabase.rpc('search_products_with_fitment', {
+        search_query: searchQuery,
+        vehicle_id_param: vehicleId
+      });
+      if (error) {
+        console.error('Error with RPC for products:', error);
+        throw error;
       }
-      if (searchQuery) {
-        query = query.textSearch('fts', `'${searchQuery}'`);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
+      const productIds = data.map(row => row.product_id);
+      if (productIds.length === 0) return [];
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*')
+        .in('id', productIds);
+      if (productsError) throw productsError;
+      return productsData;
     },
     enabled: filterMode === 'all' || filterMode === 'products',
   });
+
 
   const allResults = useMemo(() => {
     const combined = [];
