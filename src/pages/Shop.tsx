@@ -123,7 +123,7 @@ const Shop = () => {
     queryKey: ['shop-parts', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
       const vehicleId = await getVehicleId();
-      const { data, error } = await supabase.rpc('search_parts_with_fitment', {
+      const { data: rpcData, error } = await supabase.rpc('search_parts_with_fitment', {
         search_query: searchQuery,
         vehicle_id_param: vehicleId
       });
@@ -131,7 +131,7 @@ const Shop = () => {
         console.error('Error with RPC for parts:', error);
         throw error;
       }
-      const partIds = data.map(row => row.part_id);
+      const partIds = rpcData.map(row => row.part_id);
       if (partIds.length === 0) return [];
       const { data: partsData, error: partsError } = await supabase
         .from('parts')
@@ -147,7 +147,7 @@ const Shop = () => {
     queryKey: ['shop-products', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
       const vehicleId = await getVehicleId();
-      const { data, error } = await supabase.rpc('search_products_with_fitment', {
+      const { data: rpcData, error } = await supabase.rpc('search_products_with_fitment', {
         search_query: searchQuery,
         vehicle_id_param: vehicleId
       });
@@ -155,7 +155,7 @@ const Shop = () => {
         console.error('Error with RPC for products:', error);
         throw error;
       }
-      const productIds = data.map(row => row.product_id);
+      const productIds = rpcData.map(row => row.product_id);
       if (productIds.length === 0) return [];
       const { data: productsData, error: productsError } = await supabase
         .from('products')
