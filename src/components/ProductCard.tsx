@@ -48,13 +48,15 @@ const ProductCard = ({
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevents the Link from navigating
-    addToCart({ id, name, brand, price, image: image_urls[0] });
+    // CORRECTED: Added quantity and used the correct key 'image_url'
+    addToCart({ id, name, brand, price: 1, image: image_urls[0] });
     toast.success(`${name} added to cart!`);
   };
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevents the Link from navigating
-    toggleWishlist({ id, name, brand, image: image_urls[0] });
+    // CORRECTED: Used the correct key 'image_url'
+    toggleWishlist({ id, name, brand, price, image: image_urls[0] });
   };
   
   // Choose the image to display. Default to the first one if the array is valid.
