@@ -174,54 +174,68 @@ const getVehicleId = async () => {
   const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
     queryKey: ['shop-parts', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
-      const vehicleId = await getVehicleId();
-      // The RPC call below is where the table name issue originates.
-      // The function must be updated in your Supabase database to use the correct table.
-      const { data: rpcData, error } = await supabase.rpc('search_parts_with_fitment', {
-        search_query: searchQuery,
-        vehicle_id_param: vehicleId
-      });
-      if (error) {
-        console.error('Error with RPC for parts:', error);
-        throw error;
-      }
-      const partIds = rpcData.map(row => row.part_id);
-      if (partIds.length === 0) return [];
-      const { data: partsData, error: partsError } = await supabase
-        .from('parts')
-        .select('*')
-        .in('id', partIds);
-      if (partsError) throw partsError;
-      return partsData;
+        const vehicleId = await getVehicleId();
+
+        // --- FIX START ---
+        // If filters are applied but no vehicle ID is found, return an empty array
+        if ((selectedYear || selectedMakeName || selectedModel) && !vehicleId) {
+            console.log("Vehicle filters applied but no vehicle ID found. Returning empty part list.");
+            return [];
+        }
+        // --- FIX END ---
+
+        const { data: rpcData, error } = await supabase.rpc('search_parts_with_fitment', {
+            search_query: searchQuery,
+            vehicle_id_param: vehicleId
+        });
+        if (error) {
+            console.error('Error with RPC for parts:', error);
+            throw error;
+        }
+        const partIds = rpcData.map(row => row.part_id);
+        if (partIds.length === 0) return [];
+        const { data: partsData, error: partsError } = await supabase
+            .from('parts')
+            .select('*')
+            .in('id', partIds);
+        if (partsError) throw partsError;
+        return partsData;
     },
     enabled: filterMode === 'all' || filterMode === 'parts',
-  });
+});
 
   const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
     queryKey: ['shop-products', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
-      const vehicleId = await getVehicleId();
-      // The RPC call below is where the table name issue originates.
-      // The function must be updated in your Supabase database to use the correct table.
-      const { data: rpcData, error } = await supabase.rpc('search_products_with_fitment', {
-        search_query: searchQuery,
-        vehicle_id_param: vehicleId
-      });
-      if (error) {
-        console.error('Error with RPC for products:', error);
-        throw error;
-      }
-      const productIds = rpcData.map(row => row.product_id);
-      if (productIds.length === 0) return [];
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('*')
-        .in('id', productIds);
-      if (productsError) throw productsError;
-      return productsData;
+        const vehicleId = await getVehicleId();
+
+        // --- FIX START ---
+        // If filters are applied but no vehicle ID is found, return an empty array
+        if ((selectedYear || selectedMakeName || selectedModel) && !vehicleId) {
+            console.log("Vehicle filters applied but no vehicle ID found. Returning empty product list.");
+            return [];
+        }
+        // --- FIX END ---
+
+        const { data: rpcData, error } = await supabase.rpc('search_products_with_fitment', {
+            search_query: searchQuery,
+            vehicle_id_param: vehicleId
+        });
+        if (error) {
+            console.error('Error with RPC for products:', error);
+            throw error;
+        }
+        const productIds = rpcData.map(row => row.product_id);
+        if (productIds.length === 0) return [];
+        const { data: productsData, error: productsError } = await supabase
+            .from('products')
+            .select('*')
+            .in('id', productIds);
+        if (productsError) throw productsError;
+        return productsData;
     },
     enabled: filterMode === 'all' || filterMode === 'products',
-  });
+});
 
 
   const allResults = useMemo(() => {
