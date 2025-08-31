@@ -127,9 +127,31 @@ const Shop = () => {
 
   // --- UPDATED useQuery Hooks ---
   const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
-    queryKey: ['shop-parts', filterIds, searchQuery],
+    queryKey: ['shop-parts', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
-        const { yearId, makeId, modelId } = await filterIds;
+        let yearId = null;
+        let makeId = null;
+        let modelId = null;
+
+        if (selectedYear) {
+            const { data } = await supabase.from('vehicle_years').select('id').eq('year', parseInt(selectedYear, 10)).maybeSingle();
+            if (data) yearId = data.id;
+        }
+
+        if (selectedMakeName) {
+            const foundMake = vehicleMakes.find(m => m.name === selectedMakeName);
+            if (foundMake) makeId = foundMake.id;
+        }
+
+        if (selectedModel && makeId) {
+            const { data } = await supabase.from('vehicle_models').select('id').eq('name', selectedModel).eq('make_id', makeId).maybeSingle();
+            if (data) modelId = data.id;
+        }
+
+        // If a filter is selected and no ID is found, return an empty array.
+        if ((selectedYear || selectedMakeName || selectedModel) && (!yearId && !makeId && !modelId)) {
+          return [];
+        }
 
         const { data: rpcData, error } = await supabase.rpc('search_parts_with_fitment', {
             search_query: searchQuery,
@@ -137,6 +159,7 @@ const Shop = () => {
             make_id_param: makeId,
             model_id_param: modelId
         });
+        
         if (error) {
             console.error('Error with RPC for parts:', error);
             return [];
@@ -150,13 +173,34 @@ const Shop = () => {
         if (partsError) throw partsError;
         return partsData;
     },
-    enabled: !!filterIds,
 });
 
   const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
-    queryKey: ['shop-products', filterIds, searchQuery],
+    queryKey: ['shop-products', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
-        const { yearId, makeId, modelId } = await filterIds;
+        let yearId = null;
+        let makeId = null;
+        let modelId = null;
+
+        if (selectedYear) {
+            const { data } = await supabase.from('vehicle_years').select('id').eq('year', parseInt(selectedYear, 10)).maybeSingle();
+            if (data) yearId = data.id;
+        }
+
+        if (selectedMakeName) {
+            const foundMake = vehicleMakes.find(m => m.name === selectedMakeName);
+            if (foundMake) makeId = foundMake.id;
+        }
+
+        if (selectedModel && makeId) {
+            const { data } = await supabase.from('vehicle_models').select('id').eq('name', selectedModel).eq('make_id', makeId).maybeSingle();
+            if (data) modelId = data.id;
+        }
+        
+        // If a filter is selected and no ID is found, return an empty array.
+        if ((selectedYear || selectedMakeName || selectedModel) && (!yearId && !makeId && !modelId)) {
+          return [];
+        }
 
         const { data: rpcData, error } = await supabase.rpc('search_products_with_fitment', {
             search_query: searchQuery,
@@ -164,6 +208,7 @@ const Shop = () => {
             make_id_param: makeId,
             model_id_param: modelId
         });
+
         if (error) {
             console.error('Error with RPC for products:', error);
             return [];
@@ -177,7 +222,6 @@ const Shop = () => {
         if (productsError) throw productsError;
         return productsData;
     },
-    enabled: !!filterIds,
 });
 
   const allResults = useMemo(() => {
