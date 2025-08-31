@@ -668,7 +668,7 @@ const Account = () => {
             : await supabase.from(table).insert([payload]).select().single();
         
         if (error) {
-            console.error(`Supabase Insert/Update Error:`, error);
+            console.error(`Supabase Insert/Update Error:`, error.message, error.code, error.hint);
             toast({ title: "Error", description: `Database error: ${error.message}`, variant: "destructive" });
             return;
         }
