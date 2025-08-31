@@ -18,9 +18,11 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Database } from "@/database.types";
 import { v4 as uuidv4 } from 'uuid';
 
+// Define the database types for the application
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
 
+// Extend the Part type to correctly handle specifications which are stored as JSONB
 interface PartSpecifications {
   category?: string;
   make?: string;
@@ -35,6 +37,7 @@ interface PartWithSpecs extends Omit<Part, 'specifications'> {
   specifications: PartSpecifications | null;
 }
 
+// Predefined categories for parts and products
 const categories = [
   "Engine Parts", "Valvetrain", "Fuel supply system", "Air intake and exhaust systems",
   "Turbochargers / Superchargers", "Ignition system", "Engine lubrication components",
@@ -137,12 +140,12 @@ const Account = () => {
     }
   });
 
-  const { data: vehicleModels = [] } = useQuery<{ name: string; }[]>({
+  const { data: vehicleModels = [] } = useQuery<{ id: string; name: string; }[]>({
     queryKey: ['vehicle-models', productInfo.make],
     queryFn: async () => {
       const makeId = vehicleMakes.find(make => make.name === productInfo.make)?.id;
       if (!makeId) return [];
-      const { data, error } = await supabase.from('vehicle_models').select('name').eq('make_id', makeId).order('name');
+      const { data, error } = await supabase.from('vehicle_models').select('id, name').eq('make_id', makeId).order('name');
       if (error) throw error;
       return data;
     },
@@ -277,10 +280,19 @@ const Account = () => {
 
     if (error) {
       console.error("Error updating profile:", error.message);
-      alert("Failed to update profile.");
+      // Using toast instead of alert for better UX
+      toast({
+        title: "Error",
+        description: "Failed to update profile.",
+        variant: "destructive"
+      });
     } else {
       console.log("Profile updated successfully!");
       setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+      });
     }
   };
 
@@ -341,7 +353,11 @@ const Account = () => {
 
     if (error) {
       console.error("Login failed:", error.message);
-      alert("Login failed: " + error.message);
+      toast({
+        title: "Login failed",
+        description: error.message,
+        variant: "destructive"
+      });
     } else {
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
@@ -357,7 +373,11 @@ const Account = () => {
 
       if (profileError) {
         console.error("Error fetching profile:", profileError.message);
-        alert("Login failed: Could not retrieve profile information.");
+        toast({
+          title: "Login failed",
+          description: "Could not retrieve profile information.",
+          variant: "destructive"
+        });
         await supabase.auth.signOut();
       } else if (profileData?.is_admin && loginMode === "admin") {
         if (sellerData) {
@@ -370,7 +390,11 @@ const Account = () => {
         setIsLoggedIn(true);
         fetchAndSetUserData(data.user.id);
       } else {
-        alert("Invalid login mode selected.");
+        toast({
+          title: "Invalid Login",
+          description: "Invalid login mode selected.",
+          variant: "destructive"
+        });
         await supabase.auth.signOut();
       }
     }
@@ -380,7 +404,11 @@ const Account = () => {
     e.preventDefault();
 
     if (loginMode === "admin" && adminExists) {
-      alert("Admin account has already been created. Please log in.");
+      toast({
+        title: "Account Exists",
+        description: "Admin account has already been created. Please log in.",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -398,7 +426,11 @@ const Account = () => {
 
     if (error) {
       console.error('Signup error:', error.message);
-      alert("Signup failed: " + error.message);
+      toast({
+        title: "Signup failed",
+        description: error.message,
+        variant: "destructive"
+      });
     } else {
       console.log('Signup successful, user:', data.user);
 
@@ -408,9 +440,15 @@ const Account = () => {
           .update({ is_admin: true })
           .eq('user_id', data.user.id);
         setAdminExists(true);
-        alert("Admin account created. Please log in to your account page.");
+        toast({
+          title: "Admin Account Created",
+          description: "Admin account created. Please log in to your account page.",
+        });
       } else {
-        alert("Please check your email to confirm your account!");
+        toast({
+          title: "Account Created",
+          description: "Please check your email to confirm your account!",
+        });
       }
       setView("login");
     }
@@ -443,7 +481,11 @@ const Account = () => {
 
       if (profileError) {
         console.error("Error retrieving existing user profile:", profileError.message);
-        alert("Failed to create seller account. User exists but profile could not be retrieved.");
+        toast({
+          title: "Error",
+          description: "Failed to create seller account. User exists but profile could not be retrieved.",
+          variant: "destructive"
+        });
         return;
       }
       if (existingProfileData) {
@@ -455,52 +497,72 @@ const Account = () => {
         });
         if (signInError) {
           console.error("Failed to sign in existing user:", signInError.message);
-          alert("A user with this email exists, but we couldn't sign in. Please log in directly.");
+          toast({
+            title: "Error",
+            description: "A user with this email exists, but we couldn't sign in. Please log in directly.",
+            variant: "destructive"
+          });
           return;
         }
         userId = signedInData.user.id;
       }
     } else if (signUpError) {
       console.error('Seller account creation error:', signUpError.message);
-      alert("Failed to create seller account: " + signUpError.message);
+      toast({
+        title: "Error",
+        description: `Failed to create seller account: ${signUpError.message}`,
+        variant: "destructive"
+      });
       return;
     } else {
       userId = newUserData?.user?.id;
     }
 
     if (userId) {
-        const { error: upsertError } = await supabase
-            .from('profiles')
-            .upsert({
-                user_id: userId,
-                is_seller: true,
-                email: newSellerEmail,
-                first_name: newSellerName
-            }, { onConflict: 'user_id' });
+      const { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: userId,
+          is_seller: true,
+          email: newSellerEmail,
+          first_name: newSellerName
+        }, { onConflict: 'user_id' });
 
-        if (upsertError) {
-            console.error('Error upserting profiles table:', upsertError.message);
-            alert('Error updating profiles table. Please try again.');
-            return;
-        }
-    } else {
-        alert("User ID could not be determined. Seller creation failed.");
+      if (upsertError) {
+        console.error('Error upserting profiles table:', upsertError.message);
+        toast({
+          title: "Error",
+          description: 'Error updating profiles table. Please try again.',
+          variant: "destructive"
+        });
         return;
+      }
+    } else {
+      toast({
+        title: "Error",
+        description: "User ID could not be determined. Seller creation failed.",
+        variant: "destructive"
+      });
+      return;
     }
 
     const { error: sellerInsertError } = await supabase
-        .from('sellers')
-        .insert({
-            user_id: userId,
-            name: newSellerName,
-            address: newSellerAddress,
-            email: newSellerEmail,
-            phone: newSellerPhoneNumber,
-        });
+      .from('sellers')
+      .insert({
+        user_id: userId,
+        name: newSellerName,
+        address: newSellerAddress,
+        email: newSellerEmail,
+        phone: newSellerPhoneNumber,
+      });
 
     if (sellerInsertError) {
       console.error('Error inserting into sellers table:', sellerInsertError.message);
-      alert('Error creating seller account. Please try again.');
+      toast({
+        title: "Error",
+        description: 'Error creating seller account. Please try again.',
+        variant: "destructive"
+      });
       return;
     }
 
@@ -513,7 +575,11 @@ const Account = () => {
       console.error("Error updating profile with seller status:", profileUpdateError.message);
     }
 
-    alert(`Seller account created successfully for ${newSellerEmail}!`);
+    toast({
+      title: "Success",
+      description: `Seller account created successfully for ${newSellerEmail}!`
+    });
+
     setNewSellerName("");
     setNewSellerAddress("");
     setNewSellerEmail("");
@@ -530,7 +596,7 @@ const Account = () => {
     e.preventDefault();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      alert("You must be logged in to list a product.");
+      toast({ title: "Error", description: "You must be logged in to list a product.", variant: "destructive" });
       return;
     }
 
@@ -578,20 +644,59 @@ const Account = () => {
 
     let vehicleId = null;
     if (productInfo.year && productInfo.make && productInfo.model) {
-      const { data, error } = await supabase
-        .from('vehicles')
+      // Get the UUIDs for the selected make, model, and year
+      const makeId = vehicleMakes.find(make => make.name === productInfo.make)?.id;
+      const modelId = vehicleModels.find(model => model.name === productInfo.model)?.id;
+      
+      const { data: yearData, error: yearError } = await supabase
+        .from('vehicle_years')
         .select('id')
         .eq('year', parseInt(productInfo.year))
-        .eq('make', productInfo.make)
-        .eq('model', productInfo.model)
         .single();
 
-      if (error) {
-        console.error("Error fetching vehicle:", error);
-        toast({ title: "Error", description: "Failed to find matching vehicle.", variant: "destructive" });
+      if (yearError) {
+        console.error("Error fetching vehicle year:", yearError);
+        toast({ title: "Error", description: "Failed to find matching vehicle year.", variant: "destructive" });
         return;
       }
-      vehicleId = data?.id;
+      const yearId = yearData.id;
+
+      // Check if a vehicle combination with these IDs already exists in vehicles_new
+      const { data: existingVehicle, error: existingVehicleError } = await supabase
+        .from('vehicles_new')
+        .select('id')
+        .eq('year_id', yearId)
+        .eq('make_id', makeId)
+        .eq('model_id', modelId)
+        .maybeSingle();
+
+      if (existingVehicleError && existingVehicleError.code !== 'PGRST116') {
+        console.error("Error checking for existing vehicle:", existingVehicleError);
+        toast({ title: "Error", description: "Failed to check for existing vehicle.", variant: "destructive" });
+        return;
+      }
+
+      if (existingVehicle) {
+        vehicleId = existingVehicle.id;
+      } else {
+        // If no match, insert a new record into vehicles_new
+        const { data: newVehicle, error: newVehicleError } = await supabase
+          .from('vehicles_new')
+          .insert({
+            make_id: makeId,
+            model_id: modelId,
+            year_id: yearId,
+          })
+          .select('id')
+          .single();
+
+        if (newVehicleError) {
+          console.error("Error creating new vehicle record:", newVehicleError);
+          toast({ title: "Error", description: "Failed to create new vehicle record.", variant: "destructive" });
+          return;
+        }
+        vehicleId = newVehicle.id;
+      }
     }
 
     const cleanupAndRefetch = () => {
@@ -768,15 +873,23 @@ const Account = () => {
   });
 
   const handleDeleteProduct = (productId: string) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      deleteProductMutation.mutate(productId);
-    }
+    // Replaced window.confirm with a custom toast component for a consistent UI
+    toast({
+      title: "Confirm Deletion",
+      description: "Are you sure you want to delete this product?",
+      variant: "destructive",
+      action: <Button variant="ghost" onClick={() => deleteProductMutation.mutate(productId)}>Delete</Button>
+    });
   };
 
   const handleDeletePart = (partId: string) => {
-    if (window.confirm("Are you sure you want to delete this part?")) {
-      deletePartMutation.mutate(partId);
-    }
+    // Replaced window.confirm with a custom toast component for a consistent UI
+    toast({
+      title: "Confirm Deletion",
+      description: "Are you sure you want to delete this part?",
+      variant: "destructive",
+      action: <Button variant="ghost" onClick={() => deletePartMutation.mutate(partId)}>Delete</Button>
+    });
   };
 
   const archiveProductMutation = useMutation({
@@ -860,11 +973,19 @@ const Account = () => {
 
     if (error) {
       console.error("Error deleting address:", error.message);
-      alert("Failed to delete address.");
+      toast({
+        title: "Error",
+        description: "Failed to delete address.",
+        variant: "destructive"
+      });
     } else {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         fetchUserAddresses(session.user.id);
+        toast({
+          title: "Success",
+          description: "Address deleted successfully.",
+        });
       }
     }
   };
@@ -883,8 +1004,17 @@ const Account = () => {
         .eq("id", editingAddressId);
 
       if (error) {
-      console.error("Error updating address:", error.message);
-        alert("Failed to update address.");
+        console.error("Error updating address:", error.message);
+        toast({
+          title: "Error",
+          description: "Failed to update address.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Address updated successfully.",
+        });
       }
     } else {
       const { error } = await supabase
@@ -893,7 +1023,16 @@ const Account = () => {
 
       if (error) {
         console.error("Error adding address:", error.message);
-        alert("Failed to add new address.");
+        toast({
+          title: "Error",
+          description: "Failed to add new address.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "New address added successfully.",
+        });
       }
     }
 
@@ -982,13 +1121,13 @@ const Account = () => {
                       <Button variant="link" className="text-sm" onClick={() => {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
-                           supabase.auth.resetPasswordForEmail(emailInput, {
+                          supabase.auth.resetPasswordForEmail(emailInput, {
                             redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
                           }).then(({ error }) => {
                             if (error) {
-                              alert("Error sending password reset email: " + error.message);
+                              toast({ title: "Error", description: `Error sending password reset email: ${error.message}`, variant: "destructive" });
                             } else {
-                              alert("Password reset email sent. Please check your inbox!");
+                              toast({ title: "Email Sent", description: "Password reset email sent. Please check your inbox!" });
                             }
                           });
                         }
@@ -1065,7 +1204,6 @@ const Account = () => {
                         Sign Up
                       </Button>
                     </form>
-
                     <div className="mt-6 text-center space-y-2">
                       <p className="text-sm text-muted-foreground">
                         Already have an account?{" "}
@@ -1341,7 +1479,7 @@ const Account = () => {
                       </Card>
                     ))
                   ) : (
-                    <div className="col-span-2 text-center text-muted-foreground py-8">
+                    <div className="text-center text-muted-foreground py-8">
                       You have no saved addresses yet.
                     </div>
                   )}
@@ -1418,9 +1556,9 @@ const Account = () => {
                           redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
                         }).then(({ error }) => {
                           if (error) {
-                            alert("Error sending password reset email: " + error.message);
+                            toast({ title: "Error", description: `Error sending password reset email: ${error.message}`, variant: "destructive" });
                           } else {
-                            alert("Password reset email sent. Please check your inbox!");
+                            toast({ title: "Email Sent", description: "Password reset email sent. Please check your inbox!" });
                           }
                         });
                       }
@@ -1482,7 +1620,7 @@ const Account = () => {
                           onChange={(e) => setNewSellerEmail(e.target.value)}
                           required
                         />
-                      </div>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="seller-password">Password</Label>
                       <Input
@@ -1504,202 +1642,199 @@ const Account = () => {
           )}
 
           {userInfo.is_admin && userInfo.is_seller && (
-            <TabsContent value="admin-dashboard">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold">{editingProductId ? 'Edit' : 'List a New...'}</h2>
-                    <Button variant={listingType === "part" ? "default" : "outline"} onClick={() => setListingType("part")}>Part</Button>
-                    <Button variant={listingType === "product" ? "default" : "outline"} onClick={() => setListingType("product")}>Product</Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleProductSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="product-name">{listingType === "part" ? "Part Name" : "Product Name"}</Label>
-                      <Input id="product-name" value={productInfo.name} onChange={(e) => setProductInfo({ ...productInfo, name: e.target.value })} required />
+            <>
+              <TabsContent value="admin-dashboard">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-xl font-bold">{editingProductId ? 'Edit' : 'List a New...'}</h2>
+                      <Button variant={listingType === "part" ? "default" : "outline"} onClick={() => setListingType("part")}>Part</Button>
+                      <Button variant={listingType === "product" ? "default" : "outline"} onClick={() => setListingType("product")}>Product</Button>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-description">Description</Label>
-                      <Textarea id="product-description" value={productInfo.description} onChange={(e) => setProductInfo({ ...productInfo, description: e.target.value })} rows={4} required />
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-6">
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleProductSubmit} className="space-y-6">
                       <div className="space-y-2">
-                        <Label htmlFor="product-price">Price ($)</Label>
-                        <Input id="product-price" type="number" step="0.01" value={productInfo.price} onChange={(e) => setProductInfo({ ...productInfo, price: e.target.value })} required />
+                        <Label htmlFor="product-name">{listingType === "part" ? "Part Name" : "Product Name"}</Label>
+                        <Input id="product-name" value={productInfo.name} onChange={(e) => setProductInfo({ ...productInfo, name: e.target.value })} required />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="product-quantity">Quantity</Label>
-                        <Input id="product-quantity" type="number" value={productInfo.stock_quantity.toString()} onChange={(e) => setProductInfo({ ...productInfo, stock_quantity: parseInt(e.target.value, 10) || 0 })} required />
+                        <Label htmlFor="product-description">Description</Label>
+                        <Textarea id="product-description" value={productInfo.description} onChange={(e) => setProductInfo({ ...productInfo, description: e.target.value })} rows={4} required />
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-category">Category</Label>
-                      <Select value={productInfo.category} onValueChange={(value) => setProductInfo({ ...productInfo, category: value })}>
-                        <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
-                        <SelectContent>
-                          {categories.map((category) => (<SelectItem key={category} value={category}>{category}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-images">Product Images</Label>
-                      <Input id="product-images" type="file" multiple onChange={handleImageUpload} />
-                    </div>
-                    {productInfo.image_urls.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-4">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="product-price">Price ($)</Label>
+                          <Input id="product-price" type="number" step="0.01" value={productInfo.price} onChange={(e) => setProductInfo({ ...productInfo, price: e.target.value })} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="product-quantity">Quantity</Label>
+                          <Input id="product-quantity" type="number" value={productInfo.stock_quantity.toString()} onChange={(e) => setProductInfo({ ...productInfo, stock_quantity: parseInt(e.target.value, 10) || 0 })} required />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="product-category">Category</Label>
+                        <Select value={productInfo.category} onValueChange={(value) => setProductInfo({ ...productInfo, category: value })}>
+                          <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                          <SelectContent>
+                            {categories.map((category) => (<SelectItem key={category} value={category}>{category}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="product-images">Product Images</Label>
+                        <Input id="product-images" type="file" multiple onChange={handleImageUpload} />
+                      </div>
+                      {productInfo.image_urls.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-4">
                             {productInfo.image_urls.map((url, index) => (
                                 <div key={index} className="relative w-24 h-24 border rounded overflow-hidden">
                                     <img src={url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
                                     <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="destructive"
-                                        className="absolute top-1 right-1 w-6 h-6 p-0"
-                                        onClick={() => removeImage(index)}
+                                      type="button"
+                                      size="sm"
+                                      variant="destructive"
+                                      className="absolute top-1 right-1 w-6 h-6 p-0"
+                                      onClick={() => removeImage(index)}
                                     >
                                         <Trash2 className="h-3 w-3" />
                                     </Button>
                                 </div>
                             ))}
-                        </div>
-                    )}
-                    <Separator className="my-8" />
-                    <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="part-year">Vehicle Year</Label>
-                        <Select value={productInfo.year} onValueChange={(value) => setProductInfo({ ...productInfo, year: value, make: '', model: '' })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Year" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vehicleYears.map(year => (
-                              <SelectItem key={year} value={year.toString()}>
-                                {year}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="part-make">Vehicle Make</Label>
-                        <Select value={productInfo.make} onValueChange={(value) => setProductInfo({ ...productInfo, make: value, model: '' })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Make" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vehicleMakes.map(make => (
-                              <SelectItem key={make.name} value={make.name}>
-                                {make.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="part-model">Vehicle Model</Label>
-                        <Select value={productInfo.model} onValueChange={(value) => setProductInfo({ ...productInfo, model: value })} disabled={!productInfo.make}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Model" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vehicleModels.map(model => (
-                              <SelectItem key={model.name} value={model.name}>
-                                {model.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-specs">Specifications</Label>
-                      <Textarea id="product-specs" value={productInfo.specifications} onChange={(e) => setProductInfo({ ...productInfo, specifications: e.target.value })} rows={4} placeholder={listingType === "part" ? "Additional specifications, e.g., 'Color: Black'" : "List specifications here."} />
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button type="submit">{editingProductId ? "Update" : "List"} {listingType === "part" ? "Part" : "Product"}</Button>
-                      {editingProductId && (
-                        <Button type="button" variant="outline" onClick={() => {
-                          setEditingProductId(null);
-                          setProductInfo({
-                            name: "", description: "", price: "", stock_quantity: 0, image_urls: [],
-                            specifications: "", category: "", make: "", model: "", year: "", vin: "",
-                          });
-                        }}>Cancel Edit</Button>
+                          </div>
                       )}
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-
-              <Separator className="my-8" />
-
-              <h2 className="text-2xl font-bold mb-4">Your Listed Parts</h2>
-              <div className="space-y-4">
-                {parts.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">You have no parts listed yet.</div>
-                ) : (
-                  parts.map((part) => (
-                    <Card key={part.id}>
-                      <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-                        <div className="flex-1 space-y-1">
-                          <h3 className="font-semibold text-lg">{part.name} (Part)</h3>
-                          <p className="text-muted-foreground text-sm">{part.brand}</p>
-                          <p className="text-lg font-bold">${part.price}</p>
-                          <p className="text-sm">In Stock: {part.stock_quantity}</p>
-                          <p className={`text-sm font-medium ${part.is_active ? 'text-green-500' : 'text-yellow-500'}`}>
-                            Status: {part.is_active ? 'Active' : 'Archived'}
-                          </p>
+                      <Separator className="my-8" />
+                      <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="part-year">Vehicle Year</Label>
+                          <Select value={productInfo.year} onValueChange={(value) => setProductInfo({ ...productInfo, year: value, make: '', model: '' })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {vehicleYears.map(year => (
+                                <SelectItem key={year} value={year.toString()}>
+                                  {year}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEditPart(part)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleArchivePart(part.id, part.is_active)}>
-                            <Archive className="h-4 w-4 mr-2" />
-                            {part.is_active ? 'Archive' : 'Unarchive'}
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDeletePart(part.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
+                        <div className="space-y-2">
+                          <Label htmlFor="part-make">Vehicle Make</Label>
+                          <Select value={productInfo.make} onValueChange={(value) => setProductInfo({ ...productInfo, make: value, model: '' })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Make" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {vehicleMakes.map(make => (
+                                <SelectItem key={make.name} value={make.name}>
+                                  {make.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-
-              <Separator className="my-8" />
-
-              <h2 className="text-2xl font-bold mb-4">Your Listed Products</h2>
-              <div className="space-y-4">
-                {products.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">You have no products listed yet.</div>
-                ) : (
-                  products.map((product) => (
-                    <Card key={product.id}>
-                      <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-                        <div className="flex-1 space-y-1">
-                          <h3 className="font-semibold text-lg">{product.name} (Product)</h3>
-                          <p className="text-muted-foreground text-sm">{product.category}</p>
-                          <p className="text-lg font-bold">${product.price}</p>
-                          <p className="text-sm">In Stock: {product.stock_quantity}</p>
-                          <p className={`text-sm font-medium ${product.is_active ? 'text-green-500' : 'text-yellow-500'}`}>Status: {product.is_active ? 'Active' : 'Archived'}</p>
+                        <div className="space-y-2">
+                          <Label htmlFor="part-model">Vehicle Model</Label>
+                          <Select value={productInfo.model} onValueChange={(value) => setProductInfo({ ...productInfo, model: value })} disabled={!productInfo.make}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Model" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {vehicleModels.map(model => (
+                                <SelectItem key={model.name} value={model.name}>
+                                  {model.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleArchiveProduct(product.id, product.is_active)}><Archive className="h-4 w-4 mr-2" />{product.is_active ? 'Archive' : 'Unarchive'}</Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </TabsContent>
-          )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="product-specs">Specifications</Label>
+                        <Textarea id="product-specs" value={productInfo.specifications} onChange={(e) => setProductInfo({ ...productInfo, specifications: e.target.value })} rows={4} placeholder={listingType === "part" ? "Additional specifications, e.g., 'Color: Black'" : "List specifications here."} />
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button type="submit">{editingProductId ? "Update" : "List"} {listingType === "part" ? "Part" : "Product"}</Button>
+                        {editingProductId && (
+                          <Button type="button" variant="outline" onClick={() => {
+                            setEditingProductId(null);
+                            setProductInfo({
+                              name: "", description: "", price: "", stock_quantity: 0, image_urls: [],
+                              specifications: "", category: "", make: "", model: "", year: "", vin: "",
+                            });
+                          }}>Cancel Edit</Button>
+                        )}
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
 
-          {userInfo.is_admin && userInfo.is_seller && (
-            <TabsContent value="analytics-dashboard">
-              <AnalyticsDashboard />
-            </TabsContent>
+                <Separator className="my-8" />
+
+                <h2 className="text-2xl font-bold mb-4">Your Listed Parts</h2>
+                <div className="space-y-4">
+                  {parts.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">You have no parts listed yet.</div>
+                  ) : (
+                    parts.map((part) => (
+                      <Card key={part.id}>
+                        <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+                          <div className="flex-1 space-y-1">
+                            <h3 className="font-semibold text-lg">{part.name} (Part)</h3>
+                            <p className="text-muted-foreground text-sm">{part.brand}</p>
+                            <p className="text-lg font-bold">${part.price}</p>
+                            <p className="text-sm">In Stock: {part.stock_quantity}</p>
+                            <p className={`text-sm font-medium ${part.is_active ? 'text-green-500' : 'text-yellow-500'}`}>
+                              Status: {part.is_active ? 'Active' : 'Archived'}
+                            </p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => handleEditPart(part)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleArchivePart(part.id, part.is_active)}><Archive className="h-4 w-4 mr-2" />{part.is_active ? 'Archive' : 'Unarchive'}</Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeletePart(part.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+
+                <Separator className="my-8" />
+
+                <h2 className="text-2xl font-bold mb-4">Your Listed Products</h2>
+                <div className="space-y-4">
+                  {products.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">You have no products listed yet.</div>
+                  ) : (
+                    products.map((product) => (
+                      <Card key={product.id}>
+                        <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+                          <div className="flex-1 space-y-1">
+                            <h3 className="font-semibold text-lg">{product.name} (Product)</h3>
+                            <p className="text-muted-foreground text-sm">{product.category}</p>
+                            <p className="text-lg font-bold">${product.price}</p>
+                            <p className="text-sm">In Stock: {product.stock_quantity}</p>
+                            <p className={`text-sm font-medium ${product.is_active ? 'text-green-500' : 'text-yellow-500'}`}>Status: {product.is_active ? 'Active' : 'Archived'}</p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleArchiveProduct(product.id, product.is_active)}><Archive className="h-4 w-4 mr-2" />{product.is_active ? 'Archive' : 'Unarchive'}</Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="analytics-dashboard">
+                <AnalyticsDashboard />
+              </TabsContent>
+            </>
           )}
         </Tabs>
       </div>
