@@ -3,7 +3,7 @@ import { Facebook, Twitter, Instagram, Youtube, Phone, Mail, MapPin } from "luci
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import CarWrenchLogo from "@/assets/car-wrench-logo.png"; // Import the logo
+import CarWrenchLogo from "@/assets/logo.png"; // Import the logo
 
 const Footer = () => {
   return (
