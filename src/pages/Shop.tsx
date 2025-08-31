@@ -180,7 +180,6 @@ const Shop = () => {
     enabled: !!filterIds,
 });
 
-
   const allResults = useMemo(() => {
     const combined = [];
     if (filterMode === 'all' || filterMode === 'parts') {
