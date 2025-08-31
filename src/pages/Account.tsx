@@ -117,6 +117,7 @@ const Account = () => {
   });
   const [productFiles, setProductFiles] = useState<File[]>([]);
   const [sellerId, setSellerId] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   // Queries for Filter Dropdowns
   const { data: vehicleYears = [] } = useQuery({
@@ -230,9 +231,9 @@ const Account = () => {
 
   const checkSellerExists = useCallback(async (userId) => {
     const { data, count, error } = await supabase
-      .from('sellers')
-      .select('user_id', { count: 'exact' })
-      .eq('user_id', userId);
+      .from('profiles')
+      .select('is_seller', { count: 'exact' })
+      .eq('is_seller', true);
 
     if (error) {
       console.error("Error checking seller status:", error.message);
@@ -530,42 +531,54 @@ const Account = () => {
     e.preventDefault();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      alert("You must be logged in to list a product.");
-      return;
+        toast({ title: "Error", description: "You must be logged in to list a product.", variant: "destructive" });
+        return;
     }
 
-    if (!sellerId) {
-      const { data: sellerData, error } = await supabase.from('sellers').select('id').eq('user_id', session.user.id).single();
-      if (error) {
-        console.error('Error fetching seller ID:', error);
-        toast({ title: "Error", description: "Could not find seller ID.", variant: "destructive" });
-        return;
-      }
-      setSellerId(sellerData.id);
+    let currentSellerId = sellerId;
+    if (!currentSellerId) {
+        console.log("Seller ID not found in state, fetching...");
+        const { data: sellerData, error: sellerError } = await supabase.from('sellers').select('id').eq('user_id', session.user.id).single();
+        if (sellerError) {
+            console.error('Error fetching seller ID:', sellerError);
+            toast({ title: "Error", description: "Could not find seller ID. Please check your account settings.", variant: "destructive" });
+            return;
+        }
+        currentSellerId = sellerData.id;
+        setSellerId(currentSellerId);
     }
+    console.log("Using Seller ID:", currentSellerId);
 
     const imageUrls: string[] = [];
-    if (productFiles.length > 0) {
-      const bucketName = listingType === 'part' ? 'part_images' : 'product_images';
-      for (const file of productFiles) {
-        const fileExtension = file.name.split('.').pop();
-        const filePath = `${session.user.id}/${uuidv4()}.${fileExtension}`;
-        const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file, { upsert: true });
-        if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
-        const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
-        imageUrls.push(publicUrlData.publicUrl);
-      }
+    try {
+        if (productFiles.length > 0) {
+            const bucketName = listingType === 'part' ? 'part_images' : 'product_images';
+            for (const file of productFiles) {
+                const fileExtension = file.name.split('.').pop();
+                const filePath = `${session.user.id}/${uuidv4()}.${fileExtension}`;
+                const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file, { upsert: true });
+                if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
+                const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+                imageUrls.push(publicUrlData.publicUrl);
+            }
+        }
+    } catch (uploadError) {
+        console.error('Image upload failed:', uploadError);
+        toast({ title: "Error", description: "Image upload failed. Please try again.", variant: "destructive" });
+        return;
     }
 
     const finalImageUrls = editingProductId ? [...productInfo.image_urls, ...imageUrls] : imageUrls;
 
     let vehicleId: string | null = null;
     if (productInfo.year && productInfo.make && productInfo.model) {
+      try {
         const makeId = vehicleMakes.find(m => m.name === productInfo.make)?.id;
-        const yearIdRow = await supabase.from('vehicle_years').select('id').eq('year', parseInt(productInfo.year, 10)).single();
-        const modelIdRow = await supabase.from('vehicle_models').select('id').eq('name', productInfo.model).eq('make_id', makeId).single();
+        const { data: yearIdRow, error: yearError } = await supabase.from('vehicle_years').select('id').eq('year', parseInt(productInfo.year, 10)).single();
+        const { data: modelIdRow, error: modelError } = await supabase.from('vehicle_models').select('id').eq('name', productInfo.model).eq('make_id', makeId).single();
 
-        if (!makeId || !yearIdRow.data?.id || !modelIdRow.data?.id) {
+        if (yearError || modelError || !makeId) {
+            console.error("Error fetching vehicle IDs:", yearError?.message, modelError?.message);
             toast({ title: "Error", description: "Could not find IDs for the selected vehicle attributes.", variant: "destructive" });
             return;
         }
@@ -574,21 +587,30 @@ const Account = () => {
             .from('vehicles_new')
             .select('id')
             .eq('make_id', makeId)
-            .eq('model_id', modelIdRow.data.id)
-            .eq('year_id', yearIdRow.data.id)
+            .eq('model_id', modelIdRow.id)
+            .eq('year_id', yearIdRow.id)
             .single();
+
+        if (existingVehicleError && existingVehicleError.code !== 'PGRST116') { // PGRST116 is for no rows found
+             console.error('Error checking for existing vehicle:', existingVehicleError);
+        }
 
         if (existingVehicle) {
             vehicleId = existingVehicle.id;
         } else {
             const { data: newVehicle, error: newVehicleError } = await supabase
                 .from('vehicles_new')
-                .insert({ make_id: makeId, model_id: modelIdRow.data.id, year_id: yearIdRow.data.id })
+                .insert({ make_id: makeId, model_id: modelIdRow.id, year_id: yearIdRow.id })
                 .select('id')
                 .single();
             if (newVehicleError) throw new Error(`Failed to create new vehicle: ${newVehicleError.message}`);
             vehicleId = newVehicle.id;
         }
+      } catch (e) {
+        console.error("Vehicle compatibility logic failed:", e);
+        toast({ title: "Error", description: "Failed to process vehicle compatibility.", variant: "destructive" });
+        return;
+      }
     }
 
     const cleanupAndRefetch = () => {
@@ -613,16 +635,24 @@ const Account = () => {
             additional: productInfo.specifications
         };
 
+        const priceValue = parseFloat(productInfo.price);
+        const stockValue = Number(productInfo.stock_quantity);
+
+        if (isNaN(priceValue) || isNaN(stockValue)) {
+            toast({ title: "Error", description: "Price and Quantity must be valid numbers.", variant: "destructive" });
+            return;
+        }
+
         const payload = {
             name: productInfo.name,
             description: productInfo.description,
-            price: parseFloat(productInfo.price) || 0,
-            stock_quantity: Number(productInfo.stock_quantity) || 0,
+            price: priceValue,
+            stock_quantity: stockValue,
             brand: userInfo.firstName || 'Unknown',
-            seller_id: sellerId,
+            seller_id: currentSellerId,
             specifications: specificationsPayload,
             image_urls: finalImageUrls,
-            is_active: productInfo.stock_quantity > 0,
+            is_active: stockValue > 0,
             ...(isPart ? {} : { 
                 is_featured: false, 
                 category: productInfo.category,
@@ -630,21 +660,28 @@ const Account = () => {
             })
         };
 
+        console.log("Final Payload:", payload);
+        
         const table = isPart ? 'parts' : 'products';
         const { data: itemData, error } = editingProductId
             ? await supabase.from(table).update(payload).eq('id', editingProductId).select().single()
             : await supabase.from(table).insert([payload]).select().single();
         
-        if (error) throw error;
+        if (error) {
+            console.error(`Supabase Insert/Update Error:`, error);
+            toast({ title: "Error", description: `Database error: ${error.message}`, variant: "destructive" });
+            return;
+        }
+        console.log("Supabase operation successful:", itemData);
 
         if (itemData && vehicleId) {
             const fitmentTable = isPart ? 'part_fitments' : 'product_fitments';
             const fitmentPayload = isPart ? { part_id: itemData.id, vehicle_id: vehicleId } : { product_id: itemData.id, vehicle_id: vehicleId };
             
-            // Upsert to handle potential existing fitments during an edit
-            const { error: fitmentError } = await supabase.from(fitmentTable).upsert([fitmentPayload]);
+            const { error: fitmentError } = await supabase.from(fitmentTable).upsert([fitmentPayload], { onConflict: isPart ? 'part_id, vehicle_id' : 'product_id, vehicle_id' });
             if (fitmentError) {
                 console.error(`Error inserting into ${fitmentTable}:`, fitmentError);
+                toast({ title: "Warning", description: "Item listed, but vehicle fitment failed to save.", variant: "default" });
             }
         }
         
@@ -1686,7 +1723,3 @@ const Account = () => {
 };
 
 export default Account;
-function setModalOpen(arg0: boolean) {
-  throw new Error("Function not implemented.");
-}
-
