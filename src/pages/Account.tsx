@@ -572,14 +572,25 @@ const Account = () => {
 
     let vehicleId: string | null = null;
     if (productInfo.year && productInfo.make && productInfo.model) {
-      try {
+    try {
         const makeId = vehicleMakes.find(m => m.name === productInfo.make)?.id;
-        const { data: yearIdRow, error: yearError } = await supabase.from('vehicle_years').select('id').eq('year', parseInt(productInfo.year, 10)).single();
-        const { data: modelIdRow, error: modelError } = await supabase.from('vehicle_models').select('id').eq('name', productInfo.model).eq('make_id', makeId).single();
+        if (!makeId) {
+            console.error("Error: Could not find make ID for name:", productInfo.make);
+            toast({ title: "Error", description: "Selected vehicle make not found in database.", variant: "destructive" });
+            return;
+        }
 
-        if (yearError || modelError || !makeId) {
-            console.error("Error fetching vehicle IDs:", yearError?.message, modelError?.message);
-            toast({ title: "Error", description: "Could not find IDs for the selected vehicle attributes.", variant: "destructive" });
+        const { data: yearIdRow, error: yearError } = await supabase.from('vehicle_years').select('id').eq('year', parseInt(productInfo.year, 10)).single();
+        if (yearError) {
+            console.error("Error fetching vehicle year ID:", yearError);
+            toast({ title: "Error", description: "Selected vehicle year not found in database.", variant: "destructive" });
+            return;
+        }
+
+        const { data: modelIdRow, error: modelError } = await supabase.from('vehicle_models').select('id').eq('name', productInfo.model).eq('make_id', makeId).single();
+        if (modelError) {
+            console.error("Error fetching vehicle model ID:", modelError);
+            toast({ title: "Error", description: "Selected vehicle model not found in database.", variant: "destructive" });
             return;
         }
 
@@ -591,27 +602,36 @@ const Account = () => {
             .eq('year_id', yearIdRow.id)
             .single();
 
-        if (existingVehicleError && existingVehicleError.code !== 'PGRST116') { // PGRST116 is for no rows found
+        if (existingVehicleError && existingVehicleError.code !== 'PGRST116') {
              console.error('Error checking for existing vehicle:', existingVehicleError);
+             throw new Error(`Error checking for existing vehicle: ${existingVehicleError.message}`);
         }
 
         if (existingVehicle) {
             vehicleId = existingVehicle.id;
+            console.log("Existing vehicle found:", vehicleId);
         } else {
+            console.log("No existing vehicle found, attempting to create new one.");
             const { data: newVehicle, error: newVehicleError } = await supabase
                 .from('vehicles_new')
                 .insert({ make_id: makeId, model_id: modelIdRow.id, year_id: yearIdRow.id })
                 .select('id')
                 .single();
-            if (newVehicleError) throw new Error(`Failed to create new vehicle: ${newVehicleError.message}`);
+            
+            if (newVehicleError) {
+                console.error(`Failed to create new vehicle:`, newVehicleError);
+                throw new Error(`Failed to create new vehicle: ${newVehicleError.message}`);
+            }
             vehicleId = newVehicle.id;
+            console.log("New vehicle created:", vehicleId);
         }
-      } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
         console.error("Vehicle compatibility logic failed:", e);
-        toast({ title: "Error", description: "Failed to process vehicle compatibility.", variant: "destructive" });
+        toast({ title: "Error", description: `Failed to process vehicle compatibility. Details: ${e.message}`, variant: "destructive" });
         return;
-      }
     }
+}
 
     const cleanupAndRefetch = () => {
         setEditingProductId(null);
