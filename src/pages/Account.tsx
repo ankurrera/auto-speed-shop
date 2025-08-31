@@ -547,148 +547,118 @@ const Account = () => {
     const imageUrls: string[] = [];
     if (productFiles.length > 0) {
       const bucketName = listingType === 'part' ? 'part_images' : 'product_images';
-      try {
-        for (const file of productFiles) {
-          const fileExtension = file.name.split('.').pop();
-          const filePath = `${session.user.id}/${uuidv4()}.${fileExtension}`;
-          const { error: uploadError } = await supabase.storage
-            .from(bucketName)
-            .upload(filePath, file, { upsert: true });
-
-          if (uploadError) {
-            console.error('Image upload failed:', uploadError);
-            toast({ title: "Error", description: `Failed to upload image to ${bucketName} bucket.`, variant: "destructive" });
-            return;
-          }
-
-          const { data: publicUrlData } = supabase.storage
-            .from(bucketName)
-            .getPublicUrl(filePath);
-
-          imageUrls.push(publicUrlData.publicUrl);
-        }
-      } catch (error) {
-        console.error('Image upload failed:', error);
-        toast({ title: "Error", description: `An unexpected error occurred during image upload: ${error.message}`, variant: "destructive" });
-        return;
+      for (const file of productFiles) {
+        const fileExtension = file.name.split('.').pop();
+        const filePath = `${session.user.id}/${uuidv4()}.${fileExtension}`;
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file, { upsert: true });
+        if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
+        const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+        imageUrls.push(publicUrlData.publicUrl);
       }
     }
 
     const finalImageUrls = editingProductId ? [...productInfo.image_urls, ...imageUrls] : imageUrls;
 
-    let vehicleId = null;
+    let vehicleId: string | null = null;
     if (productInfo.year && productInfo.make && productInfo.model) {
-      const { data, error } = await supabase
-        .from('vehicles')
-        .select('id')
-        .eq('year', parseInt(productInfo.year))
-        .eq('make', productInfo.make)
-        .eq('model', productInfo.model)
-        .single();
+        const makeId = vehicleMakes.find(m => m.name === productInfo.make)?.id;
+        const yearIdRow = await supabase.from('vehicle_years').select('id').eq('year', parseInt(productInfo.year, 10)).single();
+        const modelIdRow = await supabase.from('vehicle_models').select('id').eq('name', productInfo.model).eq('make_id', makeId).single();
 
-      if (error) {
-        console.error("Error fetching vehicle:", error);
-        toast({ title: "Error", description: "Failed to find matching vehicle.", variant: "destructive" });
-        return;
-      }
-      vehicleId = data?.id;
+        if (!makeId || !yearIdRow.data?.id || !modelIdRow.data?.id) {
+            toast({ title: "Error", description: "Could not find IDs for the selected vehicle attributes.", variant: "destructive" });
+            return;
+        }
+
+        const { data: existingVehicle, error: existingVehicleError } = await supabase
+            .from('vehicles_new')
+            .select('id')
+            .eq('make_id', makeId)
+            .eq('model_id', modelIdRow.data.id)
+            .eq('year_id', yearIdRow.data.id)
+            .single();
+
+        if (existingVehicle) {
+            vehicleId = existingVehicle.id;
+        } else {
+            const { data: newVehicle, error: newVehicleError } = await supabase
+                .from('vehicles_new')
+                .insert({ make_id: makeId, model_id: modelIdRow.data.id, year_id: yearIdRow.data.id })
+                .select('id')
+                .single();
+            if (newVehicleError) throw new Error(`Failed to create new vehicle: ${newVehicleError.message}`);
+            vehicleId = newVehicle.id;
+        }
     }
 
     const cleanupAndRefetch = () => {
-      setEditingProductId(null);
-      setProductInfo({
-        name: "", description: "", price: "", stock_quantity: 0, image_urls: [],
-        specifications: "", category: "", make: "", model: "", year: "", vin: "",
-      });
-      setProductFiles([]);
-      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
-      queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
+        setEditingProductId(null);
+        setProductInfo({
+            name: "", description: "", price: "", stock_quantity: 0, image_urls: [],
+            specifications: "", category: "", make: "", model: "", year: "", vin: "",
+        });
+        setProductFiles([]);
+        queryClient.invalidateQueries({ queryKey: ['seller-products'] });
+        queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
     };
 
     try {
-      const isPart = listingType === 'part';
-      const specificationsPayload = {
-        category: productInfo.category,
-        make: productInfo.make,
-        model: productInfo.model,
-        year: productInfo.year,
-        vin: productInfo.vin,
-        additional: productInfo.specifications
-      };
+        const isPart = listingType === 'part';
+        const specificationsPayload = {
+            category: productInfo.category,
+            make: productInfo.make,
+            model: productInfo.model,
+            year: productInfo.year,
+            vin: productInfo.vin,
+            additional: productInfo.specifications
+        };
 
-      const payload = isPart ? {
-        name: productInfo.name,
-        description: productInfo.description,
-        price: parseFloat(productInfo.price) || 0,
-        stock_quantity: Number(productInfo.stock_quantity) || 0,
-        brand: userInfo.firstName || 'Unknown',
-        seller_id: sellerId,
-        specifications: specificationsPayload,
-        image_urls: finalImageUrls,
-      } : {
-        name: productInfo.name,
-        description: productInfo.description,
-        price: parseFloat(productInfo.price) || 0,
-        stock_quantity: Number(productInfo.stock_quantity) || 0,
-        is_active: productInfo.stock_quantity > 0,
-        image_urls: finalImageUrls,
-        specifications: specificationsPayload,
-        is_featured: false,
-        brand: userInfo.firstName || 'Unknown',
-        seller_id: sellerId,
-        category: productInfo.category,
-        product_type: 'GENERIC',
-      };
+        const payload = {
+            name: productInfo.name,
+            description: productInfo.description,
+            price: parseFloat(productInfo.price) || 0,
+            stock_quantity: Number(productInfo.stock_quantity) || 0,
+            brand: userInfo.firstName || 'Unknown',
+            seller_id: sellerId,
+            specifications: specificationsPayload,
+            image_urls: finalImageUrls,
+            is_active: productInfo.stock_quantity > 0,
+            ...(isPart ? {} : { 
+                is_featured: false, 
+                category: productInfo.category,
+                product_type: 'GENERIC',
+            })
+        };
 
-      let itemId = null;
-      if (editingProductId) {
-        if (isPart) {
-          const { error } = await supabase.from('parts').update(payload).eq('id', editingProductId);
-          if (error) throw error;
-          itemId = editingProductId;
-        } else {
-          const { error } = await supabase.from('products').update(payload).eq('id', editingProductId);
-          if (error) throw error;
-          itemId = editingProductId;
+        const table = isPart ? 'parts' : 'products';
+        const { data: itemData, error } = editingProductId
+            ? await supabase.from(table).update(payload).eq('id', editingProductId).select().single()
+            : await supabase.from(table).insert([payload]).select().single();
+        
+        if (error) throw error;
+
+        if (itemData && vehicleId) {
+            const fitmentTable = isPart ? 'part_fitments' : 'product_fitments';
+            const fitmentPayload = isPart ? { part_id: itemData.id, vehicle_id: vehicleId } : { product_id: itemData.id, vehicle_id: vehicleId };
+            
+            // Upsert to handle potential existing fitments during an edit
+            const { error: fitmentError } = await supabase.from(fitmentTable).upsert([fitmentPayload]);
+            if (fitmentError) {
+                console.error(`Error inserting into ${fitmentTable}:`, fitmentError);
+            }
         }
-        toast({ title: "Success!", description: `${isPart ? 'Part' : 'Product'} updated successfully.`});
-      } else {
-        if (isPart) {
-          const { data, error } = await supabase.from('parts').insert([payload]).select().single();
-          if (error) throw error;
-          itemId = data.id;
-        } else {
-          const { data, error } = await supabase.from('products').insert([payload]).select().single();
-          if (error) throw error;
-          itemId = data.id;
-        }
-        toast({ title: "Success!", description: `${isPart ? 'Part' : 'Product'} listed successfully.`});
-      }
-
-      if (itemId && vehicleId) {
-        if (isPart) {
-          const { error } = await supabase.from('part_vehicle_compatibility').insert([{ part_id: itemId, vehicle_id: vehicleId }]);
-          if (error) {
-            console.error("Error inserting into part_vehicle_compatibility:", error);
-          }
-        } else {
-          const { error } = await supabase.from('product_fitments').insert([{ product_id: itemId, vehicle_id: vehicleId }]);
-          if (error) {
-            console.error("Error inserting into product_fitments:", error);
-          }
-        }
-      }
-
-      cleanupAndRefetch();
+        
+        toast({ title: "Success!", description: `${isPart ? 'Part' : 'Product'} ${editingProductId ? 'updated' : 'listed'} successfully.` });
+        cleanupAndRefetch();
     } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: "Error",
-        description: `An unexpected error occurred: ${error.message}`,
-        variant: "destructive"
-      });
+        console.error('Unexpected error:', error);
+        toast({
+            title: "Error",
+            description: `An unexpected error occurred: ${error.message}`,
+            variant: "destructive"
+        });
     }
-  };
+};
 
   const handleEditProduct = (product: Product) => {
     setEditingProductId(product.id);

@@ -104,19 +104,39 @@ const Shop = () => {
   const getVehicleId = async () => {
     if (!selectedYear || !selectedMakeName || !selectedModel) return null;
 
-    const { data: vehicles, error } = await supabase
-      .from('vehicles')
+    const makeId = vehicleMakes.find(make => make.name === selectedMakeName)?.id;
+    if (!makeId) return null;
+
+    const { data: yearData } = await supabase
+      .from('vehicle_years')
       .select('id')
       .eq('year', parseInt(selectedYear))
-      .eq('make', selectedMakeName)
-      .eq('model', selectedModel);
+      .single();
+    if (!yearData) return null;
+
+    const { data: modelData } = await supabase
+      .from('vehicle_models')
+      .select('id')
+      .eq('make_id', makeId)
+      .eq('name', selectedModel)
+      .single();
+    if (!modelData) return null;
+
+    const { data: vehicle, error } = await supabase
+      .from('vehicles_new')
+      .select('id')
+      .eq('make_id', makeId)
+      .eq('model_id', modelData.id)
+      .eq('year_id', yearData.id)
+      .single();
 
     if (error) {
       console.error('Error fetching vehicle ID:', error);
       return null;
     }
-    return vehicles?.[0]?.id || null;
-  };
+
+    return vehicle?.id || null;
+};
 
   const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
     queryKey: ['shop-parts', selectedYear, selectedMakeName, selectedModel, searchQuery],
