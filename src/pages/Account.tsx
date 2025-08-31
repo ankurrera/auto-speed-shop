@@ -552,7 +552,7 @@ const Account = () => {
     const imageUrls: string[] = [];
     try {
         if (productFiles.length > 0) {
-            const bucketName = listingType === 'part' ? 'part_images' : 'product_images';
+            const bucketName = listingType === 'part' ? 'part_images' : 'products_images';
             for (const file of productFiles) {
                 const fileExtension = file.name.split('.').pop();
                 const filePath = `${session.user.id}/${uuidv4()}.${fileExtension}`;
