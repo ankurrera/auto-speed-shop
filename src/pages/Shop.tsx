@@ -100,24 +100,17 @@ const Shop = () => {
   }, [initialMake, vehicleMakes]);
 
 
-  // --- Queries for Parts and Products ---
-
-// --- Queries for Parts and Products ---
-// --- Queries for Parts and Products ---
 const getVehicleId = async () => {
-    // --- NEW LOGGING ---
+    // These logs confirm the values being used for the lookup.
     console.log("Looking up vehicle with:", selectedYear, selectedMakeName, selectedModel);
     if (!selectedYear || !selectedMakeName || !selectedModel) {
         console.log("Missing vehicle filter values, returning null.");
         return null;
     }
-    // --- END NEW LOGGING ---
 
     const makeId = vehicleMakes.find(m => m.name === selectedMakeName)?.id;
     if (!makeId) {
-        // --- NEW LOGGING ---
         console.log("Could not find makeId for name:", selectedMakeName);
-        // --- END NEW LOGGING ---
         return null;
     }
 
@@ -125,36 +118,24 @@ const getVehicleId = async () => {
       .from('vehicle_years')
       .select('id')
       .eq('year', parseInt(selectedYear))
-      .maybeSingle(); // --- UPDATED ---
-    
-    if (yearError || !yearData) { // --- UPDATED ---
-        // --- NEW LOGGING ---
+      .maybeSingle();
+
+    if (yearError || !yearData) {
         console.error("Year data lookup failed:", yearError);
-        // --- END NEW LOGGING ---
         return null;
     }
-    
-    // --- NEW LOGGING ---
-    console.log("Year ID found:", yearData?.id);
-    // --- END NEW LOGGING ---
-    
+
     const { data: modelData, error: modelError } = await supabase
       .from('vehicle_models')
       .select('id')
       .eq('name', selectedModel)
       .eq('make_id', makeId)
-      .maybeSingle(); // --- UPDATED ---
-    
-    if (modelError || !modelData) { // --- UPDATED ---
-        // --- NEW LOGGING ---
+      .maybeSingle();
+
+    if (modelError || !modelData) {
         console.error("Model data lookup failed:", modelError);
-        // --- END NEW LOGGING ---
         return null;
     }
-    
-    // --- NEW LOGGING ---
-    console.log("Model ID found:", modelData?.id);
-    // --- END NEW LOGGING ---
 
     const { data: vehicle, error } = await supabase
       .from('vehicles_new')
@@ -162,13 +143,13 @@ const getVehicleId = async () => {
       .eq('make_id', makeId)
       .eq('model_id', modelData.id)
       .eq('year_id', yearData.id)
-      .maybeSingle(); // --- UPDATED ---
-    
-    if (error || !vehicle) { // --- UPDATED ---
-      console.error('Error fetching vehicle ID:', error);
-      return null;
-    }
+      .maybeSingle();
 
+    // The fix is here: only log a real error object, not the null return from maybeSingle().
+    if (error) {
+        console.error('Error fetching vehicle ID:', error);
+    }
+    // Return the vehicle data or null if not found
     return vehicle?.id || null;
 };
 
