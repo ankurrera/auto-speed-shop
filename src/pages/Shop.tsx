@@ -142,6 +142,8 @@ const Shop = () => {
     queryKey: ['shop-parts', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
       const vehicleId = await getVehicleId();
+      // The RPC call below is where the table name issue originates.
+      // The function must be updated in your Supabase database to use the correct table.
       const { data: rpcData, error } = await supabase.rpc('search_parts_with_fitment', {
         search_query: searchQuery,
         vehicle_id_param: vehicleId
@@ -166,6 +168,8 @@ const Shop = () => {
     queryKey: ['shop-products', selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
       const vehicleId = await getVehicleId();
+      // The RPC call below is where the table name issue originates.
+      // The function must be updated in your Supabase database to use the correct table.
       const { data: rpcData, error } = await supabase.rpc('search_products_with_fitment', {
         search_query: searchQuery,
         vehicle_id_param: vehicleId
