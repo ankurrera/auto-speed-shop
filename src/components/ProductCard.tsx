@@ -48,14 +48,13 @@ const ProductCard = ({
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevents the Link from navigating
-    // CORRECTED: Added quantity and used the correct key 'image_url'
-    addToCart({ id, name, brand, price: 1, image: image_urls[0] });
+    // CORRECTED: The price is now correctly passed from props
+    addToCart({ id, name, brand, price, image: image_urls[0] }, 1);
     toast.success(`${name} added to cart!`);
   };
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevents the Link from navigating
-    // CORRECTED: Used the correct key 'image_url'
     toggleWishlist({ id, name, brand, price, image: image_urls[0] });
   };
   
