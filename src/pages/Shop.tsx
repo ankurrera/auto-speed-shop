@@ -297,19 +297,6 @@ return vehicle?.id || null;
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2 col-span-1 md:col-span-2">
-            <Label htmlFor="search-filter">Search Parts & Products</Label>
-            <div className="flex space-x-2">
-              <Input
-                id="search-filter"
-                placeholder="Search by keyword..."
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleTextSearch()}
-              />
-              <Button onClick={handleTextSearch}><Search className="h-4 w-4" /></Button>
-            </div>
-          </div>
         </div>
       </div>
       
