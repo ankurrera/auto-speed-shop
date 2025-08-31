@@ -14,7 +14,7 @@ import {
 import { SimpleThemeToggle } from "./SimpleThemeToggle";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
-import CarWrenchLogo from "@/assets/logo.png";
+import CarWrenchLogo from "@/assets/car-wrench-logo.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
