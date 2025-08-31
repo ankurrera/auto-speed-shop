@@ -660,34 +660,42 @@ const Account = () => {
     }
 };
 
-  const handleEditProduct = (product: Product) => {
+  const handleEditProduct = (product: Product | Part) => {
     setEditingProductId(product.id);
+    setListingType('seller_id' in product ? 'part' : 'product');
+
     let specs: PartSpecifications = {};
-    if (typeof product.specifications === 'string' && product.specifications.trim() !== '') {
-        try {
-            specs = JSON.parse(product.specifications);
-        } catch (e) {
-            console.error("Failed to parse product specifications as JSON:", e);
+    if (product.specifications) {
+        if (typeof product.specifications === 'string') {
+            try {
+                // Try to parse the string into an object
+                specs = JSON.parse(product.specifications);
+            } catch (error) {
+                // If parsing fails, it's not valid JSON. Treat it as a simple string.
+                console.error("Failed to parse specifications, treating as raw string:", error);
+                specs = { additional: product.specifications };
+            }
+        } else if (typeof product.specifications === 'object') {
+            // It's already an object, use it directly
+            specs = product.specifications as PartSpecifications;
         }
-    } else if (typeof product.specifications === 'object' && product.specifications !== null) {
-        specs = product.specifications;
     }
+
     setProductInfo({
-      name: product.name,
-      description: product.description,
-      price: String(product.price),
-      stock_quantity: product.stock_quantity,
-      image_urls: product.image_urls || [],
-      specifications: specs?.additional || "",
-      category: specs?.category || "",
-      make: specs?.make || "",
-      model: specs?.model || "",
-      year: specs?.year || "",
-      vin: specs?.vin || "",
+        name: product.name,
+        description: product.description || "",
+        price: product.price?.toString() || "",
+        stock_quantity: product.stock_quantity || 0,
+        image_urls: product.image_urls || [],
+        specifications: specs.additional || "",
+        category: specs.category || ('category' in product ? product.category : "") || "",
+        make: specs.make || "",
+        model: specs.model || "",
+        year: specs.year || "",
+        vin: specs.vin || ""
     });
-    setListingType("product");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    setModalOpen(true);
+};
 
   const handleEditPart = (part: PartWithSpecs) => {
     setEditingProductId(part.id);
@@ -1678,3 +1686,7 @@ const Account = () => {
 };
 
 export default Account;
+function setModalOpen(arg0: boolean) {
+  throw new Error("Function not implemented.");
+}
+
