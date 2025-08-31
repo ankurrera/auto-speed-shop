@@ -163,13 +163,11 @@ return vehicle?.id || null;
     queryFn: async () => {
         const vehicleId = await getVehicleId();
 
-        // --- FIX START ---
         // If filters are applied but no vehicle ID is found, return an empty array
         if ((selectedYear || selectedMakeName || selectedModel) && !vehicleId) {
             console.log("Vehicle filters applied but no vehicle ID found. Returning empty part list.");
             return [];
         }
-        // --- FIX END ---
 
         const { data: rpcData, error } = await supabase.rpc('search_parts_with_fitment', {
             search_query: searchQuery,
@@ -196,13 +194,11 @@ return vehicle?.id || null;
     queryFn: async () => {
         const vehicleId = await getVehicleId();
 
-        // --- FIX START ---
         // If filters are applied but no vehicle ID is found, return an empty array
         if ((selectedYear || selectedMakeName || selectedModel) && !vehicleId) {
             console.log("Vehicle filters applied but no vehicle ID found. Returning empty product list.");
             return [];
         }
-        // --- FIX END ---
 
         const { data: rpcData, error } = await supabase.rpc('search_products_with_fitment', {
             search_query: searchQuery,
