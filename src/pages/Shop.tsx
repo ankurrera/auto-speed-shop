@@ -100,77 +100,46 @@ const Shop = () => {
   }, [initialMake, vehicleMakes]);
 
 
-const getVehicleId = async () => {
-    // These logs confirm the values being used for the lookup.
-    console.log("Looking up vehicle with:", selectedYear, selectedMakeName, selectedModel);
-    if (!selectedYear || !selectedMakeName || !selectedModel) {
-        console.log("Missing vehicle filter values, returning null.");
-        return null;
+  // --- NEW: Memoized IDs for queries to avoid multiple lookups ---
+  const filterIds = useMemo(async () => {
+    let yearId = null;
+    let makeId = null;
+    let modelId = null;
+
+    if (selectedYear) {
+      const { data } = await supabase.from('vehicle_years').select('id').eq('year', parseInt(selectedYear, 10)).maybeSingle();
+      if (data) yearId = data.id;
     }
 
-    const makeId = vehicleMakes.find(m => m.name === selectedMakeName)?.id;
-    if (!makeId) {
-        console.log("Could not find makeId for name:", selectedMakeName);
-        return null;
+    if (selectedMakeName) {
+      const foundMake = vehicleMakes.find(m => m.name === selectedMakeName);
+      if (foundMake) makeId = foundMake.id;
     }
 
-    const { data: yearData, error: yearError } = await supabase
-      .from('vehicle_years')
-      .select('id')
-      .eq('year', parseInt(selectedYear))
-      .maybeSingle();
-
-    if (yearError || !yearData) {
-        console.error("Year data lookup failed:", yearError);
-        return null;
+    if (selectedModel && makeId) {
+      const { data } = await supabase.from('vehicle_models').select('id').eq('name', selectedModel).eq('make_id', makeId).maybeSingle();
+      if (data) modelId = data.id;
     }
 
-    const { data: modelData, error: modelError } = await supabase
-      .from('vehicle_models')
-      .select('id')
-      .eq('name', selectedModel)
-      .eq('make_id', makeId)
-      .maybeSingle();
+    return { yearId, makeId, modelId };
+  }, [selectedYear, selectedMakeName, selectedModel, vehicleMakes]);
 
-    if (modelError || !modelData) {
-        console.error("Model data lookup failed:", modelError);
-        return null;
-    }
 
-    const { data: vehicle, error } = await supabase
-      .from('vehicles_new')
-      .select('id')
-      .eq('make_id', makeId)
-      .eq('model_id', modelData.id)
-      .eq('year_id', yearData.id)
-      .maybeSingle();
-
-    if (error || !vehicle) {
-        if (error) {
-          console.error('Error fetching vehicle ID:', error);
-        }
-        return null; 
-    }
-    return vehicle?.id || null;
-};
-
+  // --- UPDATED useQuery Hooks ---
   const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
-    queryKey: ['shop-parts', selectedYear, selectedMakeName, selectedModel, searchQuery],
+    queryKey: ['shop-parts', filterIds, searchQuery],
     queryFn: async () => {
-        const vehicleId = await getVehicleId();
-
-        if ((selectedYear || selectedMakeName || selectedModel) && !vehicleId) {
-            console.log("Vehicle filters applied but no vehicle ID found. Returning empty part list.");
-            return [];
-        }
+        const { yearId, makeId, modelId } = await filterIds;
 
         const { data: rpcData, error } = await supabase.rpc('search_parts_with_fitment', {
             search_query: searchQuery,
-            vehicle_id_param: vehicleId
+            year_id_param: yearId,
+            make_id_param: makeId,
+            model_id_param: modelId
         });
         if (error) {
             console.error('Error with RPC for parts:', error);
-            throw error;
+            return [];
         }
         const partIds = rpcData.map(row => row.part_id);
         if (partIds.length === 0) return [];
@@ -181,26 +150,23 @@ const getVehicleId = async () => {
         if (partsError) throw partsError;
         return partsData;
     },
-    enabled: filterMode === 'all' || filterMode === 'parts',
+    enabled: !!filterIds,
 });
 
   const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
-    queryKey: ['shop-products', selectedYear, selectedMakeName, selectedModel, searchQuery],
+    queryKey: ['shop-products', filterIds, searchQuery],
     queryFn: async () => {
-        const vehicleId = await getVehicleId();
-
-        if ((selectedYear || selectedMakeName || selectedModel) && !vehicleId) {
-            console.log("Vehicle filters applied but no vehicle ID found. Returning empty product list.");
-            return [];
-        }
+        const { yearId, makeId, modelId } = await filterIds;
 
         const { data: rpcData, error } = await supabase.rpc('search_products_with_fitment', {
             search_query: searchQuery,
-            vehicle_id_param: vehicleId
+            year_id_param: yearId,
+            make_id_param: makeId,
+            model_id_param: modelId
         });
         if (error) {
             console.error('Error with RPC for products:', error);
-            throw error;
+            return [];
         }
         const productIds = rpcData.map(row => row.product_id);
         if (productIds.length === 0) return [];
@@ -211,8 +177,9 @@ const getVehicleId = async () => {
         if (productsError) throw productsError;
         return productsData;
     },
-    enabled: filterMode === 'all' || filterMode === 'products',
+    enabled: !!filterIds,
 });
+
 
   const allResults = useMemo(() => {
     const combined = [];
@@ -232,13 +199,11 @@ const getVehicleId = async () => {
     setSearchParams(prev => { prev.set('year', value); return prev; }, { replace: true });
   };
 
-  const handleMakeChange = (makeId: string) => {
-    const makeName = vehicleMakes.find(m => m.id === makeId)?.name || '';
-    setSelectedMakeId(makeId);
-    setSelectedMakeName(makeName);
+  const handleMakeChange = (value: string) => {
+    setSelectedMakeName(value);
     setSelectedModel('');
     setSearchParams(prev => { 
-      prev.set('make', makeName); 
+      prev.set('make', value); 
       prev.delete('model'); 
       return prev; 
     }, { replace: true });
@@ -273,10 +238,10 @@ const getVehicleId = async () => {
           {/* Make Filter */}
           <div className="space-y-2">
             <Label htmlFor="make-filter">Make</Label>
-            <Select value={selectedMakeId} onValueChange={handleMakeChange}>
+            <Select value={selectedMakeName} onValueChange={handleMakeChange}>
               <SelectTrigger id="make-filter"><SelectValue placeholder="All Makes" /></SelectTrigger>
               <SelectContent>
-                {vehicleMakes.map(make => <SelectItem key={make.id} value={make.id}>{make.name}</SelectItem>)}
+                {vehicleMakes.map(make => <SelectItem key={make.name} value={make.name}>{make.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
