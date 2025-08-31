@@ -137,20 +137,25 @@ const getVehicleId = async () => {
         return null;
     }
 
-    const { data: vehicle, error } = await supabase
-      .from('vehicles_new')
-      .select('id')
-      .eq('make_id', makeId)
-      .eq('model_id', modelData.id)
-      .eq('year_id', yearData.id)
-      .maybeSingle();
+    // Inside getVehicleId
+// ...
+const { data: vehicle, error } = await supabase
+  .from('vehicles_new')
+  .select('id')
+  .eq('make_id', makeId)
+  .eq('model_id', modelData.id)
+  .eq('year_id', yearData.id)
+  .maybeSingle();
 
-    // The fix is here: only log a real error object, not the null return from maybeSingle().
+// Use a single line to check for both error and no vehicle found
+if (error || !vehicle) {
     if (error) {
-        console.error('Error fetching vehicle ID:', error);
+      console.error('Error fetching vehicle ID:', error);
     }
-    // Return the vehicle data or null if not found
-    return vehicle?.id || null;
+    return null; // Return null to trigger 'No results found' message
+}
+
+return vehicle?.id || null;
 };
 
   const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
