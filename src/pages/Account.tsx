@@ -702,21 +702,26 @@ const Account = () => {
     setListingType('seller_id' in product ? 'part' : 'product');
 
     let specs: PartSpecifications = {};
-    if (product.specifications) {
-        if (typeof product.specifications === 'string') {
-            try {
-                // Try to parse the string into an object
-                specs = JSON.parse(product.specifications);
-            } catch (error) {
-                // If parsing fails, it's not valid JSON. Treat it as a simple string.
-                console.error("Failed to parse specifications, treating as raw string:", error);
-                specs = { additional: product.specifications };
-            }
-        } else if (typeof product.specifications === 'object') {
-            // It's already an object, use it directly
+if (product.specifications) {
+    if (typeof product.specifications === 'string') {
+        try {
+            // Try to parse the string into a JSON object
+            specs = JSON.parse(product.specifications);
+        } catch (error) {
+            // If parsing fails, it's not valid JSON. Treat it as a simple string.
+            console.error("Failed to parse specifications, treating as raw string:", error);
+            specs = { additional: product.specifications };
+        }
+    } else if (typeof product.specifications === 'object') {
+        // If it's already a JSON object, check for a null value
+        if (product.specifications !== null) {
             specs = product.specifications as PartSpecifications;
+        } else {
+            // Handle null case explicitly
+            specs = {};
         }
     }
+}
 
     setProductInfo({
         name: product.name,
