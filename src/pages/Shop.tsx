@@ -102,6 +102,7 @@ const Shop = () => {
 
   // --- Queries for Parts and Products ---
 
+// --- Queries for Parts and Products ---
 const getVehicleId = async () => {
   // --- NEW LOGGING ---
   console.log("Looking up vehicle with:", selectedYear, selectedMakeName, selectedModel);
@@ -111,7 +112,7 @@ const getVehicleId = async () => {
   }
   // --- END NEW LOGGING ---
 
-  const makeId = vehicleMakes.find(make => make.name === selectedMakeName)?.id;
+  const makeId = vehicleMakes.find(m => m.name === selectedMakeName)?.id;
   if (!makeId) {
       // --- NEW LOGGING ---
       console.log("Could not find makeId for name:", selectedMakeName);
@@ -124,32 +125,32 @@ const getVehicleId = async () => {
     .select('id')
     .eq('year', parseInt(selectedYear))
     .single();
-  
+
   if (yearError) {
       // --- NEW LOGGING ---
       console.error("Year data lookup failed:", yearError);
       // --- END NEW LOGGING ---
       return null;
   }
-  
+
   // --- NEW LOGGING ---
   console.log("Year ID found:", yearData?.id);
   // --- END NEW LOGGING ---
-  
+
   const { data: modelData, error: modelError } = await supabase
     .from('vehicle_models')
     .select('id')
-    .eq('make_id', makeId)
     .eq('name', selectedModel)
+    .eq('make_id', makeId)
     .single();
-  
+
   if (modelError) {
       // --- NEW LOGGING ---
       console.error("Model data lookup failed:", modelError);
       // --- END NEW LOGGING ---
       return null;
   }
-  
+
   // --- NEW LOGGING ---
   console.log("Model ID found:", modelData?.id);
   // --- END NEW LOGGING ---
@@ -161,7 +162,7 @@ const getVehicleId = async () => {
     .eq('model_id', modelData.id)
     .eq('year_id', yearData.id)
     .single();
-  
+
   if (error) {
     console.error('Error fetching vehicle ID:', error);
     return null;
