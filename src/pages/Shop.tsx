@@ -137,25 +137,21 @@ const getVehicleId = async () => {
         return null;
     }
 
-    // Inside getVehicleId
-// ...
-const { data: vehicle, error } = await supabase
-  .from('vehicles_new')
-  .select('id')
-  .eq('make_id', makeId)
-  .eq('model_id', modelData.id)
-  .eq('year_id', yearData.id)
-  .maybeSingle();
+    const { data: vehicle, error } = await supabase
+      .from('vehicles_new')
+      .select('id')
+      .eq('make_id', makeId)
+      .eq('model_id', modelData.id)
+      .eq('year_id', yearData.id)
+      .maybeSingle();
 
-// Use a single line to check for both error and no vehicle found
-if (error || !vehicle) {
-    if (error) {
-      console.error('Error fetching vehicle ID:', error);
+    if (error || !vehicle) {
+        if (error) {
+          console.error('Error fetching vehicle ID:', error);
+        }
+        return null; 
     }
-    return null; // Return null to trigger 'No results found' message
-}
-
-return vehicle?.id || null;
+    return vehicle?.id || null;
 };
 
   const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
@@ -163,7 +159,6 @@ return vehicle?.id || null;
     queryFn: async () => {
         const vehicleId = await getVehicleId();
 
-        // If filters are applied but no vehicle ID is found, return an empty array
         if ((selectedYear || selectedMakeName || selectedModel) && !vehicleId) {
             console.log("Vehicle filters applied but no vehicle ID found. Returning empty part list.");
             return [];
@@ -194,7 +189,6 @@ return vehicle?.id || null;
     queryFn: async () => {
         const vehicleId = await getVehicleId();
 
-        // If filters are applied but no vehicle ID is found, return an empty array
         if ((selectedYear || selectedMakeName || selectedModel) && !vehicleId) {
             console.log("Vehicle filters applied but no vehicle ID found. Returning empty product list.");
             return [];
@@ -219,7 +213,6 @@ return vehicle?.id || null;
     },
     enabled: filterMode === 'all' || filterMode === 'products',
 });
-
 
   const allResults = useMemo(() => {
     const combined = [];
@@ -266,7 +259,7 @@ return vehicle?.id || null;
       <h1 className="text-4xl font-bold mb-8 text-center">Shop</h1>
       
       <div className="bg-card p-6 rounded-lg shadow-sm mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+        <div className="flex flex-col md:flex-row justify-center items-end md:items-center space-y-4 md:space-y-0 md:space-x-4">
           {/* Year Filter */}
           <div className="space-y-2">
             <Label htmlFor="year-filter">Year</Label>
