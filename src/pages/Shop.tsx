@@ -232,7 +232,9 @@ const Shop = () => {
               <ProductCard
                 key={item.id}
                 {...formatCardData(item)}
-                onAddToCart={() =>
+                onAddToCart={(event) => {
+                  event.stopPropagation();
+                  event.preventDefault();
                   addToCart(
                     {
                       id: item.id,
@@ -244,7 +246,7 @@ const Shop = () => {
                       category: "category" in item ? (item as Product).category : undefined,
                     }
                   )
-                }
+                }}
               />
             ))}
           </div>
