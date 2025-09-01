@@ -51,7 +51,7 @@ const ProductCard = ({
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevents the Link from navigating
-    const isPart = !category;
+    const isPart = !!brand && !category;
     addToCart({ 
       id, 
       name, 
@@ -60,7 +60,7 @@ const ProductCard = ({
       is_part: isPart,
       brand,
       category 
-    }, 1);
+    });
     toast.success(`${name} added to cart!`);
   };
 
