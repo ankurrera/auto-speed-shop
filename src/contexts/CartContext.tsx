@@ -154,6 +154,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const existingItem = cartItems.find((cartItem) => cartItem.id === item.id);
 
       let upsertData;
+      const onConflictColumns = item.is_part ? "user_id, part_id" : "user_id, product_id";
       if (item.is_part) {
         upsertData = {
           user_id: user.id,
@@ -169,7 +170,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       const { error } = await supabase.from("cart_items").upsert(upsertData, {
-        onConflict: `user_id, ${item.is_part ? "part_id" : "product_id"}`,
+        onConflict: onConflictColumns,
       });
 
       if (error) throw error;
