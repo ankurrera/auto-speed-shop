@@ -1,128 +1,191 @@
-// src/pages/ProductDetails.tsx
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Star } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { ShoppingCart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useCart } from "@/contexts/CartContext";
+import { toast } from "sonner";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import { Card, CardContent } from "@/components/ui/card";
+import { Database } from "@/database.types";
+import { cn } from "@/lib/utils";
 
-// Define a TypeScript interface for the product data
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  brand: string;
-  price: number;
-  compare_at_price: number | null;
-  image_urls: string[];
-  is_featured: boolean;
-  specifications: string;
-}
+type Product = Database['public']['Tables']['products']['Row'];
+type Part = Database['public']['Tables']['parts']['Row'];
 
 const ProductDetails = () => {
-  const { id } = useParams<{ id: string }>(); // Get the product ID from the URL
-  const [mainImage, setMainImage] = useState<string | null>(null);
+  const { id } = useParams<{ id: string }>();
+  const { addToCart } = useCart();
+  const [dominantColor, setDominantColor] = useState('bg-muted');
 
-  // Fetch product data from Supabase
-  const { data: product, isLoading, isError } = useQuery<Product>({
+  const fetchProduct = async (productId: string) => {
+    // Check both 'products' and 'parts' tables for the product ID
+    const { data: productData, error: productError } = await supabase
+      .from("products")
+      .select("*")
+      .eq("id", productId)
+      .single();
+
+    if (productData) {
+      return { ...productData, type: 'product' };
+    }
+
+    const { data: partData, error: partError } = await supabase
+      .from("parts")
+      .select("*")
+      .eq("id", productId)
+      .single();
+
+    if (partData) {
+      return { ...partData, type: 'part' };
+    }
+
+    if (productError || partError) {
+      console.error("Error fetching product:", productError?.message || partError?.message);
+    }
+    
+    throw new Error("Product not found");
+  };
+
+  const { data: product, isLoading, error } = useQuery({
     queryKey: ['product', id],
-    queryFn: async () => {
-      if (!id) throw new Error("Product ID is missing.");
-      
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!id, // Ensure the query only runs if an ID exists
+    queryFn: () => fetchProduct(id as string),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Use a useEffect hook to set the main image after data is fetched
+  // Function to extract the dominant color from an image using a temporary canvas
+  const getDominantColor = (imgSrc: string) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      canvas.width = 1;
+      canvas.height = 1;
+      ctx.drawImage(img, 0, 0, 1, 1);
+      const pixelData = ctx.getImageData(0, 0, 1, 1).data;
+      const r = pixelData[0];
+      const g = pixelData[1];
+      const b = pixelData[2];
+      setDominantColor(`rgb(${r}, ${g}, ${b})`);
+    };
+    img.onerror = () => {
+      setDominantColor('bg-muted');
+    };
+    img.src = imgSrc;
+  };
+
   useEffect(() => {
     if (product && product.image_urls && product.image_urls.length > 0) {
-      setMainImage(product.image_urls[0]);
+      getDominantColor(product.image_urls[0]);
     }
   }, [product]);
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading product details...</div>;
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h1 className="text-2xl font-bold">Loading product details...</h1>
+      </div>
+    );
   }
 
-  if (isError || !product) {
-    return <div className="min-h-screen flex items-center justify-center">Oops! Product not found.</div>;
+  if (error || !product) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h1 className="text-2xl font-bold text-red-500">Oops, product not found.</h1>
+        <p className="text-muted-foreground">The product you are looking for may have been removed or does not exist.</p>
+      </div>
+    );
   }
+  
+  const productData = {
+    id: product.id,
+    name: product.name,
+    brand: 'brand' in product ? product.brand : 'Auto Speed Shop',
+    price: product.price,
+    image: product.image_urls[0],
+  };
+
+  const handleAddToCart = () => {
+    addToCart(productData, 1);
+    toast.success(`${product.name} added to cart!`);
+  };
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Product Image Gallery */}
-        <div className="flex flex-col gap-4">
-          <img
-            src={mainImage || '/placeholder.svg'}
-            alt={product.name}
-            className="w-full aspect-square object-contain rounded-lg border"
-          />
-          <div className="flex gap-2 overflow-x-auto">
-            {product.image_urls?.map((url, index) => (
-              <img
-                key={index}
-                src={url}
-                alt={`${product.name} angle ${index + 1}`}
-                className={`w-24 h-24 object-cover rounded-md border cursor-pointer transition-all duration-200 ${mainImage === url ? 'border-primary-foreground scale-105' : 'border-transparent'}`}
-                onClick={() => setMainImage(url)}
-              />
-            ))}
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid md:grid-cols-2 gap-12">
+        {/* Product Images */}
+        <div className="space-y-4">
+          <Carousel className="w-full">
+            <CarouselContent>
+              {product.image_urls?.map((url, index) => (
+                <CarouselItem key={index}>
+                  <Card className="rounded-none border-none">
+                    <CardContent className="flex items-center justify-center p-0">
+                      <div className="relative aspect-square w-full" style={{ backgroundColor: dominantColor }}>
+                        <img
+                          src={url}
+                          alt={product.name}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious />
+            <CarouselNext />
+          </Carousel>
         </div>
 
         {/* Product Details */}
         <div className="space-y-6">
           <div className="flex items-center space-x-2">
-            <Badge variant="secondary">{product.brand}</Badge>
-            {product.is_featured && <Badge>Featured</Badge>}
+            {'brand' in product && <p className="text-muted-foreground font-medium">{product.brand}</p>}
+            {'category' in product && <p className="text-muted-foreground font-medium">{product.category}</p>}
           </div>
           <h1 className="text-4xl font-bold">{product.name}</h1>
-          
-          <div className="flex items-center space-x-2 text-muted-foreground">
-            <div className="flex items-center">
-              <Star className="h-4 w-4 text-yellow-400 fill-current" />
-              <span className="ml-1">4.5</span>
-            </div>
-            <span>|</span>
-            <span>(150 Reviews)</span>
-          </div>
-          
+          <p className="text-3xl font-bold text-foreground">${product.price?.toFixed(2)}</p>
+          <p className="text-muted-foreground">{product.description}</p>
           <Separator />
-
-          <div className="flex items-baseline space-x-2">
-            <span className="text-3xl font-bold text-foreground">${product.price.toFixed(2)}</span>
-            {product.compare_at_price && (
-              <span className="text-lg text-muted-foreground line-through">${product.compare_at_price.toFixed(2)}</span>
+          
+          <div className="flex items-center space-x-4">
+            <Button className="w-full sm:w-auto" onClick={handleAddToCart}>
+              <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
+            </Button>
+            {product.stock_quantity > 0 ? (
+              <Badge variant="default">In Stock</Badge>
+            ) : (
+              <Badge variant="destructive">Out of Stock</Badge>
             )}
           </div>
-          
-          <p className="text-lg text-muted-foreground">{product.description}</p>
-
-          <Button size="lg" className="w-full">
-            <ShoppingCart className="h-5 w-5 mr-2" />
-            Add to Cart
-          </Button>
-
-          <Separator />
-          
-          {/* Product Specifications and Details */}
-          <div className="space-y-2">
-            <h3 className="text-xl font-semibold">Specifications</h3>
-            <p className="text-sm text-muted-foreground">{product.specifications}</p>
-          </div>
         </div>
+      </div>
+
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-4">Specifications</h2>
+        <ul className="list-disc list-inside space-y-2">
+          {product.type === 'part' && product.specifications && typeof product.specifications === 'object' && Object.entries(product.specifications).map(([key, value]) => (
+            <li key={key}>
+              <span className="font-semibold">{key}:</span> {String(value)}
+            </li>
+          ))}
+          {product.type === 'product' && product.specifications && typeof product.specifications === 'string' && (
+            <li>{product.specifications}</li>
+          )}
+        </ul>
       </div>
     </div>
   );
