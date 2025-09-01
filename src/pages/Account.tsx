@@ -1,3 +1,4 @@
+// src/pages/Account.tsx
 import { useState, useEffect, useCallback, ChangeEvent, FormEvent } from "react";
 import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff, Lock, TrendingUp, Archive, Trash2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -714,7 +715,7 @@ const Account = () => {
             const { error: fitmentError } = await supabase.from(fitmentTable).upsert([fitmentPayload], { onConflict: isPart ? 'part_id, vehicle_id' : 'product_id, vehicle_id' });
             if (fitmentError) {
                 console.error(`Error inserting into ${fitmentTable}:`, fitmentError);
-                toast({ title: "Warning", description: "Item listed, but vehicle fitment failed to save.", variant: "default" });
+                toast({ title: "Warning", description: `Item listed, but vehicle fitment failed to save: ${fitmentError.message}`, variant: "default" });
             }
         }
         
@@ -1611,7 +1612,7 @@ if (product.specifications) {
                                         className="absolute top-1 right-1 w-6 h-6 p-0"
                                         onClick={() => removeImage(index)}
                                     >
-                                        <Trash2 className="h-3 w-3" />
+                                        <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>
                             ))}

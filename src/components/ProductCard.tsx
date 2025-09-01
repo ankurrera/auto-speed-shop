@@ -1,3 +1,4 @@
+// src/components/ProductCard.tsx
 import { useState, useEffect } from "react";
 import { Heart, ShoppingCart, Star, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,16 @@ const ProductCard = ({
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevents the Link from navigating
-    addToCart({ id, name, brand, price, image: image_urls[0] }, 1);
+    const isPart = !category;
+    addToCart({ 
+      id, 
+      name, 
+      price, 
+      image: image_urls[0], 
+      is_part: isPart,
+      brand,
+      category 
+    }, 1);
     toast.success(`${name} added to cart!`);
   };
 

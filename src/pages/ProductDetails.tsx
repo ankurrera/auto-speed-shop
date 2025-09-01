@@ -1,3 +1,4 @@
+// src/pages/ProductDetails.tsx
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -112,9 +113,11 @@ const ProductDetails = () => {
   const productData = {
     id: product.id,
     name: product.name,
-    brand: 'brand' in product ? product.brand : (product.category || 'Product'),
     price: product.price,
     image: product.image_urls[0],
+    is_part: product.type === 'part',
+    brand: 'brand' in product ? product.brand : undefined,
+    category: 'category' in product ? product.category : undefined,
   };
 
   const handleAddToCart = () => {
