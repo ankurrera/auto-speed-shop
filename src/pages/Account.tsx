@@ -662,27 +662,39 @@ const Account = () => {
             toast({ title: "Error", description: "Price and Quantity must be valid numbers.", variant: "destructive" });
             return;
         }
+        
+        const table = isPart ? 'parts' : 'products';
+        let payload = {};
 
-        const payload = {
-            name: productInfo.name,
-            description: productInfo.description,
-            price: priceValue,
-            stock_quantity: stockValue,
-            brand: userInfo.firstName || 'Unknown',
-            seller_id: currentSellerId,
-            specifications: specificationsPayload,
-            image_urls: finalImageUrls,
-            is_active: stockValue > 0,
-            ...(isPart ? {} : { 
-                is_featured: false, 
+        if (isPart) {
+            payload = {
+                name: productInfo.name,
+                description: productInfo.description,
+                price: priceValue,
+                stock_quantity: stockValue,
+                brand: "Auto Speed Shop",
+                seller_id: currentSellerId,
+                specifications: specificationsPayload,
+                image_urls: finalImageUrls,
+                is_active: stockValue > 0,
+            };
+        } else {
+            payload = {
+                name: productInfo.name,
+                description: productInfo.description,
+                price: priceValue,
+                stock_quantity: stockValue,
+                seller_id: currentSellerId,
+                image_urls: finalImageUrls,
+                is_active: stockValue > 0,
+                is_featured: false,
                 category: productInfo.category,
                 product_type: 'GENERIC',
-            })
-        };
+            };
+        }
 
         console.log("Final Payload:", payload);
         
-        const table = isPart ? 'parts' : 'products';
         const { data: itemData, error } = editingProductId
             ? await supabase.from(table).update(payload).eq('id', editingProductId).select().single()
             : await supabase.from(table).insert([payload]).select().single();

@@ -21,6 +21,7 @@ interface ProductCardProps {
   inStock: boolean;
   isOnSale?: boolean;
   className?: string;
+  category?: string;
 }
 
 const ProductCard = ({
@@ -35,6 +36,7 @@ const ProductCard = ({
   inStock,
   isOnSale,
   className,
+  category,
 }: ProductCardProps) => {
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
@@ -159,6 +161,7 @@ const ProductCard = ({
               <h3 className="font-medium text-foreground line-clamp-2 leading-tight">
                 {name}
               </h3>
+              {category && <p className="text-sm text-muted-foreground">{category}</p>}
               
               <div className="flex items-center space-x-1">
                 <div className="flex items-center">
