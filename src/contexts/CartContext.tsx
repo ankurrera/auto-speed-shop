@@ -159,12 +159,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         upsertData = {
           user_id: user.id,
           part_id: item.id,
+          product_id: null, // Explicitly set to null for parts
           quantity: existingItem ? existingItem.quantity + quantity : quantity,
         };
       } else {
         upsertData = {
           user_id: user.id,
           product_id: item.id,
+          part_id: null, // Explicitly set to null for products
           quantity: existingItem ? existingItem.quantity + quantity : quantity,
         };
       }
