@@ -1,3 +1,4 @@
+// src/pages/Cart.tsx
 import { useState } from "react";
 import { Plus, Minus, Trash2, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ const Cart = () => {
               Start adding some amazing auto parts to your cart!
             </p>
             <Button asChild>
-              <Link to="/shop">Continue Shopping</Link>
+              <Link to="/shop">Shop Now</Link>
             </Button>
           </div>
         </div>
@@ -38,88 +39,60 @@ const Cart = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
-          <p className="text-muted-foreground">
-            {cartItems.length} item{cartItems.length !== 1 ? 's' : ''} in your cart
-          </p>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-4">
+        <h1 className="text-3xl font-bold mb-6">Shopping Cart</h1>
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-2 space-y-4">
             {cartItems.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    {/* Product Image */}
-                    <div className="w-20 h-20 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    {/* Product Info */}
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="font-semibold text-lg">{item.name}</h3>
-                          <p className="text-muted-foreground">{item.brand}</p>
-                          {/* Assuming inStock info will be part of the product data fetched from Supabase */}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFromCart(item.id)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        {/* Quantity Controls */}
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => decreaseQuantity(item.id)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-12 text-center font-medium">
-                            {item.quantity}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => increaseQuantity(item.id)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-
-                        {/* Price */}
-                        <div className="text-right">
-                          <p className="font-semibold text-lg">
-                            ${(item.price * item.quantity).toFixed(2)}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            ${item.price.toFixed(2)} each
-                          </p>
-                        </div>
-                      </div>
+              <Card key={item.id} className="relative">
+                <CardContent className="flex p-4 space-x-4">
+                  <div className="w-24 h-24 flex-shrink-0">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover rounded-md"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <h3 className="font-semibold">{item.name}</h3>
+                    <p className="text-muted-foreground text-sm">
+                      {item.is_part ? `Brand: ${item.brand}` : `Category: ${item.category}`}
+                    </p>
+                    <p className="font-bold">${item.price.toFixed(2)}</p>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => decreaseQuantity(item.id, item.is_part)}
+                        className="w-8 h-8 p-0"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-8 text-center">{item.quantity}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => increaseQuantity(item.id, item.is_part)}
+                        className="w-8 h-8 p-0"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 h-8 w-8 p-0"
+                    onClick={() => removeFromCart(item.id, item.is_part)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          {/* Order Summary */}
-          <div className="space-y-6">
+          {/* Cart Summary */}
+          <div className="md:col-span-1 space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Order Summary</CardTitle>
@@ -131,20 +104,14 @@ const Cart = () => {
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
-                  <span>
-                    {shipping === 0 ? (
-                      <span className="text-success">FREE</span>
-                    ) : (
-                      `$${shipping.toFixed(2)}`
-                    )}
-                  </span>
+                  <span>${shipping.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Tax</span>
+                  <span>Tax (8%)</span>
                   <span>${tax.toFixed(2)}</span>
                 </div>
                 <Separator />
-                <div className="flex justify-between text-lg font-semibold">
+                <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
                   <span>${total.toFixed(2)}</span>
                 </div>
@@ -182,7 +149,7 @@ const Cart = () => {
             </div>
 
             {/* Continue Shopping */}
-            <Button variant="outline" asChild className="w-full" onClick={clearCart}>
+            <Button variant="outline" asChild className="w-full">
               <Link to="/shop">Continue Shopping</Link>
             </Button>
           </div>
