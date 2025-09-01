@@ -44,272 +44,180 @@ function isPart(item: Product | Part): item is Part {
 
 // Helper function to format data for the ProductCard
 const formatCardData = (item: Product | Part) => {
-  const compareAtPrice =
-    "compare_at_price" in item && item.compare_at_price
-      ? Number(item.compare_at_price)
-      : undefined;
-
-  let category: string | null = null;
-  let brand: string = "Unknown";
-
-  if (isPart(item)) {
-    brand = item.brand || "Unknown";
-    if (
-      item.specifications &&
-      typeof item.specifications === "object" &&
-      item.specifications !== null &&
-      "category" in item.specifications
-    ) {
-      const specCategory = item.specifications.category;
-      if (typeof specCategory === "string") {
-        category = specCategory;
-      }
-    }
-  } else if (isProduct(item)) {
-    if (typeof item.category === "string") {
-      category = item.category;
-    }
-    brand = category || "Product";
-  }
-
-  return {
+  const commonData = {
     id: item.id,
     name: item.name,
-    brand,
     price: Number(item.price),
-    originalPrice: compareAtPrice,
     image_urls: item.image_urls || [],
-    rating: 4.5,
-    reviews: Math.floor(Math.random() * 200) + 50,
     inStock: item.stock_quantity > 0,
-    isOnSale: compareAtPrice ? compareAtPrice > Number(item.price) : false,
-    category,
+    rating: 4.5, // Placeholder value
+    reviews: 10,  // Placeholder value
+    isOnSale: false, // Placeholder value
   };
+
+  if (isProduct(item)) {
+    return {
+      ...commonData,
+      brand: "Generic", // Placeholder for products without a brand column
+      category: item.category || "General",
+    };
+  } else {
+    return {
+      ...commonData,
+      brand: item.brand || "Generic",
+      category: undefined, // Parts don't have a category in the same way
+    };
+  }
 };
 
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialYear = searchParams.get("year") || "";
-  const initialMake = searchParams.get("make") || "";
-  const initialModel = searchParams.get("model") || "";
-  const initialQuery = searchParams.get("query") || "";
-
-  const [searchText, setSearchText] = useState(initialQuery);
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const [selectedYear, setSelectedYear] = useState(initialYear);
-  const [selectedModel, setSelectedModel] = useState(initialModel);
-  const [selectedMakeId, setSelectedMakeId] = useState("");
-  const [selectedMakeName, setSelectedMakeName] = useState(initialMake);
-  const [filterMode, setFilterMode] = useState<"all" | "parts" | "products">("all");
-
   const { addToCart } = useCart();
+  const [filterMode, setFilterMode] = useState<"all" | "parts" | "products">(
+    (searchParams.get("filterMode") as "all" | "parts" | "products") || "all"
+  );
+  const [sortOrder, setSortOrder] = useState(
+    searchParams.get("sortOrder") || "newest"
+  );
+  const [priceRange, setPriceRange] = useState(
+    searchParams.get("priceRange") || "all"
+  );
 
-  // Vehicle Queries
-  const { data: vehicleYears = [] } = useQuery<number[]>({
-    queryKey: ["vehicle-years"],
+  const fetchParts = async () => {
+    const { data, error } = await supabase.from("parts").select("*");
+    if (error) throw error;
+    return data.map(item => ({ ...item, type: "part" })) as ShopItem[];
+  };
+
+  const fetchProducts = async () => {
+    const { data, error } = await supabase.from("products").select("*");
+    if (error) throw error;
+    return data.map(item => ({ ...item, type: "product" })) as ShopItem[];
+  };
+
+  const { data: allItems = [], isLoading } = useQuery<ShopItem[]>({
+    queryKey: ["shopItems"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("vehicle_years")
-        .select("year")
-        .order("year", { ascending: false });
-      if (error) throw error;
-      return data.map((item) => item.year);
+      const [parts, products] = await Promise.all([fetchParts(), fetchProducts()]);
+      return [...parts, ...products];
     },
+    staleTime: 1000 * 60, // 1 minute
   });
 
-  const { data: vehicleMakes = [] } = useQuery<VehicleMake[]>({
-    queryKey: ["vehicle-makes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("vehicle_makes")
-        .select("id, name")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: vehicleModels = [] } = useQuery<VehicleModel[]>({
-    queryKey: ["vehicle-models", selectedMakeId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("vehicle_models")
-        .select("name")
-        .eq("make_id", selectedMakeId)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedMakeId,
-  });
-
-  useEffect(() => {
-    if (initialMake && vehicleMakes.length > 0) {
-      const makeId = vehicleMakes.find((make) => make.name === initialMake)?.id;
-      if (makeId) {
-        setSelectedMakeId(makeId);
-      }
+  const filteredItems = useMemo(() => {
+    let items = allItems;
+    
+    if (filterMode === "parts") {
+      items = items.filter(item => item.type === "part");
+    } else if (filterMode === "products") {
+      items = items.filter(item => item.type === "product");
     }
-  }, [initialMake, vehicleMakes]);
 
-  // --- Parts Query ---
-  const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
-    queryKey: ["shop-parts", selectedYear, selectedMakeName, selectedModel, searchQuery],
-    queryFn: async () => {
-      let yearId = null;
-      let makeId = null;
-      let modelId = null;
-
-      if (selectedYear) {
-        const { data } = await supabase
-          .from("vehicle_years")
-          .select("id")
-          .eq("year", parseInt(selectedYear, 10))
-          .maybeSingle();
-        if (data) yearId = data.id;
-      }
-
-      if (selectedMakeName) {
-        const foundMake = vehicleMakes.find((m) => m.name === selectedMakeName);
-        if (foundMake) makeId = foundMake.id;
-      }
-
-      if (selectedModel && makeId) {
-        const { data } = await supabase
-          .from("vehicle_models")
-          .select("id")
-          .eq("name", selectedModel)
-          .eq("make_id", makeId)
-          .maybeSingle();
-        if (data) modelId = data.id;
-      }
-
-      if ((selectedYear || selectedMakeName || selectedModel) && (!yearId && !makeId && !modelId)) {
-        return [];
-      }
-
-      const { data: rpcData, error } = await supabase.rpc("search_parts_with_fitment", {
-        search_query: searchQuery,
-        year_id_param: yearId,
-        make_id_param: makeId,
-        model_id_param: modelId,
+    if (priceRange !== "all") {
+      const [min, max] = priceRange.split("-").map(Number);
+      items = items.filter(item => {
+        const itemPrice = Number(item.price);
+        return itemPrice >= min && itemPrice <= (max || Infinity);
       });
+    }
 
-      if (error) {
-        console.error("Error with RPC for parts:", error);
-        return [];
-      }
-      const partIds = rpcData.map((row) => row.part_id);
-      if (partIds.length === 0) return [];
-      const { data: partsData, error: partsError } = await supabase
-        .from("parts")
-        .select("*")
-        .in("id", partIds);
-      if (partsError) throw partsError;
-      return partsData;
-    },
-  });
+    if (sortOrder === "newest") {
+      items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } else if (sortOrder === "price-asc") {
+      items.sort((a, b) => Number(a.price) - Number(b.price));
+    } else if (sortOrder === "price-desc") {
+      items.sort((a, b) => Number(b.price) - Number(a.price));
+    }
+    
+    return items;
+  }, [allItems, filterMode, priceRange, sortOrder]);
 
-  // --- Products Query ---
-  const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
-    queryKey: ["shop-products", selectedYear, selectedMakeName, selectedModel, searchQuery],
-    queryFn: async () => {
-      let yearId = null;
-      let makeId = null;
-      let modelId = null;
+  const priceRanges = [
+    { value: "all", label: "All Prices" },
+    { value: "0-50", label: "$0 - $50" },
+    { value: "51-100", label: "$51 - $100" },
+    { value: "101-200", label: "$101 - $200" },
+    { value: "201-", label: "$201+" },
+  ];
 
-      if (selectedYear) {
-        const { data } = await supabase
-          .from("vehicle_years")
-          .select("id")
-          .eq("year", parseInt(selectedYear, 10))
-          .maybeSingle();
-        if (data) yearId = data.id;
-      }
+  const handleFilterModeChange = (mode: "all" | "parts" | "products") => {
+    setFilterMode(mode);
+    setSearchParams(prev => {
+      prev.set("filterMode", mode);
+      return prev;
+    });
+  };
 
-      if (selectedMakeName) {
-        const foundMake = vehicleMakes.find((m) => m.name === selectedMakeName);
-        if (foundMake) makeId = foundMake.id;
-      }
+  const handleSortChange = (value: string) => {
+    setSortOrder(value);
+    setSearchParams(prev => {
+      prev.set("sortOrder", value);
+      return prev;
+    });
+  };
 
-      if (selectedModel && makeId) {
-        const { data } = await supabase
-          .from("vehicle_models")
-          .select("id")
-          .eq("name", selectedModel)
-          .eq("make_id", makeId)
-          .maybeSingle();
-        if (data) modelId = data.id;
-      }
-
-      if ((selectedYear || selectedMakeName || selectedModel) && (!yearId && !makeId && !modelId)) {
-        return [];
-      }
-
-      const { data: rpcData, error } = await supabase.rpc("search_products_with_fitment", {
-        search_query: searchQuery,
-        year_id_param: yearId,
-        make_id_param: makeId,
-        model_id_param: modelId,
-      });
-
-      if (error) {
-        console.error("Error with RPC for products:", error);
-        return [];
-      }
-      const productIds = rpcData.map((row) => row.product_id);
-      if (productIds.length === 0) return [];
-      const { data: productsData, error: productsError } = await supabase
-        .from("products")
-        .select("*")
-        .in("id", productIds);
-      if (productsError) throw productsError;
-      return productsData;
-    },
-  });
-
-  const allResults: ShopItem[] = useMemo(() => {
-  const combined: ShopItem[] = [];
-
-  if (filterMode === "all" || filterMode === "parts") {
-    combined.push(...(parts || []).map((p) => ({ ...p, type: "part" as const })));
-  }
-  if (filterMode === "all" || filterMode === "products") {
-    combined.push(...(products || []).map((p) => ({ ...p, type: "product" as const })));
-  }
-
-  return combined;
-}, [parts, products, filterMode]);
-
-  const isLoading = isLoadingParts || isLoadingProducts;
+  const handlePriceRangeChange = (value: string) => {
+    setPriceRange(value);
+    setSearchParams(prev => {
+      prev.set("priceRange", value);
+      return prev;
+    });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-8 text-center">Shop</h1>
+      <h1 className="text-3xl font-bold mb-6">Shop All Items</h1>
 
-      {/* Filters */}
-      <div className="bg-card p-6 rounded-lg shadow-sm mb-8">
-        {/* Year/Make/Model Filters (unchanged) */}
-        {/* ... */}
+      {/* Filters and Sorting */}
+      <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4 mb-8">
+        <div className="flex items-center space-x-2">
+          <Label>Sort by:</Label>
+          <Select value={sortOrder} onValueChange={handleSortChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="price-asc">Price: Low to High</SelectItem>
+              <SelectItem value="price-desc">Price: High to Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Label>Price Range:</Label>
+          <Select value={priceRange} onValueChange={handlePriceRangeChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Price Range" />
+            </SelectTrigger>
+            <SelectContent>
+              {priceRanges.map((range) => (
+                <SelectItem key={range.value} value={range.value}>
+                  {range.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Filter Mode Buttons */}
-      <div className="flex space-x-4 mb-8 justify-center">
+      <div className="flex justify-center space-x-4 mb-8">
         <Button
           variant={filterMode === "all" ? "default" : "outline"}
-          onClick={() => setFilterMode("all")}
+          onClick={() => handleFilterModeChange("all")}
         >
           All Items
         </Button>
         <Button
           variant={filterMode === "parts" ? "default" : "outline"}
-          onClick={() => setFilterMode("parts")}
+          onClick={() => handleFilterModeChange("parts")}
         >
           Parts
         </Button>
         <Button
           variant={filterMode === "products" ? "default" : "outline"}
-          onClick={() => setFilterMode("products")}
+          onClick={() => handleFilterModeChange("products")}
         >
           Products
         </Button>
@@ -318,9 +226,9 @@ const Shop = () => {
       {/* Results */}
       <section>
         {isLoading && <p>Loading items...</p>}
-        {!isLoading && allResults.length > 0 ? (
+        {!isLoading && filteredItems.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {allResults.map((item) => (
+            {filteredItems.map((item) => (
               <ProductCard
                 key={item.id}
                 {...formatCardData(item)}
@@ -334,8 +242,7 @@ const Shop = () => {
                       is_part: item.type === "part",
                       brand: "brand" in item ? (item as Part).brand : undefined,
                       category: "category" in item ? (item as Product).category : undefined,
-                    },
-                    1
+                    }
                   )
                 }
               />
