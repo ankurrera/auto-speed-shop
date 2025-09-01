@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Database } from "@/database.types";
 
 // Define the specific types from your generated database types
@@ -32,12 +33,14 @@ interface VehicleModel {
 }
 
 // --- Type Guards ---
+// Use a type guard that checks for a property unique to a Product
 function isProduct(item: Product | Part): item is Product {
   return (item as Product).category !== undefined;
 }
 
+// Use a type guard that checks for a property unique to a Part
 function isPart(item: Product | Part): item is Part {
-  return (item as Part).brand !== undefined;
+  return (item as Part).specifications !== undefined;
 }
 
 // Helper function to format data for the ProductCard
@@ -59,18 +62,18 @@ const formatCardData = (item: Product | Part) => {
       item.specifications !== null &&
       "category" in item.specifications
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const specCategory = (item.specifications as any).category;
+      const specCategory = item.specifications.category;
       if (typeof specCategory === "string") {
         category = specCategory;
       }
     }
   } else if (isProduct(item)) {
     // This is a Product item
-    brand = "Auto Speed Shop";
     if (typeof item.category === "string") {
       category = item.category;
     }
+    // Set the category as the brand name for the product card
+    brand = category || "Product";
   }
 
   return {
@@ -155,13 +158,7 @@ const Shop = () => {
 
   // --- UPDATED useQuery Hooks ---
   const { data: parts = [], isLoading: isLoadingParts } = useQuery<Part[]>({
-    queryKey: [
-      "shop-parts",
-      selectedYear,
-      selectedMakeName,
-      selectedModel,
-      searchQuery,
-    ],
+    queryKey: ["shop-parts", selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
       let yearId = null;
       let makeId = null;
@@ -191,24 +188,20 @@ const Shop = () => {
         if (data) modelId = data.id;
       }
 
+      // If a filter is selected and no ID is found, return an empty array.
       if (
         (selectedYear || selectedMakeName || selectedModel) &&
-        !yearId &&
-        !makeId &&
-        !modelId
+        (!yearId && !makeId && !modelId)
       ) {
         return [];
       }
 
-      const { data: rpcData, error } = await supabase.rpc(
-        "search_parts_with_fitment",
-        {
-          search_query: searchQuery,
-          year_id_param: yearId,
-          make_id_param: makeId,
-          model_id_param: modelId,
-        }
-      );
+      const { data: rpcData, error } = await supabase.rpc("search_parts_with_fitment", {
+        search_query: searchQuery,
+        year_id_param: yearId,
+        make_id_param: makeId,
+        model_id_param: modelId,
+      });
 
       if (error) {
         console.error("Error with RPC for parts:", error);
@@ -225,16 +218,8 @@ const Shop = () => {
     },
   });
 
-  const { data: products = [], isLoading: isLoadingProducts } = useQuery<
-    Product[]
-  >({
-    queryKey: [
-      "shop-products",
-      selectedYear,
-      selectedMakeName,
-      selectedModel,
-      searchQuery,
-    ],
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
+    queryKey: ["shop-products", selectedYear, selectedMakeName, selectedModel, searchQuery],
     queryFn: async () => {
       let yearId = null;
       let makeId = null;
@@ -264,24 +249,20 @@ const Shop = () => {
         if (data) modelId = data.id;
       }
 
+      // If a filter is selected and no ID is found, return an empty array.
       if (
         (selectedYear || selectedMakeName || selectedModel) &&
-        !yearId &&
-        !makeId &&
-        !modelId
+        (!yearId && !makeId && !modelId)
       ) {
         return [];
       }
 
-      const { data: rpcData, error } = await supabase.rpc(
-        "search_products_with_fitment",
-        {
-          search_query: searchQuery,
-          year_id_param: yearId,
-          make_id_param: makeId,
-          model_id_param: modelId,
-        }
-      );
+      const { data: rpcData, error } = await supabase.rpc("search_products_with_fitment", {
+        search_query: searchQuery,
+        year_id_param: yearId,
+        make_id_param: makeId,
+        model_id_param: modelId,
+      });
 
       if (error) {
         console.error("Error with RPC for products:", error);
@@ -299,7 +280,7 @@ const Shop = () => {
   });
 
   const allResults = useMemo(() => {
-    const combined: (Product | Part)[] = [];
+    const combined = [];
     if (filterMode === "all" || filterMode === "parts") {
       combined.push(...(parts || []).map((p) => ({ ...p, type: "part" })));
     }
@@ -313,48 +294,36 @@ const Shop = () => {
 
   const handleYearChange = (value: string) => {
     setSelectedYear(value);
-    setSearchParams(
-      (prev) => {
-        prev.set("year", value);
-        return prev;
-      },
-      { replace: true }
-    );
+    setSearchParams((prev) => {
+      prev.set("year", value);
+      return prev;
+    }, { replace: true });
   };
 
   const handleMakeChange = (value: string) => {
     setSelectedMakeName(value);
     setSelectedModel("");
-    setSearchParams(
-      (prev) => {
-        prev.set("make", value);
-        prev.delete("model");
-        return prev;
-      },
-      { replace: true }
-    );
+    setSearchParams((prev) => {
+      prev.set("make", value);
+      prev.delete("model");
+      return prev;
+    }, { replace: true });
   };
 
   const handleModelChange = (value: string) => {
     setSelectedModel(value);
-    setSearchParams(
-      (prev) => {
-        prev.set("model", value);
-        return prev;
-      },
-      { replace: true }
-    );
+    setSearchParams((prev) => {
+      prev.set("model", value);
+      return prev;
+    }, { replace: true });
   };
 
   const handleTextSearch = () => {
     setSearchQuery(searchText);
-    setSearchParams(
-      (prev) => {
-        prev.set("query", searchText);
-        return prev;
-      },
-      { replace: true }
-    );
+    setSearchParams((prev) => {
+      prev.set("query", searchText);
+      return prev;
+    }, { replace: true });
   };
 
   return (

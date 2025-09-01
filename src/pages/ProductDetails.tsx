@@ -112,7 +112,7 @@ const ProductDetails = () => {
   const productData = {
     id: product.id,
     name: product.name,
-    brand: 'brand' in product ? product.brand : 'Auto Speed Shop',
+    brand: 'brand' in product ? product.brand : (product.category || 'Product'),
     price: product.price,
     image: product.image_urls[0],
   };
