@@ -23,7 +23,7 @@ export interface ProductCardProps {
   isOnSale?: boolean;
   className?: string;
   category?: string;
-  onAddToCart?: () => void;
+  onAddToCart?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 const ProductCard = ({
@@ -51,8 +51,9 @@ const ProductCard = ({
     setCurrentImageIndex(index);
   };
   
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault(); // Prevents the Link from navigating
+    e.stopPropagation(); // Prevents the click from bubbling up to the Link
     const isPart = !!brand && !category;
     addToCart({ 
       id, 
@@ -68,6 +69,7 @@ const ProductCard = ({
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevents the Link from navigating
+    e.stopPropagation();
     toggleWishlist({ id, name, brand, price, image: image_urls[0] });
   };
   
