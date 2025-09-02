@@ -335,6 +335,7 @@ const Shop = () => {
               <SelectValue placeholder="Select Year" />
             </SelectTrigger>
             <SelectContent>
+              {/* This is the problematic item */}
               <SelectItem value="">Any Year</SelectItem>
               {vehicleYears.map((year) => (
                 <SelectItem key={year} value={year.toString()}>
@@ -352,6 +353,7 @@ const Shop = () => {
               <SelectValue placeholder="Select Make" />
             </SelectTrigger>
             <SelectContent>
+              {/* This is the problematic item */}
               <SelectItem value="">Any Make</SelectItem>
               {vehicleMakes.map((make) => (
                 <SelectItem key={make.id} value={make.name}>
@@ -369,6 +371,7 @@ const Shop = () => {
               <SelectValue placeholder="Select Model" />
             </SelectTrigger>
             <SelectContent>
+              {/* This is the problematic item */}
               <SelectItem value="">Any Model</SelectItem>
               {vehicleModels.map((model) => (
                 <SelectItem key={model.name} value={model.name}>
