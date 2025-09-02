@@ -1175,7 +1175,7 @@ if (product.specifications) {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="flex w-full items-center justify-start overflow-x-auto rounded-md bg-muted p-1 text-muted-foreground">
+          <TabsList className="flex flex-col w-full md:w-max items-start justify-start rounded-md bg-muted p-1 text-muted-foreground space-y-1">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="orders">Order History</TabsTrigger>
