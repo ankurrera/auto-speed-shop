@@ -37,24 +37,46 @@ const Checkout = () => {
 
   const [selectedShipping, setSelectedShipping] = useState(shippingOptions[0]);
 
-  // Calculate subtotal and total locally to fix the TypeScript error
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const shippingCost = selectedShipping.cost;
   const total = subtotal + shippingCost;
 
+  // Function to validate the form fields
+  const validateForm = () => {
+    if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.email) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill out all customer information fields.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!shippingAddress.addressLine1 || !shippingAddress.city || !shippingAddress.state || !shippingAddress.postalCode) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill out all required shipping address fields.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handlePlaceOrder = (e: FormEvent) => {
     e.preventDefault();
     
-    // Here you would typically integrate with a payment gateway.
-    // This is a placeholder for a successful payment simulation.
-    // The actual implementation would involve a server-side call.
-    
+    // Check if cart is empty first
     if (cartItems.length === 0) {
       toast({
         title: "Error",
         description: "Your cart is empty. Please add items to your cart before checking out.",
         variant: "destructive",
       });
+      return;
+    }
+    
+    // Validate the form before proceeding
+    if (!validateForm()) {
       return;
     }
 
@@ -93,6 +115,7 @@ const Checkout = () => {
                     id="firstName" 
                     value={customerInfo.firstName} 
                     onChange={(e) => setCustomerInfo({ ...customerInfo, firstName: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -101,6 +124,7 @@ const Checkout = () => {
                     id="lastName" 
                     value={customerInfo.lastName} 
                     onChange={(e) => setCustomerInfo({ ...customerInfo, lastName: e.target.value })}
+                    required
                   />
                 </div>
               </div>
@@ -111,6 +135,7 @@ const Checkout = () => {
                   type="email" 
                   value={customerInfo.email} 
                   onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                  required
                 />
               </div>
             </CardContent>
@@ -129,6 +154,7 @@ const Checkout = () => {
                     id="addressLine1" 
                     value={shippingAddress.addressLine1} 
                     onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine1: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -146,6 +172,7 @@ const Checkout = () => {
                       id="city" 
                       value={shippingAddress.city} 
                       onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                      required
                     />
                   </div>
                   <div className="space-y-2">
@@ -154,6 +181,7 @@ const Checkout = () => {
                       id="state" 
                       value={shippingAddress.state} 
                       onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
+                      required
                     />
                   </div>
                 </div>
@@ -164,6 +192,7 @@ const Checkout = () => {
                       id="postalCode" 
                       value={shippingAddress.postalCode} 
                       onChange={(e) => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })}
+                      required
                     />
                   </div>
                   <div className="space-y-2">

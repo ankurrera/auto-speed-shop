@@ -1,5 +1,4 @@
 # Welcome to your Lovable project
-khushi
 ## Project info
 
 **URL**: https://lovable.dev/projects/6042cb2a-7c7c-446b-a38e-5cecda9b53f6
