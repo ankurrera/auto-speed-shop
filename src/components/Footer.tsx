@@ -67,17 +67,17 @@ const Footer = () => {
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4 text-primary" />
-                <span className="text-sm text-muted-foreground">(555) 123-PART</span>
+                <span className="text-sm text-muted-foreground">+91 9874139807</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="h-4 w-4 text-primary" />
-                <span className="text-sm text-muted-foreground">support@autopartspro.com</span>
+                <span className="text-sm text-muted-foreground">sunvisiontech@gmail.com</span>
               </div>
               <div className="flex items-start space-x-2">
                 <MapPin className="h-4 w-4 text-primary mt-0.5" />
                 <div className="text-sm text-muted-foreground">
-                  <p>1234 Auto Parts Ave</p>
-                  <p>Detroit, MI 48201</p>
+                  <p>EN-9, SALTLAKE, SECTOR-5 </p>
+                  <p>KOLKATA-700091</p>
                 </div>
               </div>
             </div>
