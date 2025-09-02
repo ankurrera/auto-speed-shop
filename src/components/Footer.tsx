@@ -13,11 +13,11 @@ const Footer = () => {
           {/* Company Info */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center space-x-2">
-                <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-14 w-auto" />
-                <div className="whitespace-nowrap flex-shrink-0">
-                  <h1 className="text-2xl font-bold text-foreground">AutoParts Pro</h1>
-                  <p className="text-sm text-muted-foreground">Premium Auto Parts</p>
-                </div>
+              <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-14 w-auto" />
+              <div className="whitespace-nowrap flex-shrink-0">
+                <h1 className="text-2xl font-bold text-foreground">AutoParts Pro</h1>
+                <p className="text-sm text-muted-foreground">Premium Auto Parts</p>
+              </div>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Your trusted source for high-quality auto parts, accessories, and tools. 
@@ -65,21 +65,21 @@ const Footer = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Customer Service</h3>
             <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-primary" />
-                <span className="text-sm text-muted-foreground">+91 9874139807</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-primary" />
-                <span className="text-sm text-muted-foreground">sunvisiontech@gmail.com</span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <MapPin className="h-4 w-4 text-primary mt-0.5" />
-                <div className="text-sm text-muted-foreground">
-                  <p>EN-9, SALTLAKE, SECTOR-5 </p>
-                  <p>KOLKATA-700091</p>
+              <a href="tel:+919874139807" className="flex items-center space-x-2 group">
+                <Phone className="h-4 w-4 text-primary group-hover:text-primary-hover transition-colors" />
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">+91 9874139807</span>
+              </a>
+              <a href="https://mail.google.com/mail/?view=cm&fs=1&to=sunvisiontech@gmail.com" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-2 group">
+                <Mail className="h-4 w-4 text-primary group-hover:text-primary-hover transition-colors" />
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">sunvisiontech@gmail.com</span>
+              </a>
+              <a href="https://maps.google.com/?cid=18312918050014538517&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" target="_blank" rel="noopener noreferrer" className="flex items-start space-x-2 group">
+                <MapPin className="h-4 w-4 text-primary mt-0.5 group-hover:text-primary-hover transition-colors" />
+                <div className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                  <p>EN-9, SALTLAKE</p>
+                  <p>SECTOR-5 KOLKATA-700091</p>
                 </div>
-              </div>
+              </a>
             </div>
           </div>
 
