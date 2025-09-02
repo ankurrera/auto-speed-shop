@@ -1,6 +1,6 @@
 // src/pages/Account.tsx
 import { useState, useEffect, useCallback, ChangeEvent, FormEvent } from "react";
-import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff, Lock, TrendingUp, Archive, Trash2, Image as ImageIcon } from "lucide-react";
+import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff, Lock, TrendingUp, Archive, Trash2, Image as ImageIcon, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,13 @@ import { useToast } from "@/components/ui/use-toast";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Database } from "@/database.types";
 import { v4 as uuidv4 } from 'uuid';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -119,6 +126,7 @@ const Account = () => {
   const [productFiles, setProductFiles] = useState<File[]>([]);
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
 
   // Queries for Filter Dropdowns
   const { data: vehicleYears = [] } = useQuery({
@@ -1175,7 +1183,7 @@ if (product.specifications) {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="flex flex-col w-full md:w-max items-start justify-start rounded-md bg-muted p-1 text-muted-foreground space-y-1">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="orders">Order History</TabsTrigger>
