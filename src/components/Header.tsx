@@ -47,20 +47,87 @@ const Header = () => {
 
   return (
     <header className="bg-background border-b border-border sticky top-0 z-50">
-      {/* Main header */}
+      {/* Main header container */}
       <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
+        {/* Top row for mobile: Logo, mobile menu, and cart/wishlist icons */}
+        <div className="flex items-center justify-between md:hidden">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2">
+            <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-10 w-auto" />
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold text-foreground truncate">AutoParts Pro</h1>
+              <p className="text-xs text-muted-foreground truncate">Premium Auto Parts</p>
+            </div>
+          </Link>
+
+          {/* Action buttons (mobile) */}
+          <div className="flex items-center space-x-2">
+            {/* Wishlist */}
+            <Button variant="ghost" size="sm" asChild className="relative h-8 w-8 p-0">
+              <Link to="/wishlist">
+                <Heart className="h-4 w-4" />
+                {wishlistCount > 0 && (
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
+                    {wishlistCount}
+                  </Badge>
+                )}
+              </Link>
+            </Button>
+            {/* Cart */}
+            <Button variant="ghost" size="sm" asChild className="relative h-8 w-8 p-0">
+              <Link to="/cart">
+                <ShoppingCart className="h-4 w-4" />
+                {cartItemCount > 0 && (
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
+                    {cartItemCount}
+                  </Badge>
+                )}
+              </Link>
+            </Button>
+            {/* Mobile menu button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile Search bar */}
+        <div className="md:hidden mt-4">
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Search parts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-4 pr-12 h-9"
+            />
+            <Button
+              size="sm"
+              className="absolute right-1 top-1 h-7 px-3"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden md:flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-14 w-auto" />
-            <div className="md:whitespace-nowrap">
+            <div>
               <h1 className="text-2xl font-bold text-foreground">AutoParts Pro</h1>
               <p className="text-sm text-muted-foreground">Premium Auto Parts</p>
             </div>
           </Link>
 
           {/* Search bar - Desktop */}
-          <div className="hidden md:flex flex-1 max-w-2xl mx-8">
+          <div className="flex-1 max-w-2xl mx-8">
             <div className="relative w-full">
               <Input
                 type="text"
@@ -69,18 +136,14 @@ const Header = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-4 pr-12 h-12 text-base"
               />
-              <Button
-                size="sm"
-                className="absolute right-1 top-1 h-10 px-4"
-              >
+              <Button size="sm" className="absolute right-1 top-1 h-10 px-4">
                 <Search className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-          {/* Action buttons */}
+          {/* Action buttons - Desktop */}
           <div className="flex items-center space-x-2">
-            {/* Wishlist */}
             <Button variant="ghost" size="sm" asChild className="relative">
               <Link to="/wishlist">
                 <Heart className="h-5 w-5" />
@@ -91,8 +154,6 @@ const Header = () => {
                 )}
               </Link>
             </Button>
-
-            {/* Cart */}
             <Button variant="ghost" size="sm" asChild className="relative">
               <Link to="/cart">
                 <ShoppingCart className="h-5 w-5" />
@@ -103,50 +164,17 @@ const Header = () => {
                 )}
               </Link>
             </Button>
-
-            {/* Account link */}
             <Button variant="ghost" size="sm" asChild className="relative">
               <Link to="/account">
                 <User className="h-5 w-5" />
               </Link>
             </Button>
-
-            {/* Theme toggle */}
             <SimpleThemeToggle />
-
-            {/* Mobile menu button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-          </div>
-        </div>
-
-        {/* Search bar - Mobile */}
-        <div className="md:hidden mt-4">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Search parts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-4 pr-12"
-            />
-            <Button
-              size="sm"
-              className="absolute right-1 top-1 h-8 px-3"
-            >
-              <Search className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation and Mobile Menu */}
       <nav className="bg-secondary border-t border-border">
         <div className="container mx-auto px-4">
           {/* Desktop navigation */}
@@ -165,7 +193,6 @@ const Header = () => {
                   {item.name}
                 </Link>
               ))}
-
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary">
                   Shop by Category
@@ -187,7 +214,6 @@ const Header = () => {
                   </Link>
                 </DropdownMenuContent>
               </DropdownMenu>
-
             </div>
             <div className="flex items-center space-x-6 text-sm text-muted-foreground">
               <span>Brands</span>
