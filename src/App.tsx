@@ -13,6 +13,7 @@ import Cart from "./pages/Cart";
 import Wishlist from "./pages/Wishlist";
 import Account from "./pages/Account";
 import ResetPassword from "./pages/ResetPassword";
+import Checkout from "./pages/Checkout"; // Import the new Checkout page
 import NotFound from "./pages/NotFound";
 import ProductDetails from "./pages/ProductDetails";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -44,6 +45,7 @@ const App = () => (
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/account" element={<Account />} />
                     <Route path="/account/reset-password" element={<ResetPassword />} />
+                    <Route path="/checkout" element={<Checkout />} /> {/* Add the new route for the checkout page */}
                     <Route path="/products/:id" element={<ProductDetails />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
