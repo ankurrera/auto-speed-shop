@@ -24,9 +24,9 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 const queryClient = new QueryClient();
 
-// This is your sandbox client ID. You will need to replace this with your actual client ID.
+// Use the environment variable for the client ID
 const paypalOptions = {
-  "clientId": "AfxRHwPiPRPrde7vSZQRLx2IQxkSzfFmH-5-dFeD91Zs1F7ceQsPkwgXIqWBRyZoz4PMYD_GigzU58HU",
+  "clientId": import.meta.env.VITE_PAYPAL_CLIENT_ID,
   "currency": "USD",
 };
 
