@@ -1,4 +1,3 @@
-// src/pages/Cart.tsx
 import { useState } from "react";
 import { Plus, Minus, Trash2, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -134,8 +133,8 @@ const Cart = () => {
             </Card>
 
             {/* Checkout Button */}
-            <Button size="lg" className="w-full">
-              Proceed to Checkout
+            <Button size="lg" className="w-full" asChild>
+              <Link to="/checkout">Proceed to Checkout</Link>
             </Button>
 
             {/* Shipping Info */}
