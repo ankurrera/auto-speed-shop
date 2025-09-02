@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -171,7 +172,6 @@ const Shop = () => {
     if (selectedYear || selectedMake || selectedModel) {
       items = items.filter(item => {
         if (item.type === "part") {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const specs = item.specifications as any; // Use 'any' for now due to dynamic data
           const partYear = specs?.year?.toString();
           const partMake = specs?.make;
@@ -335,8 +335,6 @@ const Shop = () => {
               <SelectValue placeholder="Select Year" />
             </SelectTrigger>
             <SelectContent>
-              {/* This is the problematic item */}
-              <SelectItem value="">Any Year</SelectItem>
               {vehicleYears.map((year) => (
                 <SelectItem key={year} value={year.toString()}>
                   {year}
@@ -353,8 +351,6 @@ const Shop = () => {
               <SelectValue placeholder="Select Make" />
             </SelectTrigger>
             <SelectContent>
-              {/* This is the problematic item */}
-              <SelectItem value="">Any Make</SelectItem>
               {vehicleMakes.map((make) => (
                 <SelectItem key={make.id} value={make.name}>
                   {make.name}
@@ -371,8 +367,6 @@ const Shop = () => {
               <SelectValue placeholder="Select Model" />
             </SelectTrigger>
             <SelectContent>
-              {/* This is the problematic item */}
-              <SelectItem value="">Any Model</SelectItem>
               {vehicleModels.map((model) => (
                 <SelectItem key={model.name} value={model.name}>
                   {model.name}
