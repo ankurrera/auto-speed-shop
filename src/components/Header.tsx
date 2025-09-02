@@ -32,15 +32,16 @@ const Header = () => {
     { name: "Contact", href: "/contact" },
   ];
 
-  const categories = [
-    { name: "Engine"},
-    { name: "Brakes"},
-    { name: "Suspension"},
-    { name: "Electrical"},
-    { name: "Cooling"},
-    { name: "Exhaust"},
-    { name: "Filters"},
-    { name: "Tools"}
+  const brands = [
+    { name: "Audi" },
+    { name: "BMW" },
+    { name: "Chevrolet" },
+    { name: "Honda" },
+    { name: "Mazda" },
+    { name: "Mercedes" },
+    { name: "Nissan" },
+    { name: "Subaru" },
+    { name: "Toyota" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -195,28 +196,27 @@ const Header = () => {
               ))}
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary">
-                  Shop by Category
+                  Shop by Brands
                   <ChevronDown className="h-4 w-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  {categories.map((category) => (
-                    <Link to="/shop" key={category.name}>
+                  {brands.map((brand) => (
+                    <Link to={`/shop?make=${brand.name}`} key={brand.name}>
                       <DropdownMenuItem className="cursor-pointer">
-                        {category.name}
+                        {brand.name}
                       </DropdownMenuItem>
                     </Link>
                   ))}
                   <DropdownMenuSeparator />
                   <Link to="/shop">
                     <DropdownMenuItem className="cursor-pointer">
-                      View All Categories
+                      View All Brands
                     </DropdownMenuItem>
                   </Link>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
             <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-              <span>Brands</span>
               <span>Deals</span>
             </div>
           </div>
@@ -239,8 +239,9 @@ const Header = () => {
                 ))}
                 <div className="pt-4 border-t border-border">
                   <div className="flex flex-col space-y-2 text-sm text-muted-foreground">
-                    <span>Shop by Category</span>
-                    <span>Brands</span>
+                    <Link to="/shop" onClick={() => setIsMenuOpen(false)}>
+                      Shop by Brands
+                    </Link>
                     <span>Deals</span>
                   </div>
                 </div>
