@@ -69,15 +69,15 @@ const Footer = () => {
                 <Phone className="h-4 w-4 text-primary group-hover:text-primary-hover transition-colors" />
                 <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">+91 9874139807</span>
               </a>
-              <a href="https://mail.google.com/mail/?view=cm&fs=1&to=sunvisiontech@gmail.com" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-2 group">
+              <a href="https://mail.google.com/mail/?view=cm&fs=1&to=sunvisiontech@gmail.com" className="flex items-center space-x-2 group">
                 <Mail className="h-4 w-4 text-primary group-hover:text-primary-hover transition-colors" />
                 <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">sunvisiontech@gmail.com</span>
               </a>
-              <a href="https://maps.google.com/?cid=18312918050014538517&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" target="_blank" rel="noopener noreferrer" className="flex items-start space-x-2 group">
+              <a href="https://maps.google.com/?cid=12111579913860274811&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" target="_blank" rel="noopener noreferrer" className="flex items-start space-x-2 group">
                 <MapPin className="h-4 w-4 text-primary mt-0.5 group-hover:text-primary-hover transition-colors" />
                 <div className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                  <p>EN-9, SALTLAKE</p>
-                  <p>SECTOR-5 KOLKATA-700091</p>
+                  <p>EN9 , 5th Floor, Roys IT PARK</p>
+                  <p>EN Block, Sector V, Bidhannagar, Kolkata, West Bengal 700091</p>
                 </div>
               </a>
             </div>
