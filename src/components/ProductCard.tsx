@@ -154,7 +154,7 @@ const ProductCard = ({
               )}
             </div>
             
-            {/* Wishlist button */}
+            {/* Existing wishlist button on the image overlay */}
             <Button
               variant="ghost"
               size="sm"
@@ -212,7 +212,7 @@ const ProductCard = ({
         <CardFooter className="p-4 pt-0 flex gap-2">
           {/* New Wishlist button placed next to the "Add to Cart" button */}
           <Button
-            variant="outline"
+            variant={isWishlisted(id) ? "destructive" : "outline"}
             size="icon"
             onClick={handleWishlist}
             className={cn(
