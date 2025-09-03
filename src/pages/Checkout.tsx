@@ -48,6 +48,8 @@ const shippingOptions = [
   { id: "express", name: "Express Shipping", cost: 15.00 },
 ];
 
+const TAX_RATE = 0.0825; // 8.25%
+
 const Checkout = () => {
   const { cartItems, clearCart } = useCart();
   const navigate = useNavigate();
@@ -72,8 +74,9 @@ const Checkout = () => {
   const [isFormValid, setIsFormValid] = useState(false);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const taxAmount = subtotal * TAX_RATE;
   const shippingCost = selectedShipping.cost;
-  const total = subtotal + shippingCost;
+  const total = subtotal + shippingCost + taxAmount;
 
   // Function to validate the form fields and update state
   const validateForm = useCallback(() => {
@@ -325,6 +328,10 @@ const Checkout = () => {
                 <div className="flex justify-between text-sm">
                   <span>Shipping</span>
                   <span className="font-medium">${shippingCost.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Tax</span>
+                  <span className="font-medium">${taxAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
