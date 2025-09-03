@@ -16,6 +16,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 import ProductDetails from "./pages/ProductDetails";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
@@ -52,6 +53,10 @@ const App = () => (
                       <Route path="/cart" element={<Cart />} />
                       <Route path="/wishlist" element={<Wishlist />} />
                       <Route path="/account" element={<Account />} />
+                      <Route path="/account/addresses" element={<Account />} />
+                      <Route path="/account/orders" element={<Account />} />
+                      <Route path="/account/admin-dashboard" element={<Account />} />
+                      <Route path="/account/analytics-dashboard" element={<AnalyticsDashboard />} />
                       <Route path="/account/reset-password" element={<ResetPassword />} />
                       <Route path="/checkout" element={<Checkout />} />
                       <Route path="/products/:id" element={<ProductDetails />} />

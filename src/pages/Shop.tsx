@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "@/components/ProductCard";
@@ -12,9 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Search } from "lucide-react";
 import { Database } from "@/database.types";
 import { useCart } from "@/contexts/CartContext";
 
@@ -32,14 +30,8 @@ interface VehicleMake {
   name: string;
 }
 
-interface PartSpecifications {
-  category?: string;
-  make?: string;
-  model?: string;
-  year?: string;
-  vin?: string;
-  additional?: string;
-  [key: string]: unknown;
+interface VehicleModel {
+  name: string;
 }
 
 // --- Type Guards ---
@@ -83,7 +75,6 @@ const formatCardData = (item: Product | Part) => {
 
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { addToCart } = useCart();
   const [filterMode, setFilterMode] = useState<"all" | "parts" | "products">(
     (searchParams.get("filterMode") as "all" | "parts" | "products") || "all"
@@ -95,12 +86,8 @@ const Shop = () => {
     searchParams.get("priceRange") || "all"
   );
   
-  // New state for vehicle fitment filters, read from URL
-  const selectedYear = searchParams.get("year") || "";
   const selectedMake = searchParams.get("make") || "";
-  const selectedModel = searchParams.get("model") || "";
 
-  // Fetch all items (parts and products)
   const fetchParts = async () => {
     const { data, error } = await supabase.from("parts").select("*");
     if (error) throw error;
@@ -122,91 +109,17 @@ const Shop = () => {
     staleTime: 1000 * 60, // 1 minute
   });
 
-  // Fetch vehicle years from Supabase
-  const { data: vehicleYears = [] } = useQuery({
-    queryKey: ['vehicle-years'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vehicle_years')
-        .select('year')
-        .order('year', { ascending: false });
-      
-      if (error) throw error;
-      return data.map(item => item.year);
-    }
-  });
-
-  // Fetch vehicle makes from Supabase
-  const { data: vehicleMakes = [] } = useQuery<VehicleMake[]>({
-    queryKey: ['vehicle-makes'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vehicle_makes')
-        .select('id, name')
-        .order('name');
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Fetch vehicle models from Supabase, dependent on selectedMake
-  const { data: vehicleModels = [] } = useQuery<{ name: string; }[]>({
-    queryKey: ['vehicle-models', selectedMake],
-    queryFn: async () => {
-      const makeId = vehicleMakes.find(make => make.name === selectedMake)?.id;
-      
-      if (!makeId) {
-        return [];
-      }
-
-      const { data, error } = await supabase
-        .from('vehicle_models')
-        .select('name')
-        .eq('make_id', makeId)
-        .order('name');
-      
-      if (error) throw error;
-      return data.map(item => item.name);
-    },
-    enabled: !!selectedMake,
-  });
-
-  // Function to update URL search parameters for the vehicle filter box
-  const handleFilterChange = (key: string, value: string) => {
-    setSearchParams(prev => {
-      if (value) {
-        prev.set(key, value);
-      } else {
-        prev.delete(key);
-      }
-      // Reset make and model if year changes, and model if make changes
-      if (key === "year") {
-        prev.delete("make");
-        prev.delete("model");
-      }
-      if (key === "make") {
-        prev.delete("model");
-      }
-      return prev;
-    }, { replace: true });
-  };
-
 
   const filteredItems = useMemo(() => {
     let items = allItems;
     
-    // Vehicle filtering logic
-    if (selectedYear && selectedMake && selectedModel) {
+    // Brand filtering logic
+    if (selectedMake) {
       items = items.filter(item => {
-        if (isProduct(item)) {
-          return item.make === selectedMake && item.model === selectedModel && item.year_from <= Number(selectedYear) && item.year_to >= Number(selectedYear);
-        } else if (isPart(item)) {
-          if (item.specifications && typeof item.specifications === 'object') {
-            const specs = item.specifications as PartSpecifications;
-            return specs.make === selectedMake && specs.model === selectedModel && specs.year === selectedYear;
-          }
+        if (isPart(item)) {
+          return item.brand === selectedMake;
         }
+        // Products don't have a brand field in the database, so they are filtered out
         return false;
       });
     }
@@ -234,7 +147,7 @@ const Shop = () => {
     }
     
     return items;
-  }, [allItems, filterMode, priceRange, sortOrder, selectedYear, selectedMake, selectedModel]);
+  }, [allItems, filterMode, priceRange, sortOrder, selectedMake]);
 
   const priceRanges = [
     { value: "all", label: "All Prices" },
@@ -271,52 +184,6 @@ const Shop = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Shop All Items</h1>
-
-      {/* Find the Perfect Fit Filter Box */}
-      <Card className="mt-4 w-full max-w-4xl mx-auto mb-8 bg-card/70 backdrop-blur-md shadow-lg">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Select value={selectedYear} onValueChange={(value) => handleFilterChange("year", value)}>
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {vehicleYears.map(year => (
-                  <SelectItem key={year} value={year.toString()}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={selectedMake} onValueChange={(value) => handleFilterChange("make", value)}>
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="Make" />
-              </SelectTrigger>
-              <SelectContent>
-                {vehicleMakes.map(make => (
-                  <SelectItem key={make.name} value={make.name}>
-                    {make.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={selectedModel} onValueChange={(value) => handleFilterChange("model", value)} disabled={!selectedMake}>
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="Model" />
-              </SelectTrigger>
-              <SelectContent>
-                {vehicleModels.map(model => (
-                  <SelectItem key={model} value={model}>
-                    {model}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Filters and Sorting */}
       <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4 mb-8">
@@ -411,5 +278,4 @@ const Shop = () => {
     </div>
   );
 };
-
 export default Shop;
