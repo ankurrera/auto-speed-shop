@@ -87,7 +87,6 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     if (error) throw error;
     
     return data.map((item: SupabaseWishlistItem) => {
-      // Check for products in the returned array
       const product = item.products?.[0];
       if (item.product_id && product) {
         return {
@@ -101,7 +100,6 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
         };
       }
       
-      // Check for parts in the returned array
       const part = item.parts?.[0];
       if (item.part_id && part) {
         return {
@@ -119,7 +117,6 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     }).filter(Boolean) as WishlistItem[];
   };
 
-  // Use a query to fetch the wishlist items for the current user
   const { data: wishlistItems = [], isLoading } = useQuery<WishlistItem[]>({
     queryKey: ['wishlistItems', userId],
     queryFn: fetchWishlistItems,
