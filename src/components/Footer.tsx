@@ -73,7 +73,7 @@ const Footer = () => {
                 <Mail className="h-4 w-4 text-primary group-hover:text-primary-hover transition-colors" />
                 <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">sunvisiontech@gmail.com</span>
               </a>
-              <a href="https://maps.google.com/?cid=18312918050014538517&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" target="_blank" rel="noopener noreferrer" className="flex items-start space-x-2 group">
+              <a href="https://maps.app.goo.gl/RXCTsvzwDTYD31Sw9" target="_blank" rel="noopener noreferrer" className="flex items-start space-x-2 group">
                 <MapPin className="h-4 w-4 text-primary mt-0.5 group-hover:text-primary-hover transition-colors" />
                 <div className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
                   <p>EN-9, SALTLAKE</p>
