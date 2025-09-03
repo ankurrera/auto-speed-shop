@@ -33,7 +33,7 @@ interface WishlistContextType {
   wishlistItems: WishlistItem[];
   isLoading: boolean;
   isWishlisted: (productId: string) => boolean;
-  toggleWishlist: (product: { id: string; name: string; brand: string; price?: number; image: string }) => void;
+  toggleWishlist: (product: { id: string; name: string; brand: string; price?: number; image: string; category?: string | null }) => void;
 }
 
 // Create the context
