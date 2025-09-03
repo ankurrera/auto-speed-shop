@@ -10,20 +10,32 @@ import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { toast } from "sonner";
 
-export interface ProductCardProps {
+// in your ProductCard.tsx file
+
+interface ProductCardProps {
   id: string;
   name: string;
-  brand: string;
   price: number;
-  originalPrice?: number;
   image_urls: string[];
+  inStock: boolean;
   rating: number;
   reviews: number;
-  inStock: boolean;
-  isOnSale?: boolean;
-  className?: string;
+  isOnSale: boolean;
+  brand?: string;
   category?: string;
-  onAddToCart?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  is_part: boolean;
+  onAddToCart: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+  wishlistItem: {
+    product_id: string;
+    name: string;
+    price: number;
+    image: string;
+    brand?: string;
+    category?: string;
+  };
+  // NEW: Add the missing props
+  originalPrice?: number; // Make it optional since it's only used for sale items
+  className?: string; // Make it optional for styling
 }
 
 const ProductCard = ({

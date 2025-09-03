@@ -243,8 +243,7 @@ const Shop = () => {
 
       {/* Results */}
       <section>
-        {isLoading && <p>Loading items...</p>}
-        {!isLoading && filteredItems.length > 0 ? (
+        {isLoading && filteredItems.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {filteredItems.map((item) => (
               <ProductCard
