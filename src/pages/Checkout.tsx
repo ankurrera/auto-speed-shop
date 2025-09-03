@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ChevronRight } from "lucide-react";
+import { PayPalButtons } from "@paypal/react-paypal-js";
 
 // Mocking external dependencies to make the component runnable in a single file environment.
 // In a real application, you would install these libraries and configure your build process.
@@ -105,15 +106,6 @@ const Checkout = () => {
     setShippingAddress({ ...shippingAddress, [e.target.id]: e.target.value });
   };
 
-  // Mock function for handling the payment.
-  const handlePayment = () => {
-    // In a real app, this would trigger a payment gateway.
-    // Here, we just simulate a successful payment.
-    if (isFormValid) {
-      handleApprove("MOCK-ORDER-ID-12345");
-    }
-  };
-
   useEffect(() => {
     validateForm();
   }, [customerInfo, shippingAddress, validateForm]);
@@ -135,6 +127,7 @@ const Checkout = () => {
       </div>
     );
   }
+
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -287,10 +280,28 @@ const Checkout = () => {
                   Complete your order.
                 </p>
                 <div className="mt-4">
-                  <Button className="w-full" disabled={!isFormValid} onClick={handlePayment}>
-                    {isFormValid ? "Pay Now" : "Fill in details to pay"}
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
+                  <PayPalButtons
+                    createOrder={(data, actions) => {
+                      return actions.order.create({
+                        intent: 'CAPTURE',
+                        purchase_units: [
+                          {
+                            amount: {
+                              value: total.toFixed(2),
+                              currency_code: "USD",
+                            },
+                          },
+                        ],
+                      }).then(orderId => {
+                        return orderId;
+                      });
+                    }}
+                    onApprove={(data, actions) => {
+                      return actions.order.capture().then(function (orderData) {
+                        handleApprove(orderData.id);
+                      });
+                    }}
+                  />
                 </div>
               </div>
             </CardContent>
@@ -338,8 +349,8 @@ const Checkout = () => {
                   <span>${total.toFixed(2)}</span>
                 </div>
               </div>
-              <Button onClick={() => {}} className="w-full mt-6" disabled={!isFormValid}>
-                {isFormValid ? "Ready to Pay" : "Fill in Details to Pay"}
+              <Button className="w-full mt-6" disabled={!isFormValid}>
+                ${total.toFixed(2)}
               </Button>
             </CardContent>
           </Card>
