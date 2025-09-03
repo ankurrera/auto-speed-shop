@@ -8,13 +8,21 @@ import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 
 const Wishlist = () => {
-  const { wishlistItems, toggleWishlist } = useWishlist();
+  const { wishlistItems, toggleWishlist, isLoading } = useWishlist();
   const { addToCart } = useCart();
 
-  const handleAddToCartFromWishlist = (product: { id: string; name: string; brand: string; price: number; image: string }) => {
+  const handleAddToCartFromWishlist = (product: { id: string; name: string; price: number; image: string; isPart: boolean }) => {
     addToCart(product);
     toast.success(`${product.name} added to cart!`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <p>Loading wishlist...</p>
+      </div>
+    );
+  }
 
   if (wishlistItems.length === 0) {
     return (
@@ -57,14 +65,14 @@ const Wishlist = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleAddToCartFromWishlist({ id: item.product_id, name: item.name, brand: item.brand, price: 0, image: item.image})}
+                    onClick={() => handleAddToCartFromWishlist({ id: item.productId || item.partId || '', name: item.name, price: item.price || 0, image: item.image, isPart: item.isPart })}
                   >
                     <ShoppingCart className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => toggleWishlist({ id: item.product_id, name: item.name, brand: item.brand, image: item.image })}
+                    onClick={() => toggleWishlist({ id: item.productId || item.partId || '', name: item.name, image: item.image, isPart: item.isPart })}
                   >
                     <Heart className="h-4 w-4 fill-red-500 text-red-500" />
                   </Button>

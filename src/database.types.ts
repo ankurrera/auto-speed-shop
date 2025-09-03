@@ -72,7 +72,8 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          product_id: string
+          part_id: string | null
+          product_id: string | null
           quantity: number
           updated_at: string
           user_id: string
@@ -80,7 +81,8 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          product_id: string
+          part_id?: string | null
+          product_id?: string | null
           quantity?: number
           updated_at?: string
           user_id: string
@@ -88,12 +90,20 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          product_id?: string
+          part_id?: string | null
+          product_id?: string | null
           quantity?: number
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "cart_items_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cart_items_product_id_fkey"
             columns: ["product_id"]
@@ -307,15 +317,51 @@ export type Database = {
             foreignKeyName: "part_fitments_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "vehicles"
+            referencedRelation: "vehicles_new"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      part_wishlist: {
+        Row: {
+          created_at: string
+          id: string
+          part_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          part_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          part_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "part_wishlist_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "part_wishlist_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
       parts: {
         Row: {
           brand: string | null
-          created_at: string
+          created_at: string | null
           description: string | null
           fts: unknown | null
           id: string
@@ -328,11 +374,10 @@ export type Database = {
           sku: string | null
           specifications: Json | null
           stock_quantity: number
-          updated_at: string
         }
         Insert: {
           brand?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           fts?: unknown | null
           id?: string
@@ -340,16 +385,15 @@ export type Database = {
           is_active?: boolean
           name: string
           part_number?: string | null
-          price: number
+          price?: number
           seller_id?: string | null
           sku?: string | null
           specifications?: Json | null
           stock_quantity?: number
-          updated_at?: string
         }
         Update: {
           brand?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           fts?: unknown | null
           id?: string
@@ -362,9 +406,16 @@ export type Database = {
           sku?: string | null
           specifications?: Json | null
           stock_quantity?: number
-          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "parts_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_fitments: {
         Row: {
@@ -391,7 +442,7 @@ export type Database = {
             foreignKeyName: "product_fitments_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "vehicles"
+            referencedRelation: "vehicles_new"
             referencedColumns: ["id"]
           },
         ]
@@ -415,6 +466,7 @@ export type Database = {
           name: string
           part_number: string | null
           price: number
+          product_type: string
           seller_id: string | null
           sku: string | null
           specifications: string | null
@@ -441,6 +493,7 @@ export type Database = {
           name: string
           part_number?: string | null
           price: number
+          product_type?: string
           seller_id?: string | null
           sku?: string | null
           specifications?: string | null
@@ -467,6 +520,7 @@ export type Database = {
           name?: string
           part_number?: string | null
           price?: number
+          product_type?: string
           seller_id?: string | null
           sku?: string | null
           specifications?: string | null
@@ -497,6 +551,7 @@ export type Database = {
           is_seller: boolean | null
           last_name: string | null
           phone: string | null
+          role: string | null
           updated_at: string
           user_id: string
         }
@@ -511,6 +566,7 @@ export type Database = {
           is_seller?: boolean | null
           last_name?: string | null
           phone?: string | null
+          role?: string | null
           updated_at?: string
           user_id: string
         }
@@ -525,6 +581,7 @@ export type Database = {
           is_seller?: boolean | null
           last_name?: string | null
           phone?: string | null
+          role?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -631,47 +688,79 @@ export type Database = {
         }
         Relationships: []
       }
-      vehicles: {
+      vehicles_new: {
         Row: {
           id: string
-          make: string
-          model: string
-          year: number
+          make_id: string | null
+          model_id: string | null
+          year_id: string | null
         }
         Insert: {
           id?: string
-          make: string
-          model: string
-          year: number
+          make_id?: string | null
+          model_id?: string | null
+          year_id?: string | null
         }
         Update: {
           id?: string
-          make?: string
-          model?: string
-          year?: number
+          make_id?: string | null
+          model_id?: string | null
+          year_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_new_make_id_fkey"
+            columns: ["make_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_makes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_new_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_new_year_id_fkey"
+            columns: ["year_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_years"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wishlist: {
         Row: {
           created_at: string
           id: string
-          product_id: string
+          part_id: string | null
+          product_id: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          product_id: string
+          part_id?: string | null
+          product_id?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          product_id?: string
+          part_id?: string | null
+          product_id?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "wishlist_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "wishlist_product_id_fkey"
             columns: ["product_id"]
@@ -686,25 +775,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_part_with_fitment: {
+        Args: { part_data: Json }
+        Returns: string
+      }
       generate_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
-      publish_new_part_standalone: {
-        Args: {
-          p_brand: string
-          p_description: string
-          p_image_urls: string[]
-          p_make: string
-          p_model: string
-          p_name: string
-          p_price: number
-          p_seller_id: string
-          p_specifications: Json
-          p_stock_quantity: number
-          p_year: number
-        }
+      get_user_role: {
+        Args: Record<PropertyKey, never>
         Returns: string
+      }
+      publish_new_part_standalone: {
+        Args: { part_data: Json; vehicle_ids: string[] }
+        Returns: undefined
       }
       publish_new_product: {
         Args: {
@@ -739,6 +824,28 @@ export type Database = {
           p_year: number
         }
         Returns: string
+      }
+      search_parts_with_fitment: {
+        Args: {
+          make_id_param: string
+          model_id_param: string
+          search_query: string
+          year_id_param: string
+        }
+        Returns: {
+          part_id: string
+        }[]
+      }
+      search_products_with_fitment: {
+        Args: {
+          make_id_param: string
+          model_id_param: string
+          search_query: string
+          year_id_param: string
+        }
+        Returns: {
+          product_id: string
+        }[]
       }
     }
     Enums: {
