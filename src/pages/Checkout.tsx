@@ -102,7 +102,8 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 pt-20">
+      {/* Added pt-24 to fix the header overlap issue */}
+      <div className="container mx-auto px-4 py-8 pt-24">
         <h1 className="text-3xl font-bold mb-6">Checkout</h1>
         <div className="grid md:grid-cols-2 gap-8">
           <div className="space-y-6">
@@ -153,7 +154,7 @@ const Checkout = () => {
                       Click the button below to pay using PayPal or a Credit/Debit Card.
                     </p>
                     <PayPalButtons
-                      style={{ layout: "vertical" }}
+                      style={{ layout: "horizontal" }}
                       createOrder={createOrder}
                       onApprove={onApprove}
                       disabled={isPaymentProcessing}
