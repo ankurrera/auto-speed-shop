@@ -61,12 +61,14 @@ const formatCardData = (item: Product | Part) => {
       ...commonData,
       brand: "Generic", // Placeholder for products without a brand column
       category: item.category || "General",
+      is_part: false,
     };
   } else {
     return {
       ...commonData,
       brand: item.brand || "Generic",
       category: undefined, // Parts don't have a category in the same way
+      is_part: true,
     };
   }
 };
