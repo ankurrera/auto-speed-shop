@@ -1,19 +1,54 @@
-import { useState, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { useCart } from "@/contexts/CartContext";
+import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
 import { ChevronRight } from "lucide-react";
+
+// Mocking external dependencies to make the component runnable in a single file environment.
+// In a real application, you would install these libraries and configure your build process.
+
+// Mock useToast hook
+const useToast = () => {
+  const toast = ({ title, description, variant }) => {
+    console.log(`[Toast] ${variant}: ${title} - ${description}`);
+  };
+  return { toast };
+};
+
+// Mock useCart hook and data
+const useCart = () => {
+  const [cartItems, setCartItems] = useState([
+    { id: "1", name: "Spark Plugs", price: 12.50, quantity: 2 },
+    { id: "2", name: "Brake Pads", price: 45.00, quantity: 1 },
+    { id: "3", name: "Air Filter", price: 20.00, quantity: 1 },
+  ]);
+
+  const clearCart = () => {
+    setCartItems([]);
+  };
+
+  return { cartItems, clearCart };
+};
+
+// Mock useNavigate hook
+const useNavigate = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const navigate = (path) => {
+    console.log(`Navigating to: ${path}`);
+  };
+  return navigate;
+};
 
 // Mock data for shipping options
 const shippingOptions = [
   { id: "standard", name: "Standard Shipping", cost: 5.00 },
   { id: "express", name: "Express Shipping", cost: 15.00 },
 ];
+
+const TAX_RATE = 0.0825; // 8.25%
 
 const Checkout = () => {
   const { cartItems, clearCart } = useCart();
@@ -36,65 +71,70 @@ const Checkout = () => {
   });
 
   const [selectedShipping, setSelectedShipping] = useState(shippingOptions[0]);
+  const [isFormValid, setIsFormValid] = useState(false);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const taxAmount = subtotal * TAX_RATE;
   const shippingCost = selectedShipping.cost;
-  const total = subtotal + shippingCost;
+  const total = subtotal + shippingCost + taxAmount;
 
-  // Function to validate the form fields
-  const validateForm = () => {
-    if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.email) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill out all customer information fields.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (!shippingAddress.addressLine1 || !shippingAddress.city || !shippingAddress.state || !shippingAddress.postalCode) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill out all required shipping address fields.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    return true;
-  };
+  // Function to validate the form fields and update state
+  const validateForm = useCallback(() => {
+    const isValid = customerInfo.firstName && customerInfo.lastName && customerInfo.email &&
+                    shippingAddress.addressLine1 && shippingAddress.city && shippingAddress.state && shippingAddress.postalCode;
+    setIsFormValid(!!isValid);
+    return isValid;
+  }, [customerInfo, shippingAddress]);
 
-  const handlePlaceOrder = (e: FormEvent) => {
-    e.preventDefault();
-    
-    // Check if cart is empty first
-    if (cartItems.length === 0) {
-      toast({
-        title: "Error",
-        description: "Your cart is empty. Please add items to your cart before checking out.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Validate the form before proceeding
-    if (!validateForm()) {
-      return;
-    }
-
-    // Simulate order placement
-    console.log("Placing order with details:", { customerInfo, shippingAddress, total });
-
-    // Clear the cart after a successful order
+  const handleApprove = (orderID) => {
+    console.log("Payment successful for order ID:", orderID);
     clearCart();
-
-    // Show a success toast and navigate to a confirmation page or home
     toast({
-      title: "Order Placed!",
-      description: "Thank you for your purchase. Your order is being processed.",
+      title: "Payment Successful!",
+      description: "Your order has been placed and will be shipped shortly.",
       variant: "default",
     });
-
-    navigate("/"); // Redirect to home or a dedicated thank you page
+    navigate("/");
   };
+
+  const handleCustomerInfoChange = (e) => {
+    setCustomerInfo({ ...customerInfo, [e.target.id]: e.target.value });
+  };
+
+  const handleShippingAddressChange = (e) => {
+    setShippingAddress({ ...shippingAddress, [e.target.id]: e.target.value });
+  };
+
+  // Mock function for handling the payment.
+  const handlePayment = () => {
+    // In a real app, this would trigger a payment gateway.
+    // Here, we just simulate a successful payment.
+    if (isFormValid) {
+      handleApprove("MOCK-ORDER-ID-12345");
+    }
+  };
+
+  useEffect(() => {
+    validateForm();
+  }, [customerInfo, shippingAddress, validateForm]);
+
+  if (cartItems.length === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-16">
+          <div className="text-center max-w-md mx-auto">
+            <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
+            <p className="text-muted-foreground mb-8">
+              Start adding some amazing auto parts to your cart!
+            </p>
+            <Button asChild>
+              <Link to="/shop">Shop Now</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -114,7 +154,7 @@ const Checkout = () => {
                   <Input 
                     id="firstName" 
                     value={customerInfo.firstName} 
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, firstName: e.target.value })}
+                    onChange={handleCustomerInfoChange}
                     required
                   />
                 </div>
@@ -123,7 +163,7 @@ const Checkout = () => {
                   <Input 
                     id="lastName" 
                     value={customerInfo.lastName} 
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, lastName: e.target.value })}
+                    onChange={handleCustomerInfoChange}
                     required
                   />
                 </div>
@@ -134,7 +174,7 @@ const Checkout = () => {
                   id="email" 
                   type="email" 
                   value={customerInfo.email} 
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                  onChange={handleCustomerInfoChange}
                   required
                 />
               </div>
@@ -153,7 +193,7 @@ const Checkout = () => {
                   <Input 
                     id="addressLine1" 
                     value={shippingAddress.addressLine1} 
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine1: e.target.value })}
+                    onChange={handleShippingAddressChange}
                     required
                   />
                 </div>
@@ -162,7 +202,7 @@ const Checkout = () => {
                   <Input 
                     id="addressLine2" 
                     value={shippingAddress.addressLine2} 
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
+                    onChange={handleShippingAddressChange}
                   />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -171,7 +211,7 @@ const Checkout = () => {
                     <Input 
                       id="city" 
                       value={shippingAddress.city} 
-                      onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                      onChange={handleShippingAddressChange}
                       required
                     />
                   </div>
@@ -180,7 +220,7 @@ const Checkout = () => {
                     <Input 
                       id="state" 
                       value={shippingAddress.state} 
-                      onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
+                      onChange={handleShippingAddressChange}
                       required
                     />
                   </div>
@@ -191,7 +231,7 @@ const Checkout = () => {
                     <Input 
                       id="postalCode" 
                       value={shippingAddress.postalCode} 
-                      onChange={(e) => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })}
+                      onChange={handleShippingAddressChange}
                       required
                     />
                   </div>
@@ -236,7 +276,7 @@ const Checkout = () => {
             </CardContent>
           </Card>
 
-          {/* Payment Details - Placeholder */}
+          {/* Payment Details - with mock button */}
           <Card>
             <CardHeader>
               <CardTitle>Payment Information</CardTitle>
@@ -244,26 +284,13 @@ const Checkout = () => {
             <CardContent>
               <div className="space-y-4">
                 <p className="text-muted-foreground">
-                  This section would contain a payment form (e.g., Stripe Elements) to securely
-                  collect credit card information. For now, clicking "Place Order" will simulate a successful payment.
+                  Complete your order.
                 </p>
-                <div className="space-y-2">
-                  <Label htmlFor="card-number">Card Number</Label>
-                  <Input id="card-number" placeholder="XXXX-XXXX-XXXX-XXXX" />
-                </div>
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="expiration">Expiration</Label>
-                    <Input id="expiration" placeholder="MM/YY" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cvc">CVC</Label>
-                    <Input id="cvc" placeholder="CVC" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="zip-code">Zip Code</Label>
-                    <Input id="zip-code" placeholder="XXXXX" />
-                  </div>
+                <div className="mt-4">
+                  <Button className="w-full" disabled={!isFormValid} onClick={handlePayment}>
+                    {isFormValid ? "Pay Now" : "Fill in details to pay"}
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -302,14 +329,17 @@ const Checkout = () => {
                   <span>Shipping</span>
                   <span className="font-medium">${shippingCost.toFixed(2)}</span>
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span>Tax</span>
+                  <span className="font-medium">${taxAmount.toFixed(2)}</span>
+                </div>
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
                   <span>${total.toFixed(2)}</span>
                 </div>
               </div>
-              <Button onClick={handlePlaceOrder} className="w-full mt-6">
-                Place Order
-                <ChevronRight className="h-4 w-4 ml-2" />
+              <Button onClick={() => {}} className="w-full mt-6" disabled={!isFormValid}>
+                {isFormValid ? "Ready to Pay" : "Fill in Details to Pay"}
               </Button>
             </CardContent>
           </Card>
