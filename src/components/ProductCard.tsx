@@ -79,11 +79,12 @@ const ProductCard = ({
     toast.success(`${name} added to cart!`);
   };
 
-  const handleWishlist = (e: React.MouseEvent) => {
+const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevents the Link from navigating
     e.stopPropagation();
-    toggleWishlist({ id, name, brand, price, image: image_urls[0] });
-  };
+    const isPart = !!brand && !category; // Determine if the item is a part
+    toggleWishlist({ id, name, brand, price, image: image_urls[0], is_part: isPart }); // Pass the is_part flag
+};
   
   // Choose the image to display. Default to the first one if the array is valid.
   const displayImage = image_urls && image_urls.length > 0 ? image_urls[currentImageIndex] : '/placeholder.svg';
