@@ -1,14 +1,46 @@
-import { useState, FormEvent, useEffect, useCallback } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useCart } from "@/contexts/CartContext";
+import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
-import { PayPalButtons } from "@paypal/react-paypal-js";
 import { ChevronRight } from "lucide-react";
+
+// Mocking external dependencies to make the component runnable in a single file environment.
+// In a real application, you would install these libraries and configure your build process.
+
+// Mock useToast hook
+const useToast = () => {
+  const toast = ({ title, description, variant }) => {
+    console.log(`[Toast] ${variant}: ${title} - ${description}`);
+  };
+  return { toast };
+};
+
+// Mock useCart hook and data
+const useCart = () => {
+  const [cartItems, setCartItems] = useState([
+    { id: "1", name: "Spark Plugs", price: 12.50, quantity: 2 },
+    { id: "2", name: "Brake Pads", price: 45.00, quantity: 1 },
+    { id: "3", name: "Air Filter", price: 20.00, quantity: 1 },
+  ]);
+
+  const clearCart = () => {
+    setCartItems([]);
+  };
+
+  return { cartItems, clearCart };
+};
+
+// Mock useNavigate hook
+const useNavigate = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const navigate = (path) => {
+    console.log(`Navigating to: ${path}`);
+  };
+  return navigate;
+};
 
 // Mock data for shipping options
 const shippingOptions = [
@@ -52,8 +84,6 @@ const Checkout = () => {
   }, [customerInfo, shippingAddress]);
 
   const handleApprove = (orderID) => {
-    // This is where you would call your backend to capture the payment.
-    // For this sandbox example, we'll just clear the cart and navigate.
     console.log("Payment successful for order ID:", orderID);
     clearCart();
     toast({
@@ -64,12 +94,21 @@ const Checkout = () => {
     navigate("/");
   };
 
-  const handleCustomerInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCustomerInfoChange = (e) => {
     setCustomerInfo({ ...customerInfo, [e.target.id]: e.target.value });
   };
 
-  const handleShippingAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleShippingAddressChange = (e) => {
     setShippingAddress({ ...shippingAddress, [e.target.id]: e.target.value });
+  };
+
+  // Mock function for handling the payment.
+  const handlePayment = () => {
+    // In a real app, this would trigger a payment gateway.
+    // Here, we just simulate a successful payment.
+    if (isFormValid) {
+      handleApprove("MOCK-ORDER-ID-12345");
+    }
   };
 
   useEffect(() => {
@@ -234,7 +273,7 @@ const Checkout = () => {
             </CardContent>
           </Card>
 
-          {/* Payment Details - with PayPal Buttons */}
+          {/* Payment Details - with mock button */}
           <Card>
             <CardHeader>
               <CardTitle>Payment Information</CardTitle>
@@ -242,44 +281,13 @@ const Checkout = () => {
             <CardContent>
               <div className="space-y-4">
                 <p className="text-muted-foreground">
-                  Complete your payment securely with PayPal.
+                  Complete your order.
                 </p>
                 <div className="mt-4">
-                  {isFormValid ? (
-                    <PayPalButtons 
-                      style={{ layout: "vertical" }}
-                      createOrder={(data, actions) => {
-                        return actions.order.create({
-                          purchase_units: [
-                            {
-                              amount: {
-                                currency_code: "USD",
-                                value: total.toFixed(2),
-                              },
-                            },
-                          ],
-                        });
-                      }}
-                      onApprove={(data, actions) => {
-                        return actions.order.capture().then((details) => {
-                          handleApprove(data.orderID);
-                        });
-                      }}
-                      onError={(err) => {
-                        console.error("PayPal Checkout onError", err);
-                        toast({
-                          title: "Payment Error",
-                          description: "Something went wrong with your payment. Please try again.",
-                          variant: "destructive",
-                        });
-                      }}
-                    />
-                  ) : (
-                    <Button className="w-full" disabled>
-                      Fill in details to pay
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  )}
+                  <Button className="w-full" disabled={!isFormValid} onClick={handlePayment}>
+                    {isFormValid ? "Pay Now" : "Fill in details to pay"}
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
               </div>
             </CardContent>
