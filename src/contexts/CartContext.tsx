@@ -13,7 +13,7 @@ interface CartItem {
   price: number;
   image: string;
   quantity: number;
-  isPart: boolean; // Corrected property name from is_part
+  is_part: boolean;
 }
 
 interface CartContextType {
@@ -115,7 +115,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         price: item.products.price,
         image: item.products.image_urls[0],
         quantity: item.quantity,
-        isPart: false, // Corrected property name
+        is_part: false,
         category: item.products.category,
       }));
 
@@ -125,7 +125,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         price: item.parts.price,
         image: item.parts.image_urls[0],
         quantity: item.quantity,
-        isPart: true, // Corrected property name
+        is_part: true,
         brand: item.parts.brand,
       }));
 
@@ -154,8 +154,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const existingItem = cartItems.find((cartItem) => cartItem.id === item.id);
 
       let upsertData;
-      const onConflictColumns = item.isPart ? "user_id, part_id" : "user_id, product_id";
-      if (item.isPart) {
+      const onConflictColumns = item.is_part ? "user_id, part_id" : "user_id, product_id";
+      if (item.is_part) {
         upsertData = {
           user_id: user.id,
           part_id: item.id,

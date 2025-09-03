@@ -1,39 +1,35 @@
-// src/contexts/WishlistContext.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Database } from '@/database.types';
 
-type ProductRow = Database['public']['Tables']['products']['Row'];
-type PartRow = Database['public']['Tables']['parts']['Row'];
-type WishlistRow = Database['public']['Tables']['wishlist']['Row'];
+// Define the type for the data returned from the Supabase query
+interface SupabaseWishlistItem {
+  id: string;
+  product_id: string;
+  products: {
+    name: string;
+    brand: string;
+    image_urls: string[] | null;
+  };
+}
 
 // Define the type for a single item in the wishlist, as used by the UI
-interface WishlistItem {
-  id: string;
-  productId: string | null;
-  partId: string | null;
+export interface WishlistItem {
+  id: string; // The ID of the wishlist item itself
+  user_id: string;
+  product_id: string;
   name: string;
-  brand: string | null;
+  brand: string;
   image: string;
-  isPart: boolean;
-  price: number | null;
 }
 
 // Define the shape of our Wishlist Context
 interface WishlistContextType {
   wishlistItems: WishlistItem[];
   isLoading: boolean;
-  isWishlisted: (id: string, isPart: boolean) => boolean;
-  toggleWishlist: (item: {
-    id: string;
-    name: string;
-    brand?: string | null;
-    image: string;
-    isPart: boolean;
-    price?: number | null;
-  }) => void;
+  isWishlisted: (productId: string) => boolean;
+  toggleWishlist: (product: { id: string; name: string; brand: string; price?: number; image: string }) => void;
 }
 
 // Create the context
@@ -50,7 +46,9 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      if (authListener) {
+        authListener.subscription.unsubscribe();
+      }
     };
   }, []);
 
@@ -59,84 +57,48 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     queryKey: ['wishlistItems', userId],
     queryFn: async () => {
       if (!userId) return [];
-
+      
       const { data, error } = await supabase
         .from('wishlist')
         .select(`
           id,
           product_id,
-          part_id,
-          products:product_id (name, brand, image_urls, price),
-          parts:part_id (name, brand, image_urls, price)
+          products:product_id (
+            name,
+            brand,
+            image_urls
+          )
         `)
         .eq('user_id', userId);
 
-      if (error) {
-        console.error('Error fetching wishlist:', error.message);
-        throw error;
-      }
-
-      return data.flatMap((item): WishlistItem[] => {
-        if (item.product_id && item.products && Array.isArray(item.products) && item.products.length > 0) {
-          const product = item.products[0] as ProductRow;
-          return [
-            {
-              id: item.id,
-              productId: item.product_id,
-              partId: null,
-              name: product.name,
-              brand: product.brand,
-              image: product.image_urls?.[0] || '/placeholder.svg',
-              isPart: false,
-              price: product.price,
-            },
-          ];
-        }
-
-        if (item.part_id && item.parts && Array.isArray(item.parts) && item.parts.length > 0) {
-          const part = item.parts[0] as PartRow;
-          return [
-            {
-              id: item.id,
-              productId: null,
-              partId: item.part_id,
-              name: part.name,
-              brand: part.brand,
-              image: part.image_urls?.[0] || '/placeholder.svg',
-              isPart: true,
-              price: part.price,
-            },
-          ];
-        }
-
-        return [];
-      });
+      if (error) throw error;
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return data.map((item: any) => ({
+        id: item.id,
+        user_id: userId!,
+        product_id: item.product_id,
+        name: item.products.name,
+        brand: item.products.brand,
+        image: item.products.image_urls?.[0] || '/placeholder.svg',
+      }));
     },
     enabled: !!userId,
   });
 
-  const isWishlisted = (id: string, isPart: boolean) => {
-    return wishlistItems.some(
-      (item) => (isPart && item.partId === id) || (!isPart && item.productId === id),
-    );
+  const isWishlisted = (productId: string) => {
+    return wishlistItems.some(item => item.product_id === productId);
   };
-
+  
   const addMutation = useMutation({
-    mutationFn: async ({ id, isPart }: { id: string; isPart: boolean }) => {
+    mutationFn: async (product_id: string) => {
       if (!userId) throw new Error('You must be logged in to add to your wishlist.');
-
-      const upsertData: Partial<WishlistRow> = {
-        user_id: userId,
-        product_id: isPart ? null : id,
-        part_id: isPart ? id : null,
-      };
-
       const { data, error } = await supabase
         .from('wishlist')
-        .upsert(upsertData, {
-          onConflict: isPart ? 'user_id,part_id' : 'user_id,product_id',
-          ignoreDuplicates: true,
-        })
+        .upsert(
+          { user_id: userId, product_id },
+          { onConflict: 'user_id,product_id' }
+        )
         .select();
 
       if (error) throw error;
@@ -146,20 +108,18 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: ['wishlistItems'] });
     },
     onError: (error) => {
-      console.error('Error adding to wishlist:', error.message || error);
-      toast.error('Failed to add item to wishlist.');
-    },
+      console.error("Error adding to wishlist:", error.message || error);
+    }
   });
 
   const removeMutation = useMutation({
-    mutationFn: async ({ id, isPart }: { id: string; isPart: boolean }) => {
+    mutationFn: async (product_id: string) => {
       if (!userId) throw new Error('You must be logged in to remove from your wishlist.');
-
       const { error } = await supabase
         .from('wishlist')
         .delete()
         .eq('user_id', userId)
-        .eq(isPart ? 'part_id' : 'product_id', id);
+        .eq('product_id', product_id);
 
       if (error) throw error;
     },
@@ -168,29 +128,21 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     },
     onError: (error) => {
       console.error('Error removing from wishlist:', error);
-      toast.error('Failed to remove item from wishlist.');
-    },
+    }
   });
 
-  const toggleWishlist = (item: {
-    id: string;
-    name: string;
-    brand?: string | null;
-    image: string;
-    isPart: boolean;
-    price?: number | null;
-  }) => {
+  const toggleWishlist = (product: { id: string; name: string; brand: string; image: string }) => {
     if (!userId) {
       toast.error('You must be logged in to add to your wishlist.');
       return;
     }
-
-    if (isWishlisted(item.id, item.isPart)) {
-      removeMutation.mutate({ id: item.id, isPart: item.isPart });
-      toast.info(`${item.name} removed from wishlist.`);
+    
+    if (isWishlisted(product.id)) {
+      removeMutation.mutate(product.id);
+      toast.info(`${product.name} removed from wishlist`);
     } else {
-      addMutation.mutate({ id: item.id, isPart: item.isPart });
-      toast.success(`${item.name} added to wishlist!`);
+      addMutation.mutate(product.id);
+      toast.success(`${product.name} added to wishlist!`);
     }
   };
 
@@ -204,7 +156,6 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useWishlist = () => {
   const context = useContext(WishlistContext);
   if (context === undefined) {
