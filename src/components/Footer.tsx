@@ -24,18 +24,26 @@ const Footer = () => {
               Serving professionals and enthusiasts since 2010.
             </p>
             <div className="flex space-x-4">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
-                <Facebook className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
-                <Twitter className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
-                <Instagram className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
-                <Youtube className="h-4 w-4" />
-              </Button>
+              <a href="https://www.facebook.com/share/1HWqypCZvo/" target="_blank" rel="noopener noreferrer">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
+                  <Facebook className="h-4 w-4" />
+                </Button>
+              </a>
+              <a href="#" target="_self" rel="noopener noreferrer">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
+                  <Twitter className="h-4 w-4" />
+                </Button>
+              </a>
+              <a href="https://www.instagram.com/digital_indian16?igsh=cDZ3NWliNGZyZDRp" target="_blank" rel="noopener noreferrer">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
+                  <Instagram className="h-4 w-4" />
+                </Button>
+              </a>
+              <a href="https://youtube.com/@digitalindianbusinesssolut108?si=pBt6rFSYOWIU4jEt" target="_blank" rel="noopener noreferrer">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-hover p-2">
+                  <Youtube className="h-4 w-4" />
+                </Button>
+              </a>
             </div>
           </div>
 
