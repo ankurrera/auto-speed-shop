@@ -12,15 +12,13 @@ const Wishlist = () => {
   const { addToCart } = useCart();
 
   const handleAddToCartFromWishlist = (item: WishlistItem) => {
-    const isPart = !!item.brand && !item.category;
     addToCart({
       id: item.product_id,
       name: item.name,
       brand: item.brand,
       image: item.image,
       price: item.price,
-      is_part: isPart,
-      category: item.category,
+      is_part: item.is_part,
     });
     toast.success(`${item.name} added to cart!`);
   };
@@ -58,15 +56,18 @@ const Wishlist = () => {
                   alt={item.name}
                   className="w-24 h-24 object-cover rounded-md"
                 />
-                <div className="flex-1">
-                  <h2 className="text-lg font-semibold">{item.name}</h2>
-                  <p className="text-muted-foreground text-sm">{item.brand}</p>
+                <div className="flex-1 space-y-1">
+                  <Link to={`/shop/${item.product_id}`} className="hover:underline">
+                    <h2 className="text-lg font-semibold">{item.name}</h2>
+                  </Link>
+                  <p className="text-muted-foreground text-sm">{item.brand || item.category}</p>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => handleAddToCartFromWishlist(item)}
+                    aria-label={`Add ${item.name} to cart`}
                   >
                     <ShoppingCart className="h-4 w-4" />
                   </Button>

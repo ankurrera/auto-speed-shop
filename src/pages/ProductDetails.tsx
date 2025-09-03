@@ -19,6 +19,9 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Database } from "@/database.types";
 import { cn } from "@/lib/utils";
+import { Heart } from "lucide-react";
+import { useWishlist } from "@/contexts/WishlistContext";
+
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -26,6 +29,7 @@ type Part = Database['public']['Tables']['parts']['Row'];
 const ProductDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { addToCart } = useCart();
+  const { toggleWishlist, wishlistItems } = useWishlist();
   const [dominantColor, setDominantColor] = useState('bg-muted');
 
   const fetchProduct = async (productId: string) => {
@@ -121,8 +125,19 @@ const ProductDetails = () => {
   };
 
   const handleAddToCart = () => {
-    addToCart(productData, 1);
+    addToCart({...productData, is_part: product.type === 'part' }, 1);
     toast.success(`${product.name} added to cart!`);
+  };
+
+  const handleToggleWishlist = () => {
+    toggleWishlist({
+      id: product.id,
+      name: product.name,
+      image: product.image_urls[0],
+      price: product.price,
+      brand: 'brand' in product ? product.brand : undefined,
+      category: 'category' in product ? product.category : undefined,
+    });
   };
 
   return (
@@ -165,6 +180,14 @@ const ProductDetails = () => {
           <Separator />
           
           <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleToggleWishlist}
+              className={cn("hover:bg-transparent", wishlistItems.some(item => item.product_id === product.id) && "bg-transparent")}
+            >
+              <Heart className={cn("h-5 w-5", wishlistItems.some(item => item.product_id === product.id) ? "fill-red-500 text-red-500" : "text-muted-foreground")} />
+            </Button>
             <Button className="w-full sm:w-auto" onClick={handleAddToCart}>
               <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
             </Button>

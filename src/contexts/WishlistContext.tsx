@@ -18,6 +18,7 @@ interface SupabaseWishlistItem {
 
 // Define the type for a single item in the wishlist, as used by the UI
 export interface WishlistItem {
+  is_part: boolean;
   id: string; // The ID of the wishlist item itself
   user_id: string;
   product_id: string;

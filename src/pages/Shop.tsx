@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Database } from "@/database.types";
 import { useCart } from "@/contexts/CartContext";
 
+
 // Define the specific types from your generated database types
 type Product = Database["public"]["Tables"]["products"]["Row"];
 type Part = Database["public"]["Tables"]["parts"]["Row"];
@@ -250,19 +251,26 @@ const Shop = () => {
                 key={item.id}
                 {...formatCardData(item)}
                 onAddToCart={(event) => {
-                  event.stopPropagation();
-                  event.preventDefault();
-                  addToCart(
-                    {
-                      id: item.id,
-                      name: item.name,
-                      price: Number(item.price),
-                      image: item.image_urls[0],
-                      is_part: item.type === "part",
-                      brand: "brand" in item ? (item as Part).brand : undefined,
-                      category: "category" in item ? (item as Product).category : undefined,
+                  event.stopPropagation(); // Prevents navigating to the product details page
+                  addToCart({
+                    id: item.id,
+                    name: item.name,
+                    price: Number(item.price),
+                    image: item.image_urls[0],
+                    is_part: item.type === "part",
+                    brand: "brand" in item ? (item as Part).brand : undefined,
+                    category: "category" in item ? (item as Product).category : undefined,
                     }
                   )
+                }}
+                // Pass the necessary item data for the wishlist toggle
+                wishlistItem={{
+                  product_id: item.id,
+                  name: item.name,
+                  price: Number(item.price),
+                  image: item.image_urls[0],
+                  brand: "brand" in item ? (item as Part).brand : undefined,
+                  category: "category" in item ? (item as Product).category : undefined,
                 }}
               />
             ))}
