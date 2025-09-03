@@ -116,7 +116,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: ['wishlistItems'] });
     },
     onError: (error) => {
-      console.error('Error adding to wishlist:', error);
+      console.error("Error adding to wishlist:", error.message || error);
     }
   });
 

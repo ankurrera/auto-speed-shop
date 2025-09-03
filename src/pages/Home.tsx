@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, Wrench, Truck, Shield, Star, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,10 @@ const Home = () => {
   const [selectedMake, setSelectedMake] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const navigate = useNavigate();
+
+  const yearSelectRef = useRef<HTMLDivElement>(null);
+  const makeSelectRef = useRef<HTMLDivElement>(null);
+  const modelSelectRef = useRef<HTMLDivElement>(null);
 
   // Fetch featured products from Supabase
   // We use the new `Product` type to ensure the data is correctly structured
@@ -125,6 +129,29 @@ const Home = () => {
     navigate(`/shop?${searchParams.toString()}`);
   };
 
+  const handleMouseEnter = (ref: React.RefObject<HTMLDivElement>) => {
+    if (ref.current) {
+      let scrollAmount = 0;
+      const scrollStep = 1;
+      let frame: number;
+
+      const scroll = () => {
+        ref.current!.scrollTop += scrollStep;
+        scrollAmount += scrollStep;
+        if (scrollAmount < ref.current!.scrollHeight - ref.current!.clientHeight) {
+          frame = window.requestAnimationFrame(scroll);
+        }
+      };
+
+      frame = window.requestAnimationFrame(scroll);
+
+      ref.current.addEventListener("mouseleave", () => {
+        window.cancelAnimationFrame(frame);
+        ref.current!.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero Section */}
@@ -159,7 +186,10 @@ const Home = () => {
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent
+                    ref={yearSelectRef}
+                    onMouseEnter={() => handleMouseEnter(yearSelectRef)}
+                  >
                     {vehicleYears.map(year => (
                       <SelectItem key={year} value={year.toString()}>
                         {year}
@@ -172,7 +202,10 @@ const Home = () => {
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="Make" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent
+                    ref={makeSelectRef}
+                    onMouseEnter={() => handleMouseEnter(makeSelectRef)}
+                  >
                     {vehicleMakes.map(make => (
                       <SelectItem key={make.name} value={make.name}>
                         {make.name}
@@ -185,14 +218,17 @@ const Home = () => {
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="Model" />
                   </SelectTrigger>
-                    <SelectContent>
-                      {vehicleModels.map(model => (
-                        <SelectItem key={model} value={model}>
-                          {model}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SelectContent
+                    ref={modelSelectRef}
+                    onMouseEnter={() => handleMouseEnter(modelSelectRef)}
+                  >
+                    {vehicleModels.map(model => (
+                      <SelectItem key={model} value={model}>
+                        {model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                   
                   <Button size="lg" className="h-12 shadow-primary hover:shadow-lg transition-all duration-300" onClick={handleSearch}>
                     <Search className="h-5 w-5 mr-2" />

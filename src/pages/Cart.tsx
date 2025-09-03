@@ -7,13 +7,15 @@ import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 
+const TAX_RATE = 0.08; // Standardized Tax Rate
+
 const Cart = () => {
   const { cartItems, removeFromCart, clearCart, increaseQuantity, decreaseQuantity } = useCart();
   const [promoCode, setPromoCode] = useState("");
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal > 75 ? 0 : 9.99;
-  const tax = subtotal * 0.08;
+  const shipping = subtotal > 275 ? 0 : 9.99;
+  const tax = subtotal * TAX_RATE;
   const total = subtotal + shipping + tax;
 
   if (cartItems.length === 0) {

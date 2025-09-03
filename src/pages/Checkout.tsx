@@ -1,289 +1,213 @@
-import { useState, FormEvent } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
-import { ChevronRight } from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
+import { useToast } from "@/hooks/use-toast";
+import { CreditCard, Lock } from "lucide-react";
 
-// Mock data for shipping options
-const shippingOptions = [
-  { id: "standard", name: "Standard Shipping", cost: 5.00 },
-  { id: "express", name: "Express Shipping", cost: 15.00 },
-];
+const TAX_RATE = 0.08; // Standardized Tax Rate
 
 const Checkout = () => {
   const { cartItems, clearCart } = useCart();
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [customerInfo, setCustomerInfo] = useState({
+  const [shippingInfo, setShippingInfo] = useState({
     firstName: "",
     lastName: "",
-    email: "",
-  });
-
-  const [shippingAddress, setShippingAddress] = useState({
-    addressLine1: "",
-    addressLine2: "",
+    address: "",
     city: "",
     state: "",
-    postalCode: "",
-    country: "US",
+    zip: "",
   });
 
-  const [selectedShipping, setSelectedShipping] = useState(shippingOptions[0]);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // Calculate subtotal and total locally to fix the TypeScript error
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shippingCost = selectedShipping.cost;
-  const total = subtotal + shippingCost;
+  const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setShippingInfo((prev) => ({ ...prev, [id]: value }));
+  };
 
-  const handlePlaceOrder = (e: FormEvent) => {
-    e.preventDefault();
-    
-    // Here you would typically integrate with a payment gateway.
-    // This is a placeholder for a successful payment simulation.
-    // The actual implementation would involve a server-side call.
-    
-    if (cartItems.length === 0) {
-      toast({
-        title: "Error",
-        description: "Your cart is empty. Please add items to your cart before checking out.",
-        variant: "destructive",
-      });
-      return;
+  const validateShippingInfo = () => {
+    const newErrors: { [key: string]: string } = {};
+    if (!shippingInfo.firstName) newErrors.firstName = "First name is required.";
+    if (!shippingInfo.lastName) newErrors.lastName = "Last name is required.";
+    if (!shippingInfo.address) newErrors.address = "Address is required.";
+    if (!shippingInfo.city) newErrors.city = "City is required.";
+    if (!shippingInfo.state) newErrors.state = "State is required.";
+    if (!shippingInfo.zip) newErrors.zip = "ZIP code is required.";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const shipping = subtotal > 275 ? 0 : 9.99;
+  const tax = subtotal * TAX_RATE;
+  const total = subtotal + shipping + tax;
+
+  const handlePlaceOrder = () => {
+    const isFormValid = validateShippingInfo();
+    if (!isFormValid) {
+        toast({
+            title: "Incomplete Information",
+            description: "Please fill out all required shipping fields.",
+            variant: "destructive",
+        });
+        return;
     }
 
-    // Simulate order placement
-    console.log("Placing order with details:", { customerInfo, shippingAddress, total });
-
-    // Clear the cart after a successful order
-    clearCart();
-
-    // Show a success toast and navigate to a confirmation page or home
-    toast({
-      title: "Order Placed!",
-      description: "Thank you for your purchase. Your order is being processed.",
-      variant: "default",
-    });
-
-    navigate("/"); // Redirect to home or a dedicated thank you page
+    setIsLoading(true);
+    // Simulate API call for placing order
+    setTimeout(() => {
+      setIsLoading(false);
+      clearCart();
+      toast({
+        title: "Order Placed!",
+        description: "Thank you for your purchase. Your order has been successfully placed.",
+      });
+      navigate("/");
+    }, 2000);
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Checkout</h1>
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* Checkout Form Section */}
-        <div className="space-y-6">
-          {/* Customer Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Customer Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input 
-                    id="firstName" 
-                    value={customerInfo.firstName} 
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, firstName: e.target.value })}
-                  />
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-6">Checkout</h1>
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Shipping and Payment Information */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Shipping Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" placeholder="John" value={shippingInfo.firstName} onChange={handleShippingChange} className={errors.firstName ? 'border-red-500' : ''} />
+                    {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" placeholder="Doe" value={shippingInfo.lastName} onChange={handleShippingChange} className={errors.lastName ? 'border-red-500' : ''} />
+                    {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input 
-                    id="lastName" 
-                    value={customerInfo.lastName} 
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, lastName: e.target.value })}
-                  />
+                  <Label htmlFor="address">Address</Label>
+                  <Input id="address" placeholder="123 Main St" value={shippingInfo.address} onChange={handleShippingChange} className={errors.address ? 'border-red-500' : ''} />
+                  {errors.address && <p className="text-sm text-red-500">{errors.address}</p>}
                 </div>
-              </div>
-              <div className="space-y-2 mt-4">
-                <Label htmlFor="email">Email Address</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  value={customerInfo.email} 
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Shipping Address */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Shipping Address</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="addressLine1">Address Line 1</Label>
-                  <Input 
-                    id="addressLine1" 
-                    value={shippingAddress.addressLine1} 
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine1: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="addressLine2">Address Line 2 (Optional)</Label>
-                  <Input 
-                    id="addressLine2" 
-                    value={shippingAddress.addressLine2} 
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
-                  />
-                </div>
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">City</Label>
-                    <Input 
-                      id="city" 
-                      value={shippingAddress.city} 
-                      onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
-                    />
+                    <Input id="city" placeholder="Anytown" value={shippingInfo.city} onChange={handleShippingChange} className={errors.city ? 'border-red-500' : ''} />
+                    {errors.city && <p className="text-sm text-red-500">{errors.city}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="state">State / Province</Label>
-                    <Input 
-                      id="state" 
-                      value={shippingAddress.state} 
-                      onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
-                    />
+                    <Label htmlFor="state">State</Label>
+                    <Input id="state" placeholder="CA" value={shippingInfo.state} onChange={handleShippingChange} className={errors.state ? 'border-red-500' : ''} />
+                    {errors.state && <p className="text-sm text-red-500">{errors.state}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="zip">ZIP Code</Label>
+                    <Input id="zip" placeholder="12345" value={shippingInfo.zip} onChange={handleShippingChange} className={errors.zip ? 'border-red-500' : ''} />
+                    {errors.zip && <p className="text-sm text-red-500">{errors.zip}</p>}
                   </div>
                 </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="postalCode">Postal Code</Label>
-                    <Input 
-                      id="postalCode" 
-                      value={shippingAddress.postalCode} 
-                      onChange={(e) => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="country">Country</Label>
-                    <Input 
-                      id="country" 
-                      value={shippingAddress.country} 
-                      disabled 
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Shipping Method */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Shipping Method</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {shippingOptions.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      id={option.id}
-                      name="shippingMethod"
-                      value={option.id}
-                      checked={selectedShipping.id === option.id}
-                      onChange={() => setSelectedShipping(option)}
-                      className="h-4 w-4 text-primary focus:ring-primary"
-                    />
-                    <label htmlFor={option.id} className="flex-1 text-sm font-medium">
-                      {option.name}
-                    </label>
-                    <span className="text-sm font-semibold">${option.cost.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payment Details - Placeholder */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-muted-foreground">
-                  This section would contain a payment form (e.g., Stripe Elements) to securely
-                  collect credit card information. For now, clicking "Place Order" will simulate a successful payment.
-                </p>
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="card-number">Card Number</Label>
-                  <Input id="card-number" placeholder="XXXX-XXXX-XXXX-XXXX" />
-                </div>
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="expiration">Expiration</Label>
-                    <Input id="expiration" placeholder="MM/YY" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cvc">CVC</Label>
-                    <Input id="cvc" placeholder="CVC" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="zip-code">Zip Code</Label>
-                    <Input id="zip-code" placeholder="XXXXX" />
+                  <div className="relative">
+                    <Input id="card-number" placeholder="**** **** **** ****" />
+                    <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="expiry-date">Expiry Date</Label>
+                    <Input id="expiry-date" placeholder="MM/YY" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cvv">CVV</Label>
+                    <Input id="cvv" placeholder="123" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Order Summary Section */}
-        <div className="md:sticky md:top-20 md:h-fit">
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {cartItems.length > 0 ? (
-                  cartItems.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-muted-foreground">{item.quantity} x</span>
-                        <span className="font-medium">{item.name}</span>
-                      </div>
-                      <span className="font-semibold">${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-center text-muted-foreground">Your cart is empty.</p>
-                )}
-              </div>
-              <Separator className="my-4" />
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
+          {/* Order Summary */}
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-2">
+                  {cartItems.map((item) => (
+                    <li key={item.id} className="flex justify-between">
+                      <span>
+                        {item.name} (x{item.quantity})
+                      </span>
+                      <span>
+                        ${(item.price * item.quantity).toFixed(2)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <Separator />
+                <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="font-medium">${subtotal.toFixed(2)}</span>
+                  <span>${subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between">
                   <span>Shipping</span>
-                  <span className="font-medium">${shippingCost.toFixed(2)}</span>
+                  <span>${shipping.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-lg font-bold">
+                <div className="flex justify-between">
+                  <span>Tax (8.%)</span>
+                  <span>${tax.toFixed(2)}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
                   <span>${total.toFixed(2)}</span>
                 </div>
-              </div>
-              <Button onClick={handlePlaceOrder} className="w-full mt-6">
-                Place Order
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Place Order Button */}
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={handlePlaceOrder}
+              disabled={isLoading || cartItems.length === 0}
+            >
+              {isLoading ? "Placing Order..." : "Place Order"}
+            </Button>
+            <div className="flex items-center justify-center text-sm text-muted-foreground">
+              <Lock className="h-4 w-4 mr-2" />
+              <span>Secure checkout with SSL encryption</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
