@@ -2,7 +2,7 @@ import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useWishlist } from "@/contexts/WishlistContext";
+import { useWishlist, WishlistItem } from "@/contexts/WishlistContext";
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
@@ -11,9 +11,18 @@ const Wishlist = () => {
   const { wishlistItems, toggleWishlist } = useWishlist();
   const { addToCart } = useCart();
 
-  const handleAddToCartFromWishlist = (product: { id: string; name: string; brand: string; price: number; image: string }) => {
-    addToCart(product);
-    toast.success(`${product.name} added to cart!`);
+  const handleAddToCartFromWishlist = (item: WishlistItem) => {
+    const isPart = !!item.brand && !item.category;
+    addToCart({
+      id: item.product_id,
+      name: item.name,
+      brand: item.brand,
+      image: item.image,
+      price: item.price,
+      is_part: isPart,
+      category: item.category,
+    });
+    toast.success(`${item.name} added to cart!`);
   };
 
   if (wishlistItems.length === 0) {
@@ -57,14 +66,14 @@ const Wishlist = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleAddToCartFromWishlist({ id: item.product_id, name: item.name, brand: item.brand, price: 0, image: item.image})}
+                    onClick={() => handleAddToCartFromWishlist(item)}
                   >
                     <ShoppingCart className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => toggleWishlist({ id: item.product_id, name: item.name, brand: item.brand, image: item.image })}
+                    onClick={() => toggleWishlist({ id: item.product_id, name: item.name, brand: item.brand, price: item.price, image: item.image })}
                   >
                     <Heart className="h-4 w-4 fill-red-500 text-red-500" />
                   </Button>

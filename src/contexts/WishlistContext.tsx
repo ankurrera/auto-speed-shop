@@ -11,6 +11,8 @@ interface SupabaseWishlistItem {
     name: string;
     brand: string;
     image_urls: string[] | null;
+    price: number;
+    category: string | null;
   };
 }
 
@@ -22,6 +24,8 @@ export interface WishlistItem {
   name: string;
   brand: string;
   image: string;
+  price: number;
+  category: string | null;
 }
 
 // Define the shape of our Wishlist Context
@@ -66,7 +70,9 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
           products:product_id (
             name,
             brand,
-            image_urls
+            image_urls,
+            price,
+            category
           )
         `)
         .eq('user_id', userId);
@@ -81,6 +87,8 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
         name: item.products.name,
         brand: item.products.brand,
         image: item.products.image_urls?.[0] || '/placeholder.svg',
+        price: item.products.price,
+        category: item.products.category,
       }));
     },
     enabled: !!userId,
@@ -91,12 +99,12 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const addMutation = useMutation({
-    mutationFn: async (product_id: string) => {
+    mutationFn: async (product: { product_id: string; price: number }) => {
       if (!userId) throw new Error('You must be logged in to add to your wishlist.');
       const { data, error } = await supabase
         .from('wishlist')
         .upsert(
-          { user_id: userId, product_id },
+          { user_id: userId, product_id: product.product_id },
           { onConflict: 'user_id,product_id' }
         )
         .select();
@@ -131,7 +139,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  const toggleWishlist = (product: { id: string; name: string; brand: string; image: string }) => {
+  const toggleWishlist = (product: { id: string; name: string; brand: string; price: number; image: string }) => {
     if (!userId) {
       toast.error('You must be logged in to add to your wishlist.');
       return;
@@ -141,7 +149,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
       removeMutation.mutate(product.id);
       toast.info(`${product.name} removed from wishlist`);
     } else {
-      addMutation.mutate(product.id);
+      addMutation.mutate({ product_id: product.id, price: product.price });
       toast.success(`${product.name} added to wishlist!`);
     }
   };
