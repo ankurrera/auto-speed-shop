@@ -2,6 +2,7 @@
 Sayandeep
 ## Project info
 
+<<<<<<< Updated upstream
 **URL**: https://lovable.dev/projects/6042cb2a-7c7c-446b-a38e-5cecda9b53f6
 
 ## How can I edit this code?
@@ -71,3 +72,6 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+=======
+v j nh 
+>>>>>>> Stashed changes
