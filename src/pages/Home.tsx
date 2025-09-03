@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import BrandCarousel from "@/components/BrandCarousel"; // Import the new component
 
 // Define the type for a product object to ensure type safety
 interface Product {
@@ -239,6 +240,9 @@ const Home = () => {
             </Card>
           </div>
         </section>
+
+        {/* Brand Carousel Section */}
+        <BrandCarousel />
 
         {/* Features */}
         <section className="py-24 bg-background">
