@@ -16,8 +16,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Database } from "@/database.types";
 import { useCart } from "@/contexts/CartContext";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
 
 // Define the specific types from your generated database types
 type Product = Database["public"]["Tables"]["products"]["Row"];
@@ -30,10 +28,6 @@ type ShopItem =
 // Define types for the vehicle data
 interface VehicleMake {
   id: string;
-  name: string;
-}
-
-interface VehicleModel {
   name: string;
 }
 
@@ -89,9 +83,8 @@ const Shop = () => {
     searchParams.get("priceRange") || "all"
   );
   
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("query") || "");
   const [selectedYear, setSelectedYear] = useState(searchParams.get("year") || "");
-  const [selectedMake, setSelectedMake] = useState(searchParams.get("make") || "");
+  const [selectedMake, setSelectedMake] = useState(searchParams.get("make") || "all");
   const [selectedModel, setSelectedModel] = useState(searchParams.get("model") || "");
   
   const yearSelectRef = useRef<HTMLDivElement>(null);
@@ -100,9 +93,8 @@ const Shop = () => {
 
   useEffect(() => {
     setSelectedYear(searchParams.get("year") || "");
-    setSelectedMake(searchParams.get("make") || "");
-    setSelectedModel(searchParams.get("model") || "");
-    setSearchQuery(searchParams.get("query") || "");
+    setSelectedMake(searchParams.get("make") || "all");
+    setSelectedModel(searchParams.get("model") || (searchParams.get("make") ? "all" : ""));
     setFilterMode((searchParams.get("filterMode") as "all" | "parts" | "products") || "all");
     setSortOrder(searchParams.get("sortOrder") || "newest");
     setPriceRange(searchParams.get("priceRange") || "all");
@@ -140,6 +132,7 @@ const Shop = () => {
   const { data: vehicleModels = [] } = useQuery({
     queryKey: ['vehicle-models', selectedMake],
     queryFn: async () => {
+      if (!selectedMake || selectedMake === 'all') return [];
       const makeId = vehicleMakes.find(make => make.name === selectedMake)?.id;
       
       if (!makeId) {
@@ -155,7 +148,7 @@ const Shop = () => {
       if (error) throw error;
       return data.map(item => item.name);
     },
-    enabled: !!selectedMake,
+    enabled: !!selectedMake && selectedMake !== 'all',
   });
 
 
@@ -191,26 +184,26 @@ const Shop = () => {
           const specs = item.specifications as { year?: string };
           return specs?.year === selectedYear;
         }
-        return false;
+        return true; // Keep products in the list
       });
     }
 
-    if (selectedMake) {
+    if (selectedMake && selectedMake !== 'all') {
       items = items.filter(item => {
         if (isPart(item)) {
           return item.brand === selectedMake;
         }
-        return false;
+        return true; // Keep products in the list
       });
     }
 
-    if (selectedModel) {
+    if (selectedModel && selectedModel !== 'all') {
       items = items.filter(item => {
         if (isPart(item)) {
           const specs = item.specifications as { model?: string };
           return specs?.model === selectedModel;
         }
-        return false;
+        return true; // Keep products in the list
       });
     }
 
@@ -283,6 +276,23 @@ const Shop = () => {
       return prev;
     });
   };
+  
+  const handleMakeChange = (value: string) => {
+    setSelectedMake(value);
+    const newModel = value === 'all' ? '' : 'all';
+    setSelectedModel(newModel);
+    setSearchParams(prev => {
+      if (value === 'all') {
+        prev.delete("make");
+        prev.delete("model");
+      } else {
+        prev.set("make", value);
+        prev.set("model", "all");
+      }
+      return prev;
+    });
+  };
+
 
   const handleMouseEnter = (ref: React.RefObject<HTMLDivElement>) => {
     if (ref.current) {
@@ -317,7 +327,7 @@ const Shop = () => {
           <h3 className="text-xl font-bold text-foreground mb-4">
             Find the Perfect Fit
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Select value={selectedYear} onValueChange={(value) => handleSelectChange(setSelectedYear, "year", value)}>
               <SelectTrigger className="h-12">
                 <SelectValue placeholder="Year" />
@@ -334,7 +344,7 @@ const Shop = () => {
               </SelectContent>
             </Select>
             
-            <Select value={selectedMake} onValueChange={(value) => handleSelectChange(setSelectedMake, "make", value)}>
+            <Select value={selectedMake} onValueChange={handleMakeChange}>
               <SelectTrigger className="h-12">
                 <SelectValue placeholder="Make" />
               </SelectTrigger>
@@ -342,6 +352,7 @@ const Shop = () => {
                 ref={makeSelectRef}
                 onMouseEnter={() => handleMouseEnter(makeSelectRef)}
               >
+                <SelectItem value="all">All Makes</SelectItem>
                 {vehicleMakes.map(make => (
                   <SelectItem key={make.name} value={make.name}>
                     {make.name}
@@ -350,7 +361,11 @@ const Shop = () => {
               </SelectContent>
             </Select>
             
-            <Select value={selectedModel} onValueChange={(value) => handleSelectChange(setSelectedModel, "model", value)}>
+            <Select 
+              value={selectedModel} 
+              onValueChange={(value) => handleSelectChange(setSelectedModel, "model", value)}
+              disabled={!selectedMake || selectedMake === 'all'}
+            >
               <SelectTrigger className="h-12">
                 <SelectValue placeholder="Model" />
               </SelectTrigger>
@@ -358,6 +373,7 @@ const Shop = () => {
                 ref={modelSelectRef}
                 onMouseEnter={() => handleMouseEnter(modelSelectRef)}
               >
+                <SelectItem value="all">All Models</SelectItem>
                 {vehicleModels.map(model => (
                   <SelectItem key={model} value={model}>
                     {model}
@@ -365,11 +381,6 @@ const Shop = () => {
                 ))}
               </SelectContent>
             </Select>
-              
-            <Button size="lg" className="h-12 shadow-primary hover:shadow-lg transition-all duration-300">
-                <Search className="h-5 w-5 mr-2" />
-                Search Items
-              </Button>
             </div>
           </CardContent>
         </Card>
