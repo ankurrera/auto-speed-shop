@@ -784,17 +784,17 @@ if (product.specifications) {
     setEditingProductId(part.id);
     const specs = part.specifications;
     setProductInfo({
-      name: part.name,
-      description: part.description,
-      price: String(part.price),
-      stock_quantity: part.stock_quantity,
-      image_urls: part.image_urls || [],
-      specifications: specs?.additional || "",
-      category: specs?.category || "",
-      make: specs?.make || "",
-      model: specs?.model || "",
-      year: specs?.year || "",
-      vin: specs?.vin || "",
+        name: part.name,
+        description: part.description || "",
+        price: part.price?.toString() || "",
+        stock_quantity: part.stock_quantity || 0,
+        image_urls: part.image_urls || [],
+        specifications: specs?.additional || "",
+        category: specs?.category || "",
+        make: part.brand || "",
+        model: specs?.model || "",
+        year: specs?.year || "",
+        vin: specs?.vin || ""
     });
     setListingType("part");
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1421,14 +1421,14 @@ if (product.specifications) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              value={userInfo.phone}
-              disabled={!isEditing}
-              onChange={(e) => setUserInfo({...userInfo, phone: e.target.value})}
-            />
-          </div>
+  <Label htmlFor="phone">Phone</Label>
+  <Input
+    id="phone"
+    value={userInfo.phone}
+    disabled={!isEditing}
+    onChange={(e) => setUserInfo({...userInfo, phone: e.target.value})}
+  />
+</div>
         </div>
         {isEditing && (
           <div className="flex space-x-4">
