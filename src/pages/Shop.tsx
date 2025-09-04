@@ -13,11 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Database } from "@/database.types";
 import { useCart } from "@/contexts/CartContext";
 import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
 
 // Define the specific types from your generated database types
 type Product = Database["public"]["Tables"]["products"]["Row"];
@@ -30,10 +30,6 @@ type ShopItem =
 // Define types for the vehicle data
 interface VehicleMake {
   id: string;
-  name: string;
-}
-
-interface VehicleModel {
   name: string;
 }
 
@@ -88,10 +84,9 @@ const Shop = () => {
   const [priceRange, setPriceRange] = useState(
     searchParams.get("priceRange") || "all"
   );
-  
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("query") || "");
-  const [selectedYear, setSelectedYear] = useState(searchParams.get("year") || "");
-  const [selectedMake, setSelectedMake] = useState(searchParams.get("make") || "");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [selectedYear, setSelectedYear] = useState(searchParams.get("year") || "all");
+  const [selectedMake, setSelectedMake] = useState(searchParams.get("make") || "all");
   const [selectedModel, setSelectedModel] = useState(searchParams.get("model") || "");
   
   const yearSelectRef = useRef<HTMLDivElement>(null);
@@ -99,13 +94,13 @@ const Shop = () => {
   const modelSelectRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setSelectedYear(searchParams.get("year") || "");
-    setSelectedMake(searchParams.get("make") || "");
-    setSelectedModel(searchParams.get("model") || "");
-    setSearchQuery(searchParams.get("query") || "");
+    setSelectedYear(searchParams.get("year") || "all");
+    setSelectedMake(searchParams.get("make") || "all");
+    setSelectedModel(searchParams.get("model") || (searchParams.get("make") ? "all" : ""));
     setFilterMode((searchParams.get("filterMode") as "all" | "parts" | "products") || "all");
     setSortOrder(searchParams.get("sortOrder") || "newest");
     setPriceRange(searchParams.get("priceRange") || "all");
+    setSearchQuery(searchParams.get("q") || "");
   }, [searchParams]);
 
   // Fetch vehicle years from Supabase
@@ -140,6 +135,7 @@ const Shop = () => {
   const { data: vehicleModels = [] } = useQuery({
     queryKey: ['vehicle-models', selectedMake],
     queryFn: async () => {
+      if (!selectedMake || selectedMake === 'all') return [];
       const makeId = vehicleMakes.find(make => make.name === selectedMake)?.id;
       
       if (!makeId) {
@@ -155,7 +151,7 @@ const Shop = () => {
       if (error) throw error;
       return data.map(item => item.name);
     },
-    enabled: !!selectedMake,
+    enabled: !!selectedMake && selectedMake !== 'all',
   });
 
 
@@ -183,34 +179,40 @@ const Shop = () => {
 
   const filteredItems = useMemo(() => {
     let items = allItems;
+
+    if (searchQuery) {
+      items = items.filter(item => 
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
     
     // Apply vehicle fitment filters
-    if (selectedYear) {
+    if (selectedYear && selectedYear !== 'all') {
       items = items.filter(item => {
         if (isPart(item)) {
           const specs = item.specifications as { year?: string };
           return specs?.year === selectedYear;
         }
-        return false;
+        return true; // Keep products in the list
       });
     }
 
-    if (selectedMake) {
+    if (selectedMake && selectedMake !== 'all') {
       items = items.filter(item => {
         if (isPart(item)) {
           return item.brand === selectedMake;
         }
-        return false;
+        return true; // Keep products in the list
       });
     }
 
-    if (selectedModel) {
+    if (selectedModel && selectedModel !== 'all') {
       items = items.filter(item => {
         if (isPart(item)) {
           const specs = item.specifications as { model?: string };
           return specs?.model === selectedModel;
         }
-        return false;
+        return true; // Keep products in the list
       });
     }
 
@@ -238,7 +240,7 @@ const Shop = () => {
     }
     
     return items;
-  }, [allItems, filterMode, priceRange, sortOrder, selectedMake, selectedModel, selectedYear]);
+  }, [allItems, filterMode, priceRange, sortOrder, selectedMake, selectedModel, selectedYear, searchQuery]);
 
   const priceRanges = [
     { value: "all", label: "All Prices" },
@@ -247,6 +249,19 @@ const Shop = () => {
     { value: "101-200", label: "$101 - $200" },
     { value: "201-", label: "$201+" },
   ];
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value;
+    setSearchQuery(query);
+    setSearchParams(prev => {
+      if (query) {
+        prev.set("q", query);
+      } else {
+        prev.delete("q");
+      }
+      return prev;
+    });
+  };
 
   const handleFilterModeChange = (mode: "all" | "parts" | "products") => {
     setFilterMode(mode);
@@ -275,7 +290,7 @@ const Shop = () => {
   const handleSelectChange = (setter: React.Dispatch<React.SetStateAction<string>>, paramName: string, value: string) => {
     setter(value);
     setSearchParams(prev => {
-      if (value) {
+      if (value && value !== 'all') {
         prev.set(paramName, value);
       } else {
         prev.delete(paramName);
@@ -283,6 +298,23 @@ const Shop = () => {
       return prev;
     });
   };
+  
+  const handleMakeChange = (value: string) => {
+    setSelectedMake(value);
+    const newModel = value === 'all' ? '' : 'all';
+    setSelectedModel(newModel);
+    setSearchParams(prev => {
+      if (value === 'all') {
+        prev.delete("make");
+        prev.delete("model");
+      } else {
+        prev.set("make", value);
+        prev.set("model", "all");
+      }
+      return prev;
+    });
+  };
+
 
   const handleMouseEnter = (ref: React.RefObject<HTMLDivElement>) => {
     if (ref.current) {
@@ -309,7 +341,21 @@ const Shop = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Shop All Items</h1>
+      <div className="flex flex-col md:flex-row items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Shop All Items</h1>
+        <div className="relative w-full md:w-1/3 mt-4 md:mt-0">
+          <Input
+            type="search"
+            placeholder="Search for items..."
+            className="pl-10"
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+            <Search className="h-5 w-5 text-muted-foreground" />
+          </span>
+        </div>
+      </div>
 
       {/* Find the Perfect Fit Box */}
       <Card className="mt-6 w-full mx-auto bg-card backdrop-blur-md shadow-lg">
@@ -317,7 +363,7 @@ const Shop = () => {
           <h3 className="text-xl font-bold text-foreground mb-4">
             Find the Perfect Fit
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Select value={selectedYear} onValueChange={(value) => handleSelectChange(setSelectedYear, "year", value)}>
               <SelectTrigger className="h-12">
                 <SelectValue placeholder="Year" />
@@ -326,6 +372,7 @@ const Shop = () => {
                 ref={yearSelectRef}
                 onMouseEnter={() => handleMouseEnter(yearSelectRef)}
               >
+                <SelectItem value="all">All Years</SelectItem>
                 {vehicleYears.map(year => (
                   <SelectItem key={year} value={year.toString()}>
                     {year}
@@ -334,7 +381,7 @@ const Shop = () => {
               </SelectContent>
             </Select>
             
-            <Select value={selectedMake} onValueChange={(value) => handleSelectChange(setSelectedMake, "make", value)}>
+            <Select value={selectedMake} onValueChange={handleMakeChange}>
               <SelectTrigger className="h-12">
                 <SelectValue placeholder="Make" />
               </SelectTrigger>
@@ -342,6 +389,7 @@ const Shop = () => {
                 ref={makeSelectRef}
                 onMouseEnter={() => handleMouseEnter(makeSelectRef)}
               >
+                <SelectItem value="all">All Makes</SelectItem>
                 {vehicleMakes.map(make => (
                   <SelectItem key={make.name} value={make.name}>
                     {make.name}
@@ -350,7 +398,11 @@ const Shop = () => {
               </SelectContent>
             </Select>
             
-            <Select value={selectedModel} onValueChange={(value) => handleSelectChange(setSelectedModel, "model", value)}>
+            <Select 
+              value={selectedModel} 
+              onValueChange={(value) => handleSelectChange(setSelectedModel, "model", value)}
+              disabled={!selectedMake || selectedMake === 'all'}
+            >
               <SelectTrigger className="h-12">
                 <SelectValue placeholder="Model" />
               </SelectTrigger>
@@ -358,6 +410,7 @@ const Shop = () => {
                 ref={modelSelectRef}
                 onMouseEnter={() => handleMouseEnter(modelSelectRef)}
               >
+                <SelectItem value="all">All Models</SelectItem>
                 {vehicleModels.map(model => (
                   <SelectItem key={model} value={model}>
                     {model}
@@ -365,11 +418,6 @@ const Shop = () => {
                 ))}
               </SelectContent>
             </Select>
-              
-            <Button size="lg" className="h-12 shadow-primary hover:shadow-lg transition-all duration-300">
-                <Search className="h-5 w-5 mr-2" />
-                Search Items
-              </Button>
             </div>
           </CardContent>
         </Card>
