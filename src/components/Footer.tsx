@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import CarWrenchLogo from "@/assets/car-wrench-logo.png";
-import { useState } from "react"; //
-import { supabase } from "@/integrations/supabase/client"; //
-import { toast } from "sonner"; //
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
@@ -14,7 +14,7 @@ const Footer = () => {
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted with email:", email); // Debug log
+
     setIsSubscribing(true);
 
     if (!email || !email.includes("@")) {
@@ -24,17 +24,12 @@ const Footer = () => {
     }
 
     try {
-      console.log("Attempting to insert email:", email); // Debug log
-      const { data, error } = await supabase
-        .from("subscribers")
-        .insert([{ email: email.trim().toLowerCase() }])
-        .select();
+
 
       console.log("Supabase response:", { data, error }); // Debug log
 
       if (error) {
-        console.error("Subscription error details:", error.message, error.code, error.details, error); // More detailed logging
-        if (error.code === '23505') { // PostgreSQL unique constraint violation error code
+
           toast.info("You are already subscribed!");
         } else {
           toast.error(`Failed to subscribe: ${error.message || 'Unknown error'}`);
@@ -42,7 +37,7 @@ const Footer = () => {
       } else {
         console.log("Successfully subscribed:", data);
         toast.success("You have been successfully subscribed!");
-        setEmail(""); // Clear the input field
+        setEmail("");
       }
     } catch (err) {
       console.error("An unexpected error occurred:", err);
