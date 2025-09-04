@@ -38,16 +38,18 @@ const BrandCarousel: React.FC = () => {
     <div className="bg-background py-12">
       <div className="container mx-auto">
         <h2 className="text-3xl font-bold text-center mb-8">Featured Brands</h2>
-        <div className="flex flex-wrap justify-center items-center gap-x-12 gap-y-8">
-          {logos.map((logo, index) => (
-            <div 
-              key={index} 
-              className="flex-shrink-0 cursor-pointer transition-transform duration-300 hover:scale-110" 
-              onClick={() => handleBrandClick(logo.alt)}
-            >
-              <img src={logo.src} alt={logo.alt} className="h-16" />
-            </div>
-          ))}
+        <div className="scroll-container" style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          <div className="scroll-content" style={{ display: 'inline-block' }}>
+            {[...logos, ...logos].map((logo, index) => (
+              <div
+                key={index}
+                className="inline-block flex-shrink-0 cursor-pointer transition-transform duration-300 hover:scale-110 mx-6"
+                onClick={() => handleBrandClick(logo.alt)}
+              >
+                <img src={logo.src} alt={logo.alt} className="h-16" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
