@@ -13,9 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Database } from "@/database.types";
 import { useCart } from "@/contexts/CartContext";
+import { Search } from "lucide-react";
 
 // Define the specific types from your generated database types
 type Product = Database["public"]["Tables"]["products"]["Row"];
@@ -82,8 +84,8 @@ const Shop = () => {
   const [priceRange, setPriceRange] = useState(
     searchParams.get("priceRange") || "all"
   );
-  
-  const [selectedYear, setSelectedYear] = useState(searchParams.get("year") || "");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [selectedYear, setSelectedYear] = useState(searchParams.get("year") || "all");
   const [selectedMake, setSelectedMake] = useState(searchParams.get("make") || "all");
   const [selectedModel, setSelectedModel] = useState(searchParams.get("model") || "");
   
@@ -92,12 +94,13 @@ const Shop = () => {
   const modelSelectRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setSelectedYear(searchParams.get("year") || "");
+    setSelectedYear(searchParams.get("year") || "all");
     setSelectedMake(searchParams.get("make") || "all");
     setSelectedModel(searchParams.get("model") || (searchParams.get("make") ? "all" : ""));
     setFilterMode((searchParams.get("filterMode") as "all" | "parts" | "products") || "all");
     setSortOrder(searchParams.get("sortOrder") || "newest");
     setPriceRange(searchParams.get("priceRange") || "all");
+    setSearchQuery(searchParams.get("q") || "");
   }, [searchParams]);
 
   // Fetch vehicle years from Supabase
@@ -176,9 +179,15 @@ const Shop = () => {
 
   const filteredItems = useMemo(() => {
     let items = allItems;
+
+    if (searchQuery) {
+      items = items.filter(item => 
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
     
     // Apply vehicle fitment filters
-    if (selectedYear) {
+    if (selectedYear && selectedYear !== 'all') {
       items = items.filter(item => {
         if (isPart(item)) {
           const specs = item.specifications as { year?: string };
@@ -231,7 +240,7 @@ const Shop = () => {
     }
     
     return items;
-  }, [allItems, filterMode, priceRange, sortOrder, selectedMake, selectedModel, selectedYear]);
+  }, [allItems, filterMode, priceRange, sortOrder, selectedMake, selectedModel, selectedYear, searchQuery]);
 
   const priceRanges = [
     { value: "all", label: "All Prices" },
@@ -240,6 +249,19 @@ const Shop = () => {
     { value: "101-200", label: "$101 - $200" },
     { value: "201-", label: "$201+" },
   ];
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value;
+    setSearchQuery(query);
+    setSearchParams(prev => {
+      if (query) {
+        prev.set("q", query);
+      } else {
+        prev.delete("q");
+      }
+      return prev;
+    });
+  };
 
   const handleFilterModeChange = (mode: "all" | "parts" | "products") => {
     setFilterMode(mode);
@@ -268,7 +290,7 @@ const Shop = () => {
   const handleSelectChange = (setter: React.Dispatch<React.SetStateAction<string>>, paramName: string, value: string) => {
     setter(value);
     setSearchParams(prev => {
-      if (value) {
+      if (value && value !== 'all') {
         prev.set(paramName, value);
       } else {
         prev.delete(paramName);
@@ -319,7 +341,21 @@ const Shop = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Shop All Items</h1>
+      <div className="flex flex-col md:flex-row items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Shop All Items</h1>
+        <div className="relative w-full md:w-1/3 mt-4 md:mt-0">
+          <Input
+            type="search"
+            placeholder="Search for items..."
+            className="pl-10"
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+            <Search className="h-5 w-5 text-muted-foreground" />
+          </span>
+        </div>
+      </div>
 
       {/* Find the Perfect Fit Box */}
       <Card className="mt-6 w-full mx-auto bg-card backdrop-blur-md shadow-lg">
@@ -336,6 +372,7 @@ const Shop = () => {
                 ref={yearSelectRef}
                 onMouseEnter={() => handleMouseEnter(yearSelectRef)}
               >
+                <SelectItem value="all">All Years</SelectItem>
                 {vehicleYears.map(year => (
                   <SelectItem key={year} value={year.toString()}>
                     {year}

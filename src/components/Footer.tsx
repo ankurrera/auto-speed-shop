@@ -14,7 +14,7 @@ const Footer = () => {
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted with email:", email);
+
     setIsSubscribing(true);
 
     if (!email || !email.includes("@")) {
@@ -24,16 +24,12 @@ const Footer = () => {
     }
 
     try {
-      console.log("Attempting to insert email:", email);
-      const { data, error } = await supabase
-        .from("subscribers")
-        .insert([{ email: email.trim().toLowerCase() }]);
 
-      console.log("Supabase response:", { data, error });
+
+      console.log("Supabase response:", { data, error }); // Debug log
 
       if (error) {
-        console.error("Subscription error details:", error.message, error.code, error.details, error);
-        if (error.code === '23505') {
+
           toast.info("You are already subscribed!");
         } else {
           toast.error(`Failed to subscribe: ${error.message || 'Unknown error'}`);
