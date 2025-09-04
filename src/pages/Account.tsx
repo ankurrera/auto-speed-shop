@@ -6,10 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import PasswordResetForm from "@/components/PasswordResetForm";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -107,6 +106,7 @@ const Account = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const location = useLocation();
 
   const [listingType, setListingType] = useState("part");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -126,7 +126,6 @@ const Account = () => {
   const [productFiles, setProductFiles] = useState<File[]>([]);
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
 
   // Queries for Filter Dropdowns
   const { data: vehicleYears = [] } = useQuery({
@@ -785,17 +784,17 @@ if (product.specifications) {
     setEditingProductId(part.id);
     const specs = part.specifications;
     setProductInfo({
-      name: part.name,
-      description: part.description,
-      price: String(part.price),
-      stock_quantity: part.stock_quantity,
-      image_urls: part.image_urls || [],
-      specifications: specs?.additional || "",
-      category: specs?.category || "",
-      make: specs?.make || "",
-      model: specs?.model || "",
-      year: specs?.year || "",
-      vin: specs?.vin || "",
+        name: part.name,
+        description: part.description || "",
+        price: part.price?.toString() || "",
+        stock_quantity: part.stock_quantity || 0,
+        image_urls: part.image_urls || [],
+        specifications: specs?.additional || "",
+        category: specs?.category || "",
+        make: part.brand || "",
+        model: specs?.model || "",
+        year: specs?.year || "",
+        vin: specs?.vin || ""
     });
     setListingType("part");
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1166,6 +1165,478 @@ if (product.specifications) {
     );
   }
 
+  // Determine which view to render based on the URL path
+  const currentPath = location.pathname.split('/').pop();
+
+  const renderContent = () => {
+    switch (currentPath) {
+      case 'addresses':
+        return renderAddressesContent();
+      case 'orders':
+        return renderOrdersContent();
+      case 'admin-dashboard':
+        return renderAdminDashboardContent();
+      default:
+        return renderProfileContent();
+    }
+  };
+  
+  const renderAdminDashboardContent = () => (
+    <div className="space-y-8">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-bold">{editingProductId ? 'Edit' : 'List a New...'}</h2>
+            <Button variant={listingType === "part" ? "default" : "outline"} onClick={() => setListingType("part")}>Part</Button>
+            <Button variant={listingType === "product" ? "default" : "outline"} onClick={() => setListingType("product")}>Product</Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleProductSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="product-name">{listingType === "part" ? "Part Name" : "Product Name"}</Label>
+              <Input id="product-name" value={productInfo.name} onChange={(e) => setProductInfo({ ...productInfo, name: e.target.value })} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="product-description">Description</Label>
+              <Textarea id="product-description" value={productInfo.description} onChange={(e) => setProductInfo({ ...productInfo, description: e.target.value })} rows={4} required />
+            </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="product-price">Price ($)</Label>
+                <Input id="product-price" type="number" step="0.01" value={productInfo.price} onChange={(e) => setProductInfo({ ...productInfo, price: e.target.value })} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="product-quantity">Quantity</Label>
+                <Input id="product-quantity" type="number" value={productInfo.stock_quantity.toString()} onChange={(e) => setProductInfo({ ...productInfo, stock_quantity: parseInt(e.target.value, 10) || 0 })} required />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="product-category">Category</Label>
+              <Select value={productInfo.category} onValueChange={(value) => setProductInfo({ ...productInfo, category: value })}>
+                <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (<SelectItem key={category} value={category}>{category}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="product-images">Product Images</Label>
+              <Input id="product-images" type="file" multiple onChange={handleImageUpload} />
+            </div>
+            {productInfo.image_urls.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                    {productInfo.image_urls.map((url, index) => (
+                        <div key={index} className="relative w-24 h-24 border rounded overflow-hidden">
+                            <img src={url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                className="absolute top-1 right-1 w-6 h-6 p-0"
+                                onClick={() => removeImage(index)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            )}
+            <Separator className="my-8" />
+            <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="part-year">Vehicle Year</Label>
+                <Select value={productInfo.year} onValueChange={(value) => setProductInfo({ ...productInfo, year: value, make: '', model: '' })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehicleYears.map(year => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="part-make">Vehicle Make</Label>
+                <Select value={productInfo.make} onValueChange={(value) => setProductInfo({ ...productInfo, make: value, model: '' })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Make" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehicleMakes.map(make => (
+                      <SelectItem key={make.name} value={make.name}>
+                        {make.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="part-model">Vehicle Model</Label>
+                <Select value={productInfo.model} onValueChange={(value) => setProductInfo({ ...productInfo, model: value })} disabled={!productInfo.make}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehicleModels.map(model => (
+                      <SelectItem key={model.name} value={model.name}>
+                        {model.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="product-specs">Specifications</Label>
+              <Textarea id="product-specs" value={productInfo.specifications} onChange={(e) => setProductInfo({ ...productInfo, specifications: e.target.value })} rows={4} placeholder={listingType === "part" ? "Additional specifications, e.g., 'Color: Black'" : "List specifications here."} />
+            </div>
+            <div className="flex space-x-2">
+              <Button type="submit">{editingProductId ? "Update" : "List"} {listingType === "part" ? "Part" : "Product"}</Button>
+              {editingProductId && (
+                <Button type="button" variant="outline" onClick={() => {
+                  setEditingProductId(null);
+                  setProductInfo({
+                    name: "", description: "", price: "", stock_quantity: 0, image_urls: [],
+                    specifications: "", category: "", make: "", model: "", year: "", vin: "",
+                  });
+                }}>Cancel Edit</Button>
+              )}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Separator className="my-8" />
+
+      <h2 className="text-2xl font-bold mb-4">Your Listed Parts</h2>
+      <div className="space-y-4">
+        {parts.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">You have no parts listed yet.</div>
+        ) : (
+          parts.map((part) => (
+            <Card key={part.id}>
+              <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+                <div className="flex-1 space-y-1">
+                  <h3 className="font-semibold text-lg">{part.name} (Part)</h3>
+                  <p className="text-muted-foreground text-sm">{part.brand}</p>
+                  <p className="text-lg font-bold">${part.price}</p>
+                  <p className="text-sm">In Stock: {part.stock_quantity}</p>
+                  <p className={`text-sm font-medium ${part.is_active ? 'text-green-500' : 'text-yellow-500'}`}>
+                    Status: {part.is_active ? 'Active' : 'Archived'}
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => handleEditPart(part)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleArchivePart(part.id, part.is_active)}>
+                    <Archive className="h-4 w-4 mr-2" />
+                    {part.is_active ? 'Archive' : 'Unarchive'}
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleDeletePart(part.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <Separator className="my-8" />
+
+      <h2 className="text-2xl font-bold mb-4">Your Listed Products</h2>
+      <div className="space-y-4">
+        {products.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">You have no products listed yet.</div>
+        ) : (
+          products.map((product) => (
+            <Card key={product.id}>
+              <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+                <div className="flex-1 space-y-1">
+                  <h3 className="font-semibold text-lg">{product.name} (Product)</h3>
+                  <p className="text-muted-foreground text-sm">{product.category}</p>
+                  <p className="text-lg font-bold">${product.price}</p>
+                  <p className="text-sm">In Stock: {product.stock_quantity}</p>
+                  <p className={`text-sm font-medium ${product.is_active ? 'text-green-500' : 'text-yellow-500'}`}>Status: {product.is_active ? 'Active' : 'Archived'}</p>
+                </div>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleArchiveProduct(product.id, product.is_active)}><Archive className="h-4 w-4 mr-2" />{product.is_active ? 'Archive' : 'Unarchive'}</Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+  const renderProfileContent = () => (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center">
+          <User className="h-5 w-5 mr-2" />
+          Profile Information
+        </CardTitle>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsEditing(!isEditing)}
+        >
+          <Edit className="h-4 w-4 mr-2" />
+          {isEditing ? "Cancel" : "Edit"}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="firstName">First Name</Label>
+            <Input
+              id="firstName"
+              value={userInfo.firstName}
+              disabled={!isEditing}
+              onChange={(e) => setUserInfo({...userInfo, firstName: e.target.value})}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Last Name</Label>
+            <Input
+              id="lastName"
+              value={userInfo.lastName}
+              disabled={!isEditing}
+              onChange={(e) => setUserInfo({...userInfo, lastName: e.target.value})}
+            />
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              value={userInfo.email}
+              disabled
+            />
+          </div>
+          <div className="space-y-2">
+  <Label htmlFor="phone">Phone</Label>
+  <Input
+    id="phone"
+    value={userInfo.phone}
+    disabled={!isEditing}
+    onChange={(e) => setUserInfo({...userInfo, phone: e.target.value})}
+  />
+</div>
+        </div>
+        {isEditing && (
+          <div className="flex space-x-4">
+            <Button onClick={handleSaveProfile}>
+              Save Changes
+            </Button>
+            <Button variant="outline" onClick={() => setIsEditing(false)}>
+              Cancel
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderAddressesContent = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold flex items-center">
+          <MapPin className="h-5 w-5 mr-2" />
+          Saved Addresses
+        </h2>
+        <Button onClick={() => {
+          setShowAddressForm(true);
+          setEditingAddressId(null);
+        }}>
+          Add New Address
+        </Button>
+      </div>
+
+      {showAddressForm ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{editingAddressId ? "Edit Address" : "Add New Address"}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAddressFormSubmit} className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="address-first-name">First Name</Label>
+                  <Input
+                    id="address-first-name"
+                    value={formAddress.first_name}
+                    onChange={(e) => setFormAddress({...formAddress, first_name: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address-last-name">Last Name</Label>
+                  <Input
+                    id="address-last-name"
+                    value={formAddress.last_name}
+                    onChange={(e) => setFormAddress({...formAddress, last_name: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address-line-1">Address Line 1</Label>
+                <Input
+                  id="address-line-1"
+                  value={formAddress.address_line_1}
+                  onChange={(e) => setFormAddress({...formAddress, address_line_1: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address-line-2">Address Line 2</Label>
+                <Input
+                  id="address-line-2"
+                  value={formAddress.address_line_2}
+                  onChange={(e) => setFormAddress({...formAddress, address_line_2: e.target.value})}
+                />
+              </div>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={formAddress.city}
+                    onChange={(e) => setFormAddress({...formAddress, city: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">State</Label>
+                  <Input
+                    id="state"
+                    value={formAddress.state}
+                    onChange={(e) => setFormAddress({...formAddress, state: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="postal-code">Postal Code</Label>
+                  <Input
+                    id="postal-code"
+                    value={formAddress.postal_code}
+                    onChange={(e) => setFormAddress({...formAddress, postal_code: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address-phone">Phone Number</Label>
+                <Input
+                  id="address-phone"
+                  type="tel"
+                  value={formAddress.phone}
+                  onChange={(e) => setFormAddress({...formAddress, phone: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setShowAddressForm(false)}>Cancel</Button>
+                <Button type="submit">{editingAddressId ? "Save Changes" : "Add Address"}</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-6">
+          {addresses.length > 0 ? (
+            addresses.map((address) => (
+              <Card key={address.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{address.type} Address</CardTitle>
+                    {address.is_default && (
+                      <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1 text-sm">
+                    <p className="font-medium">{address.first_name} {address.last_name}</p>
+                    <p>{address.address_line_1}</p>
+                    {address.address_line_2 && <p>{address.address_line_2}</p>}
+                    <p>{address.city}, {address.state} {address.postal_code}</p>
+                    <p>{address.country}</p>
+                    {address.phone && <p className="mt-2 text-muted-foreground">{address.phone}</p>}
+                  </div>
+                  <div className="flex space-x-2 mt-4">
+                    <Button variant="outline" size="sm" onClick={() => handleEditAddress(address)}>Edit</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleDeleteAddress(address.id)}>Delete</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-2 text-center text-muted-foreground py-8">
+              You have no saved addresses yet.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderOrdersContent = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Package className="h-5 w-5 mr-2" />
+          Order History
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {orders.length > 0 ? (
+            orders.map((order, index) => (
+              <div key={order.id}>
+                <div className="flex items-center justify-between py-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-4">
+                      <span className="font-medium">{order.orderNumber}</span>
+                      <span className="text-sm text-muted-foreground">{order.date}</span>
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        order.status === 'delivered' ? 'bg-green-200 text-green-800' :
+                        order.status === 'shipped' ? 'bg-blue-200 text-blue-800' :
+                        'bg-yellow-200 text-yellow-800'
+                      }`}>
+                        {order.status}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">${order.total.toFixed(2)}</p>
+                    <Button variant="outline" size="sm" className="mt-2">
+                      View Details
+                    </Button>
+                  </div>
+                </div>
+                {index < orders.length - 1 && <Separator />}
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              You have no orders yet.
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -1182,588 +1653,9 @@ if (product.specifications) {
           </Button>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="addresses">Addresses</TabsTrigger>
-            <TabsTrigger value="orders">Order History</TabsTrigger>
-            {userInfo.is_admin && !sellerExistsForAdmin && <TabsTrigger value="admin-tools">Admin Tools</TabsTrigger>}
-            {userInfo.is_admin && userInfo.is_seller && (
-              <>
-                <TabsTrigger value="admin-dashboard">Admin Dashboard</TabsTrigger>
-                <TabsTrigger value="analytics-dashboard">Analytics Dashboard</TabsTrigger>
-              </>
-            )}
-          </TabsList>
-
-          <TabsContent value="profile">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center">
-                  <User className="h-5 w-5 mr-2" />
-                  Profile Information
-                </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  {isEditing ? "Cancel" : "Edit"}
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={userInfo.firstName}
-                      disabled={!isEditing}
-                      onChange={(e) => setUserInfo({...userInfo, firstName: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={userInfo.lastName}
-                      disabled={!isEditing}
-                      onChange={(e) => setUserInfo({...userInfo, lastName: e.target.value})}
-                    />
-                  </div>
-                </div>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      value={userInfo.email}
-                      disabled
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      value={userInfo.phone}
-                      disabled={!isEditing}
-                      onChange={(e) => setUserInfo({...userInfo, phone: e.target.value})}
-                    />
-                  </div>
-                </div>
-                {isEditing && (
-                  <div className="flex space-x-4">
-                    <Button onClick={handleSaveProfile}>
-                      Save Changes
-                    </Button>
-                    <Button variant="outline" onClick={() => setIsEditing(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="addresses">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold flex items-center">
-                  <MapPin className="h-5 w-5 mr-2" />
-                  Saved Addresses
-                </h2>
-                <Button onClick={() => {
-                  setShowAddressForm(true);
-                  setEditingAddressId(null);
-                }}>
-                  Add New Address
-                </Button>
-              </div>
-
-              {showAddressForm ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{editingAddressId ? "Edit Address" : "Add New Address"}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleAddressFormSubmit} className="space-y-4">
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="address-first-name">First Name</Label>
-                          <Input
-                            id="address-first-name"
-                            value={formAddress.first_name}
-                            onChange={(e) => setFormAddress({...formAddress, first_name: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="address-last-name">Last Name</Label>
-                          <Input
-                            id="address-last-name"
-                            value={formAddress.last_name}
-                            onChange={(e) => setFormAddress({...formAddress, last_name: e.target.value})}
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="address-line-1">Address Line 1</Label>
-                        <Input
-                          id="address-line-1"
-                          value={formAddress.address_line_1}
-                          onChange={(e) => setFormAddress({...formAddress, address_line_1: e.target.value})}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="address-line-2">Address Line 2</Label>
-                        <Input
-                          id="address-line-2"
-                          value={formAddress.address_line_2}
-                          onChange={(e) => setFormAddress({...formAddress, address_line_2: e.target.value})}
-                        />
-                      </div>
-                      <div className="grid md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="city">City</Label>
-                          <Input
-                            id="city"
-                            value={formAddress.city}
-                            onChange={(e) => setFormAddress({...formAddress, city: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="state">State</Label>
-                          <Input
-                            id="state"
-                            value={formAddress.state}
-                            onChange={(e) => setFormAddress({...formAddress, state: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="postal-code">Postal Code</Label>
-                          <Input
-                            id="postal-code"
-                            value={formAddress.postal_code}
-                            onChange={(e) => setFormAddress({...formAddress, postal_code: e.target.value})}
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="address-phone">Phone Number</Label>
-                        <Input
-                          id="address-phone"
-                          type="tel"
-                          value={formAddress.phone}
-                          onChange={(e) => setFormAddress({...formAddress, phone: e.target.value})}
-                          required
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button type="button" variant="outline" onClick={() => setShowAddressForm(false)}>Cancel</Button>
-                        <Button type="submit">{editingAddressId ? "Save Changes" : "Add Address"}</Button>
-                      </div>
-                    </form>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-6">
-                  {addresses.length > 0 ? (
-                    addresses.map((address) => (
-                      <Card key={address.id}>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg">{address.type} Address</CardTitle>
-                            {address.is_default && (
-                              <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
-                                Default
-                              </span>
-                            )}
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-1 text-sm">
-                            <p className="font-medium">{address.first_name} {address.last_name}</p>
-                            <p>{address.address_line_1}</p>
-                            {address.address_line_2 && <p>{address.address_line_2}</p>}
-                            <p>{address.city}, {address.state} {address.postal_code}</p>
-                            <p>{address.country}</p>
-                            {address.phone && <p className="mt-2 text-muted-foreground">{address.phone}</p>}
-                          </div>
-                          <div className="flex space-x-2 mt-4">
-                            <Button variant="outline" size="sm" onClick={() => handleEditAddress(address)}>Edit</Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDeleteAddress(address.id)}>Delete</Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="col-span-2 text-center text-muted-foreground py-8">
-                      You have no saved addresses yet.
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="orders">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Package className="h-5 w-5 mr-2" />
-                  Order History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {orders.length > 0 ? (
-                    orders.map((order, index) => (
-                      <div key={order.id}>
-                        <div className="flex items-center justify-between py-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-4">
-                              <span className="font-medium">{order.orderNumber}</span>
-                              <span className="text-sm text-muted-foreground">{order.date}</span>
-                              <span className={`text-xs px-2 py-1 rounded ${
-                                order.status === 'delivered' ? 'bg-green-200 text-green-800' :
-                                order.status === 'shipped' ? 'bg-blue-200 text-blue-800' :
-                                'bg-yellow-200 text-yellow-800'
-                              }`}>
-                                {order.status}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold">${order.total.toFixed(2)}</p>
-                            <Button variant="outline" size="sm" className="mt-2">
-                              View Details
-                            </Button>
-                          </div>
-                        </div>
-                        {index < orders.length - 1 && <Separator />}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-muted-foreground py-8">
-                      You have no orders yet.
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="security">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Lock className="h-5 w-5 mr-2" />
-                    Password Reset
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <p className="text-muted-foreground">
-                      Reset your password using a secure password reset link sent to your email.
-                    </p>
-                    <Button onClick={() => {
-                      const emailInput = prompt("Please enter your email address to reset your password:");
-                      if (emailInput) {
-                        supabase.auth.resetPasswordForEmail(emailInput, {
-                          redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
-                        }).then(({ error }) => {
-                          if (error) {
-                            alert("Error sending password reset email: " + error.message);
-                          } else {
-                            alert("Password reset email sent. Please check your inbox!");
-                          }
-                        });
-                      }
-                    }}>
-                      Send Password Reset Link
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {userInfo.is_admin && !sellerExistsForAdmin && (
-            <TabsContent value="admin-tools">
-              <Card>
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl">Create Seller Account</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCreateSellerAccount} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="seller-name">Seller's Name</Label>
-                      <Input
-                        id="seller-name"
-                        placeholder="Enter seller's business name"
-                        value={newSellerName}
-                        onChange={(e) => setNewSellerName(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="seller-address">Address</Label>
-                      <Input
-                        id="seller-address"
-                        placeholder="Enter seller's address"
-                        value={newSellerAddress}
-                        onChange={(e) => setNewSellerAddress(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="seller-phone">Phone Number</Label>
-                      <Input
-                        id="seller-phone"
-                        type="tel"
-                        placeholder="Enter seller's phone number"
-                        value={newSellerPhoneNumber}
-                        onChange={(e) => setNewSellerPhoneNumber(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="seller-email">Email</Label>
-                        <Input
-                          id="seller-email"
-                          type="email"
-                          placeholder="Enter seller's email"
-                          value={newSellerEmail}
-                          onChange={(e) => setNewSellerEmail(e.target.value)}
-                          required
-                        />
-                      </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="seller-password">Password</Label>
-                      <Input
-                        id="seller-password"
-                        type="password"
-                        placeholder="Create a password"
-                        value={newSellerPassword}
-                        onChange={(e) => setNewSellerPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <Button type="submit" className="w-full">
-                      Create Seller Account
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
-
-          {userInfo.is_admin && userInfo.is_seller && (
-            <TabsContent value="admin-dashboard">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold">{editingProductId ? 'Edit' : 'List a New...'}</h2>
-                    <Button variant={listingType === "part" ? "default" : "outline"} onClick={() => setListingType("part")}>Part</Button>
-                    <Button variant={listingType === "product" ? "default" : "outline"} onClick={() => setListingType("product")}>Product</Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleProductSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="product-name">{listingType === "part" ? "Part Name" : "Product Name"}</Label>
-                      <Input id="product-name" value={productInfo.name} onChange={(e) => setProductInfo({ ...productInfo, name: e.target.value })} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-description">Description</Label>
-                      <Textarea id="product-description" value={productInfo.description} onChange={(e) => setProductInfo({ ...productInfo, description: e.target.value })} rows={4} required />
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="product-price">Price ($)</Label>
-                        <Input id="product-price" type="number" step="0.01" value={productInfo.price} onChange={(e) => setProductInfo({ ...productInfo, price: e.target.value })} required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="product-quantity">Quantity</Label>
-                        <Input id="product-quantity" type="number" value={productInfo.stock_quantity.toString()} onChange={(e) => setProductInfo({ ...productInfo, stock_quantity: parseInt(e.target.value, 10) || 0 })} required />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-category">Category</Label>
-                      <Select value={productInfo.category} onValueChange={(value) => setProductInfo({ ...productInfo, category: value })}>
-                        <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
-                        <SelectContent>
-                          {categories.map((category) => (<SelectItem key={category} value={category}>{category}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-images">Product Images</Label>
-                      <Input id="product-images" type="file" multiple onChange={handleImageUpload} />
-                    </div>
-                    {productInfo.image_urls.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-4">
-                            {productInfo.image_urls.map((url, index) => (
-                                <div key={index} className="relative w-24 h-24 border rounded overflow-hidden">
-                                    <img src={url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="destructive"
-                                        className="absolute top-1 right-1 w-6 h-6 p-0"
-                                        onClick={() => removeImage(index)}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    <Separator className="my-8" />
-                    <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="part-year">Vehicle Year</Label>
-                        <Select value={productInfo.year} onValueChange={(value) => setProductInfo({ ...productInfo, year: value, make: '', model: '' })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Year" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vehicleYears.map(year => (
-                              <SelectItem key={year} value={year.toString()}>
-                                {year}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="part-make">Vehicle Make</Label>
-                        <Select value={productInfo.make} onValueChange={(value) => setProductInfo({ ...productInfo, make: value, model: '' })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Make" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vehicleMakes.map(make => (
-                              <SelectItem key={make.name} value={make.name}>
-                                {make.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="part-model">Vehicle Model</Label>
-                        <Select value={productInfo.model} onValueChange={(value) => setProductInfo({ ...productInfo, model: value })} disabled={!productInfo.make}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Model" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vehicleModels.map(model => (
-                              <SelectItem key={model.name} value={model.name}>
-                                {model.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="product-specs">Specifications</Label>
-                      <Textarea id="product-specs" value={productInfo.specifications} onChange={(e) => setProductInfo({ ...productInfo, specifications: e.target.value })} rows={4} placeholder={listingType === "part" ? "Additional specifications, e.g., 'Color: Black'" : "List specifications here."} />
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button type="submit">{editingProductId ? "Update" : "List"} {listingType === "part" ? "Part" : "Product"}</Button>
-                      {editingProductId && (
-                        <Button type="button" variant="outline" onClick={() => {
-                          setEditingProductId(null);
-                          setProductInfo({
-                            name: "", description: "", price: "", stock_quantity: 0, image_urls: [],
-                            specifications: "", category: "", make: "", model: "", year: "", vin: "",
-                          });
-                        }}>Cancel Edit</Button>
-                      )}
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-
-              <Separator className="my-8" />
-
-              <h2 className="text-2xl font-bold mb-4">Your Listed Parts</h2>
-              <div className="space-y-4">
-                {parts.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">You have no parts listed yet.</div>
-                ) : (
-                  parts.map((part) => (
-                    <Card key={part.id}>
-                      <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-                        <div className="flex-1 space-y-1">
-                          <h3 className="font-semibold text-lg">{part.name} (Part)</h3>
-                          <p className="text-muted-foreground text-sm">{part.brand}</p>
-                          <p className="text-lg font-bold">${part.price}</p>
-                          <p className="text-sm">In Stock: {part.stock_quantity}</p>
-                          <p className={`text-sm font-medium ${part.is_active ? 'text-green-500' : 'text-yellow-500'}`}>
-                            Status: {part.is_active ? 'Active' : 'Archived'}
-                          </p>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEditPart(part)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleArchivePart(part.id, part.is_active)}>
-                            <Archive className="h-4 w-4 mr-2" />
-                            {part.is_active ? 'Archive' : 'Unarchive'}
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDeletePart(part.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-
-              <Separator className="my-8" />
-
-              <h2 className="text-2xl font-bold mb-4">Your Listed Products</h2>
-              <div className="space-y-4">
-                {products.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">You have no products listed yet.</div>
-                ) : (
-                  products.map((product) => (
-                    <Card key={product.id}>
-                      <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-                        <div className="flex-1 space-y-1">
-                          <h3 className="font-semibold text-lg">{product.name} (Product)</h3>
-                          <p className="text-muted-foreground text-sm">{product.category}</p>
-                          <p className="text-lg font-bold">${product.price}</p>
-                          <p className="text-sm">In Stock: {product.stock_quantity}</p>
-                          <p className={`text-sm font-medium ${product.is_active ? 'text-green-500' : 'text-yellow-500'}`}>Status: {product.is_active ? 'Active' : 'Archived'}</p>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleArchiveProduct(product.id, product.is_active)}><Archive className="h-4 w-4 mr-2" />{product.is_active ? 'Archive' : 'Unarchive'}</Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </TabsContent>
-          )}
-
-          {userInfo.is_admin && userInfo.is_seller && (
-            <TabsContent value="analytics-dashboard">
-              <AnalyticsDashboard />
-            </TabsContent>
-          )}
-        </Tabs>
+        <div className="space-y-8">
+          {renderContent()}
+        </div>
       </div>
     </div>
   );

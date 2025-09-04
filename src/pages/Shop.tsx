@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,9 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Database } from "@/database.types";
 import { useCart } from "@/contexts/CartContext";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 // Define the specific types from your generated database types
 type Product = Database["public"]["Tables"]["products"]["Row"];
@@ -86,7 +89,75 @@ const Shop = () => {
     searchParams.get("priceRange") || "all"
   );
   
-  const selectedMake = searchParams.get("make") || "";
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("query") || "");
+  const [selectedYear, setSelectedYear] = useState(searchParams.get("year") || "");
+  const [selectedMake, setSelectedMake] = useState(searchParams.get("make") || "");
+  const [selectedModel, setSelectedModel] = useState(searchParams.get("model") || "");
+  
+  const yearSelectRef = useRef<HTMLDivElement>(null);
+  const makeSelectRef = useRef<HTMLDivElement>(null);
+  const modelSelectRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setSelectedYear(searchParams.get("year") || "");
+    setSelectedMake(searchParams.get("make") || "");
+    setSelectedModel(searchParams.get("model") || "");
+    setSearchQuery(searchParams.get("query") || "");
+    setFilterMode((searchParams.get("filterMode") as "all" | "parts" | "products") || "all");
+    setSortOrder(searchParams.get("sortOrder") || "newest");
+    setPriceRange(searchParams.get("priceRange") || "all");
+  }, [searchParams]);
+
+  // Fetch vehicle years from Supabase
+  const { data: vehicleYears = [] } = useQuery({
+    queryKey: ['vehicle-years'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vehicle_years')
+        .select('year')
+        .order('year', { ascending: false });
+      
+      if (error) throw error;
+      return data.map(item => item.year);
+    }
+  });
+
+  // Fetch vehicle makes from Supabase
+  const { data: vehicleMakes = [] } = useQuery({
+    queryKey: ['vehicle-makes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vehicle_makes')
+        .select('id, name')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch vehicle models from Supabase, dependent on selectedMake
+  const { data: vehicleModels = [] } = useQuery({
+    queryKey: ['vehicle-models', selectedMake],
+    queryFn: async () => {
+      const makeId = vehicleMakes.find(make => make.name === selectedMake)?.id;
+      
+      if (!makeId) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('vehicle_models')
+        .select('name')
+        .eq('make_id', makeId)
+        .order('name');
+      
+      if (error) throw error;
+      return data.map(item => item.name);
+    },
+    enabled: !!selectedMake,
+  });
+
 
   const fetchParts = async () => {
     const { data, error } = await supabase.from("parts").select("*");
@@ -113,17 +184,37 @@ const Shop = () => {
   const filteredItems = useMemo(() => {
     let items = allItems;
     
-    // Brand filtering logic
+    // Apply vehicle fitment filters
+    if (selectedYear) {
+      items = items.filter(item => {
+        if (isPart(item)) {
+          const specs = item.specifications as { year?: string };
+          return specs?.year === selectedYear;
+        }
+        return false;
+      });
+    }
+
     if (selectedMake) {
       items = items.filter(item => {
         if (isPart(item)) {
           return item.brand === selectedMake;
         }
-        // Products don't have a brand field in the database, so they are filtered out
         return false;
       });
     }
 
+    if (selectedModel) {
+      items = items.filter(item => {
+        if (isPart(item)) {
+          const specs = item.specifications as { model?: string };
+          return specs?.model === selectedModel;
+        }
+        return false;
+      });
+    }
+
+    // Apply general filters
     if (filterMode === "parts") {
       items = items.filter(item => item.type === "part");
     } else if (filterMode === "products") {
@@ -147,7 +238,7 @@ const Shop = () => {
     }
     
     return items;
-  }, [allItems, filterMode, priceRange, sortOrder, selectedMake]);
+  }, [allItems, filterMode, priceRange, sortOrder, selectedMake, selectedModel, selectedYear]);
 
   const priceRanges = [
     { value: "all", label: "All Prices" },
@@ -180,13 +271,111 @@ const Shop = () => {
       return prev;
     });
   };
+
+  const handleSelectChange = (setter: React.Dispatch<React.SetStateAction<string>>, paramName: string, value: string) => {
+    setter(value);
+    setSearchParams(prev => {
+      if (value) {
+        prev.set(paramName, value);
+      } else {
+        prev.delete(paramName);
+      }
+      return prev;
+    });
+  };
+
+  const handleMouseEnter = (ref: React.RefObject<HTMLDivElement>) => {
+    if (ref.current) {
+      let scrollAmount = 0;
+      const scrollStep = 1;
+      let frame: number;
+
+      const scroll = () => {
+        ref.current!.scrollTop += scrollStep;
+        scrollAmount += scrollStep;
+        if (scrollAmount < ref.current!.scrollHeight - ref.current!.clientHeight) {
+          frame = window.requestAnimationFrame(scroll);
+        }
+      };
+
+      frame = window.requestAnimationFrame(scroll);
+
+      ref.current.addEventListener("mouseleave", () => {
+        window.cancelAnimationFrame(frame);
+        ref.current!.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+  };
   
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Shop All Items</h1>
 
+      {/* Find the Perfect Fit Box */}
+      <Card className="mt-6 w-full mx-auto bg-card backdrop-blur-md shadow-lg">
+        <CardContent className="p-6">
+          <h3 className="text-xl font-bold text-foreground mb-4">
+            Find the Perfect Fit
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Select value={selectedYear} onValueChange={(value) => handleSelectChange(setSelectedYear, "year", value)}>
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent
+                ref={yearSelectRef}
+                onMouseEnter={() => handleMouseEnter(yearSelectRef)}
+              >
+                {vehicleYears.map(year => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={selectedMake} onValueChange={(value) => handleSelectChange(setSelectedMake, "make", value)}>
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Make" />
+              </SelectTrigger>
+              <SelectContent
+                ref={makeSelectRef}
+                onMouseEnter={() => handleMouseEnter(makeSelectRef)}
+              >
+                {vehicleMakes.map(make => (
+                  <SelectItem key={make.name} value={make.name}>
+                    {make.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={selectedModel} onValueChange={(value) => handleSelectChange(setSelectedModel, "model", value)}>
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Model" />
+              </SelectTrigger>
+              <SelectContent
+                ref={modelSelectRef}
+                onMouseEnter={() => handleMouseEnter(modelSelectRef)}
+              >
+                {vehicleModels.map(model => (
+                  <SelectItem key={model} value={model}>
+                    {model}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+              
+            <Button size="lg" className="h-12 shadow-primary hover:shadow-lg transition-all duration-300">
+                <Search className="h-5 w-5 mr-2" />
+                Search Items
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      
       {/* Filters and Sorting */}
-      <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4 mb-8">
+      <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4 my-8">
         <div className="flex items-center space-x-2">
           <Label>Sort by:</Label>
           <Select value={sortOrder} onValueChange={handleSortChange}>
@@ -278,5 +467,4 @@ const Shop = () => {
     </div>
   );
 };
-
 export default Shop;

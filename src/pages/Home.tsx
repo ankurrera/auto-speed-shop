@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import BrandCarousel from "@/components/BrandCarousel"; // 1. Import the new component
 
 // Define the type for a product object to ensure type safety
 interface Product {
@@ -38,7 +39,7 @@ const Home = () => {
   const modelSelectRef = useRef<HTMLDivElement>(null);
 
   // Fetch featured products from Supabase
-  // We use the new `Product` type to ensure the data is correctly structured
+  // We use the new Product type to ensure the data is correctly structured
   const { data: featuredProducts = [] } = useQuery<Product[]>({
     queryKey: ['featured-products'],
     queryFn: async () => {
@@ -239,6 +240,9 @@ const Home = () => {
             </Card>
           </div>
         </section>
+
+        {/* 2. Add the Brand Carousel component here */}
+        <BrandCarousel />
 
         {/* Features */}
         <section className="py-24 bg-background">

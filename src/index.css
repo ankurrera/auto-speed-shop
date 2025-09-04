@@ -137,3 +137,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes scroll-right-to-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.scroll-content {
+  animation: scroll-right-to-left 20s linear infinite;
+}

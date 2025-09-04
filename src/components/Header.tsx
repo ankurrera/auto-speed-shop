@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Search, ShoppingCart, User, Heart, Menu, X, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Search, ShoppingCart, User, Heart, Menu, X, ChevronDown, LogOut, LayoutDashboard, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,15 +15,79 @@ import { SimpleThemeToggle } from "./SimpleThemeToggle";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import CarWrenchLogo from "@/assets/car-wrench-logo.png";
+import { supabase } from "@/integrations/supabase/client";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [userSession, setUserSession] = useState(null);
+  const [userInfo, setUserInfo] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    is_admin: false,
+    is_seller: false,
+  });
   const location = useLocation();
+  const navigate = useNavigate();
   const { cartItems } = useCart();
   const { wishlistItems } = useWishlist();
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
   const wishlistCount = wishlistItems.length;
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserSession(session);
+      if (session) {
+        fetchUserProfile(session.user.id);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserSession(session);
+      if (session) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setUserInfo({
+          firstName: "",
+          lastName: "",
+          email: "",
+          phone: "",
+          is_admin: false,
+          is_seller: false,
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("first_name, last_name, email, phone, is_admin, is_seller")
+      .eq("user_id", userId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching user profile:", error.message);
+    } else if (data) {
+      setUserInfo({
+        firstName: data.first_name || "",
+        lastName: data.last_name || "",
+        email: data.email || "",
+        phone: data.phone || "",
+        is_admin: data.is_admin || false,
+        is_seller: data.is_seller || false,
+      });
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -42,6 +106,7 @@ const Header = () => {
     { name: "Nissan" },
     { name: "Subaru" },
     { name: "Toyota" },
+    { name: "Ford" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -165,11 +230,59 @@ const Header = () => {
                 )}
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" asChild className="relative">
-              <Link to="/account">
-                <User className="h-5 w-5" />
-              </Link>
-            </Button>
+            
+            {userSession ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="relative">
+                    <User className="h-5 w-5" />
+                    <span className="sr-only">User Account Menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/account">Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account/addresses">Addresses</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account/orders">Order History</Link>
+                  </DropdownMenuItem>
+                  
+                  {userInfo.is_admin && userInfo.is_seller && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/account/admin-dashboard">
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          Admin Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/account/analytics-dashboard">
+                          <TrendingUp className="mr-2 h-4 w-4" />
+                          Analytics Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="ghost" size="sm" asChild className="relative">
+                <Link to="/account">
+                  <User className="h-5 w-5" />
+                </Link>
+              </Button>
+            )}
+
             <SimpleThemeToggle />
           </div>
         </div>
