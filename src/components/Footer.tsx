@@ -3,9 +3,50 @@ import { Facebook, Twitter, Instagram, Youtube, Phone, Mail, MapPin } from "luci
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import CarWrenchLogo from "@/assets/car-wrench-logo.png"; // Import the logo
+import CarWrenchLogo from "@/assets/car-wrench-logo.png";
+import { useState } from "react"; //
+import { supabase } from "@/integrations/supabase/client"; //
+import { toast } from "sonner"; //
 
 const Footer = () => {
+  const [email, setEmail] = useState("");
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubscribing(true);
+
+    if (!email) {
+      toast.error("Please enter a valid email address.");
+      setIsSubscribing(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("subscribers")
+        .insert([{ email }])
+        .select();
+
+      if (error) {
+        if (error.code === '23505') { // PostgreSQL unique constraint violation error code
+          toast.info("You are already subscribed!");
+        } else {
+          console.error("Subscription error:", error);
+          toast.error("Failed to subscribe. Please try again later.");
+        }
+      } else {
+        toast.success("You have been successfully subscribed!");
+        setEmail(""); // Clear the input field
+      }
+    } catch (err) {
+      console.error("An unexpected error occurred:", err);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
   return (
     <footer className="bg-background text-foreground">
       <div className="container mx-auto px-4 py-12">
@@ -20,7 +61,7 @@ const Footer = () => {
               </div>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Your trusted source for high-quality auto parts, accessories, and tools. 
+              Your trusted source for high-quality auto parts, accessories, and tools.
               Serving professionals and enthusiasts since 2010.
             </p>
             <div className="flex space-x-4">
@@ -97,16 +138,19 @@ const Footer = () => {
             <p className="text-sm text-muted-foreground">
               Get the latest deals and new arrivals straight to your inbox.
             </p>
-            <div className="space-y-2">
+            <form onSubmit={handleSubscribe} className="space-y-2">
               <Input
                 type="email"
                 placeholder="Enter your email"
                 className="bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isSubscribing}
               />
-              <Button className="w-full">
-                Subscribe
+              <Button type="submit" className="w-full" disabled={isSubscribing}>
+                {isSubscribing ? "Subscribing..." : "Subscribe"}
               </Button>
-            </div>
+            </form>
           </div>
         </div>
 
