@@ -73,7 +73,7 @@ const Footer = () => {
                 <Mail className="h-4 w-4 text-primary group-hover:text-primary-hover transition-colors" />
                 <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">sunvisiontech@gmail.com</span>
               </a>
-              <a href="https://www.google.com/maps/place/EN+BLOCK,+EN+-+9,+EN+Block,+Sector+V,+Bidhannagar,+Kolkata,+West+Bengal+700091/@22.5736107,88.4298151,17z/data=!3m1!4b1!4m6!3m5!1s0x3a0275afb2dd949b:0xcaff4cf09f3240cf!8m2!3d22.5736058!4d88.43239!16s%2Fg%2F11rkm75qlp?entry=ttu&g_ep=EgoyMDI1MDgzMC4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer" className="flex items-start space-x-2 group">
+              <a href="https://www.google.com/maps/place/EN+BLOCK,+EN+-+9,+EN+Block,+Sector+V,+Bidhannagar,+Kolkata,+West+Bengal+700091/@22.5739445,88.4340093,17.16z/data=!4m14!1m7!3m6!1s0x3a0275d29bfb54f9:0xfe248df0c3f4ab15!2sDIGITAL+CAFFE'-kolkata+coworks!8m2!3d22.5821591!4d88.4342347!16s%2Fg%2F11dfswgyxb!3m5!1s0x3a0275afb2dd949b:0xcaff4cf09f3240cf!8m2!3d22.5736058!4d88.43239!16s%2Fg%2F11rkm75qlp?entry=ttu&g_ep=EgoyMDI1MDgzMC4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer" className="flex items-start space-x-2 group">
                 <MapPin className="h-4 w-4 text-primary mt-0.5 group-hover:text-primary-hover transition-colors" />
                 <div className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
                   <p>EN-9, SALTLAKE</p>
