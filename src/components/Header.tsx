@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, User, Heart, Menu, X, ChevronDown, LogOut, LayoutDashboard, TrendingUp } from "lucide-react";
+import { ShoppingCart, User, Heart, Menu, X, ChevronDown, LogOut, LayoutDashboard, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -19,7 +18,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [userSession, setUserSession] = useState(null);
   const [userInfo, setUserInfo] = useState({
     firstName: "",
@@ -162,25 +160,6 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Search bar */}
-        <div className="md:hidden mt-4">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Search parts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-4 pr-12 h-9"
-            />
-            <Button
-              size="sm"
-              className="absolute right-1 top-1 h-7 px-3"
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
         {/* Desktop Layout */}
         <div className="hidden md:flex items-center justify-between">
           {/* Logo */}
@@ -191,22 +170,6 @@ const Header = () => {
               <p className="text-sm text-muted-foreground">Premium Auto Parts</p>
             </div>
           </Link>
-
-          {/* Search bar - Desktop */}
-          <div className="flex-1 max-w-2xl mx-8">
-            <div className="relative w-full">
-              <Input
-                type="text"
-                placeholder="Search by part name, brand, or part number..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-4 pr-12 h-12 text-base"
-              />
-              <Button size="sm" className="absolute right-1 top-1 h-10 px-4">
-                <Search className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
 
           {/* Action buttons - Desktop */}
           <div className="flex items-center space-x-2">

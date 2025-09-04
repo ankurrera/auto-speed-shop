@@ -155,19 +155,6 @@ const handleWishlist = (e: React.MouseEvent) => {
               )}
             </div>
             
-            {/* Wishlist button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute top-2 right-2 h-8 w-8 p-0 bg-background/80 hover:bg-background"
-              onClick={handleWishlist}
-            >
-              <Heart
-                className={`h-4 w-4 ${
-                  isWishlisted(id) ? "fill-red-500 text-red-500" : "text-muted-foreground"
-                }`}
-              />
-            </Button>
           </div>
 
           <div className="p-4">
