@@ -1228,12 +1228,21 @@ if (product.specifications) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="product-category">Category</Label>
-                <Select value={productInfo.category} onValueChange={(value) => setProductInfo({ ...productInfo, category: value })}>
-                  <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (<SelectItem key={category} value={category}>{category}</SelectItem>))}
-                  </SelectContent>
-                </Select>
+                {listingType === 'product' ? (
+                  <Input
+                    id="product-category"
+                    placeholder="e.g., 'Performance Tuning', 'Exterior Accessories'"
+                    value={productInfo.category}
+                    onChange={(e) => setProductInfo({ ...productInfo, category: e.target.value })}
+                  />
+                ) : (
+                  <Select value={productInfo.category} onValueChange={(value) => setProductInfo({ ...productInfo, category: value })}>
+                    <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (<SelectItem key={category} value={category}>{category}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="product-images">Product Images</Label>
@@ -1257,55 +1266,61 @@ if (product.specifications) {
                       ))}
                   </div>
               )}
-              <Separator className="my-8" />
-              <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="part-year">Vehicle Year</Label>
-                  <Select value={productInfo.year} onValueChange={(value) => setProductInfo({ ...productInfo, year: value, make: '', model: '' })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vehicleYears.map(year => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="part-make">Vehicle Make</Label>
-                  <Select value={productInfo.make} onValueChange={(value) => setProductInfo({ ...productInfo, make: value, model: '' })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Make" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vehicleMakes.map(make => (
-                        <SelectItem key={make.name} value={make.name}>
-                          {make.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="part-model">Vehicle Model</Label>
-                  <Select value={productInfo.model} onValueChange={(value) => setProductInfo({ ...productInfo, model: value })} disabled={!productInfo.make}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vehicleModels.map(model => (
-                        <SelectItem key={model.name} value={model.name}>
-                          {model.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+
+              {listingType === 'part' && (
+                <>
+                  <Separator className="my-8" />
+                  <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="part-year">Vehicle Year</Label>
+                      <Select value={productInfo.year} onValueChange={(value) => setProductInfo({ ...productInfo, year: value, make: '', model: '' })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {vehicleYears.map(year => (
+                            <SelectItem key={year} value={year.toString()}>
+                              {year}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="part-make">Vehicle Make</Label>
+                      <Select value={productInfo.make} onValueChange={(value) => setProductInfo({ ...productInfo, make: value, model: '' })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Make" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {vehicleMakes.map(make => (
+                            <SelectItem key={make.name} value={make.name}>
+                              {make.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="part-model">Vehicle Model</Label>
+                      <Select value={productInfo.model} onValueChange={(value) => setProductInfo({ ...productInfo, model: value })} disabled={!productInfo.make}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Model" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {vehicleModels.map(model => (
+                            <SelectItem key={model.name} value={model.name}>
+                              {model.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="product-specs">Specifications</Label>
                 <Textarea id="product-specs" value={productInfo.specifications} onChange={(e) => setProductInfo({ ...productInfo, specifications: e.target.value })} rows={4} placeholder={listingType === "part" ? "Additional specifications, e.g., 'Color: Black'" : "List specifications here."} />
