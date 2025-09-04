@@ -82,11 +82,11 @@ const Shop = () => {
   const [priceRange, setPriceRange] = useState(
     searchParams.get("priceRange") || "all"
   );
-  
+
   const [selectedYear, setSelectedYear] = useState(searchParams.get("year") || "");
   const [selectedMake, setSelectedMake] = useState(searchParams.get("make") || "all");
   const [selectedModel, setSelectedModel] = useState(searchParams.get("model") || "");
-  
+
   const yearSelectRef = useRef<HTMLDivElement>(null);
   const makeSelectRef = useRef<HTMLDivElement>(null);
   const modelSelectRef = useRef<HTMLDivElement>(null);
@@ -108,7 +108,7 @@ const Shop = () => {
         .from('vehicle_years')
         .select('year')
         .order('year', { ascending: false });
-      
+
       if (error) throw error;
       return data.map(item => item.year);
     }
@@ -122,7 +122,7 @@ const Shop = () => {
         .from('vehicle_makes')
         .select('id, name')
         .order('name');
-      
+
       if (error) throw error;
       return data;
     }
@@ -134,7 +134,7 @@ const Shop = () => {
     queryFn: async () => {
       if (!selectedMake || selectedMake === 'all') return [];
       const makeId = vehicleMakes.find(make => make.name === selectedMake)?.id;
-      
+
       if (!makeId) {
         return [];
       }
@@ -144,7 +144,7 @@ const Shop = () => {
         .select('name')
         .eq('make_id', makeId)
         .order('name');
-      
+
       if (error) throw error;
       return data.map(item => item.name);
     },
@@ -176,7 +176,7 @@ const Shop = () => {
 
   const filteredItems = useMemo(() => {
     let items = allItems;
-    
+
     // Apply vehicle fitment filters
     if (selectedYear) {
       items = items.filter(item => {
@@ -229,7 +229,7 @@ const Shop = () => {
     } else if (sortOrder === "price-desc") {
       items.sort((a, b) => Number(b.price) - Number(a.price));
     }
-    
+
     return items;
   }, [allItems, filterMode, priceRange, sortOrder, selectedMake, selectedModel, selectedYear]);
 
@@ -266,17 +266,18 @@ const Shop = () => {
   };
 
   const handleSelectChange = (setter: React.Dispatch<React.SetStateAction<string>>, paramName: string, value: string) => {
-    setter(value);
+    const finalValue = value === 'all' ? '' : value;
+    setter(finalValue);
     setSearchParams(prev => {
-      if (value) {
-        prev.set(paramName, value);
+      if (finalValue) {
+        prev.set(paramName, finalValue);
       } else {
         prev.delete(paramName);
       }
       return prev;
     });
   };
-  
+
   const handleMakeChange = (value: string) => {
     setSelectedMake(value);
     const newModel = value === 'all' ? '' : 'all';
@@ -316,7 +317,7 @@ const Shop = () => {
       });
     }
   };
-  
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Shop All Items</h1>
@@ -328,7 +329,7 @@ const Shop = () => {
             Find the Perfect Fit
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Select value={selectedYear} onValueChange={(value) => handleSelectChange(setSelectedYear, "year", value)}>
+            <Select value={selectedYear || 'all'} onValueChange={(value) => handleSelectChange(setSelectedYear, "year", value)}>
               <SelectTrigger className="h-12">
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
@@ -336,6 +337,7 @@ const Shop = () => {
                 ref={yearSelectRef}
                 onMouseEnter={() => handleMouseEnter(yearSelectRef)}
               >
+                <SelectItem value="all">All Years</SelectItem>
                 {vehicleYears.map(year => (
                   <SelectItem key={year} value={year.toString()}>
                     {year}
@@ -343,7 +345,7 @@ const Shop = () => {
                 ))}
               </SelectContent>
             </Select>
-            
+
             <Select value={selectedMake} onValueChange={handleMakeChange}>
               <SelectTrigger className="h-12">
                 <SelectValue placeholder="Make" />
@@ -360,9 +362,9 @@ const Shop = () => {
                 ))}
               </SelectContent>
             </Select>
-            
-            <Select 
-              value={selectedModel} 
+
+            <Select
+              value={selectedModel}
               onValueChange={(value) => handleSelectChange(setSelectedModel, "model", value)}
               disabled={!selectedMake || selectedMake === 'all'}
             >
@@ -384,7 +386,7 @@ const Shop = () => {
             </div>
           </CardContent>
         </Card>
-      
+
       {/* Filters and Sorting */}
       <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4 my-8">
         <div className="flex items-center space-x-2">
