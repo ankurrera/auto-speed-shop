@@ -33,11 +33,11 @@ const Footer = () => {
       console.log("Supabase response:", { data, error }); // Debug log
 
       if (error) {
-        console.error("Subscription error details:", error);
+        console.error("Subscription error details:", error.message, error.code, error.details, error); // More detailed logging
         if (error.code === '23505') { // PostgreSQL unique constraint violation error code
           toast.info("You are already subscribed!");
         } else {
-          toast.error(`Failed to subscribe: ${error.message}`);
+          toast.error(`Failed to subscribe: ${error.message || 'Unknown error'}`);
         }
       } else {
         console.log("Successfully subscribed:", data);
