@@ -1,4 +1,3 @@
-// src/pages/Contact.tsx
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,15 +7,14 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 
 const Contact = () => {
-  const [statusMessage, setStatusMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     setStatusMessage('');
 
-    // Extract form data
     const formData = {
       firstName: (e.currentTarget.elements.namedItem('firstName') as HTMLInputElement)?.value,
       lastName: (e.currentTarget.elements.namedItem('lastName') as HTMLInputElement)?.value,
@@ -27,7 +25,6 @@ const Contact = () => {
     };
 
     try {
-      // Send data to the API endpoint
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
@@ -38,10 +35,15 @@ const Contact = () => {
 
       if (response.ok) {
         setStatusMessage('Your message has been sent successfully!');
-        e.currentTarget.reset(); // Reset the form
+        e.currentTarget.reset(); // Reset the form fields
       } else {
-        const errorData = await response.json();
-        setStatusMessage(`Error: ${errorData.message}`);
+        let errorMessage = 'Failed to send message.';
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        }
+        setStatusMessage(`Error: ${errorMessage}`);
       }
     } catch (error) {
       console.error('Submission failed:', error);
@@ -53,7 +55,7 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* ... (Hero and Contact Info sections remain the same) ... */}
+      {/* Hero Section */}
       <section className="bg-gradient-hero text-white py-16">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
@@ -66,8 +68,89 @@ const Contact = () => {
       <div className="py-16">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-3 gap-12">
+            {/* Contact Info */}
             <div className="space-y-8">
-              {/* ... (Your existing contact info cards) ... */}
+              <div>
+                <h2 className="text-2xl font-bold mb-6">Get in Touch</h2>
+                <p className="text-muted-foreground mb-8">
+                  Have questions about parts compatibility, installation, or need expert advice? 
+                  Our team is here to help.
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Phone className="h-6 w-6 text-primary-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-1">Phone Support</h3>
+                        <p className="text-muted-foreground text-sm mb-2">
+                          Speak with our parts experts
+                        </p>
+                        <p className="font-medium">(555) 123-PART</p>
+                        <p className="text-sm text-muted-foreground">Mon-Fri 8AM-6PM EST</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Mail className="h-6 w-6 text-primary-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-1">Email Support</h3>
+                        <p className="text-muted-foreground text-sm mb-2">
+                          24/7 email assistance
+                        </p>
+                        <p className="font-medium">support@autopartspro.com</p>
+                        <p className="text-sm text-muted-foreground">Response within 2 hours</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                        <MapPin className="h-6 w-6 text-primary-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-1">Visit Our Store</h3>
+                        <p className="text-muted-foreground text-sm mb-2">
+                          Browse parts in person
+                        </p>
+                        <p className="font-medium">1234 Auto Parts Ave</p>
+                        <p className="font-medium">Detroit, MI 48201</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Clock className="h-6 w-6 text-primary-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-1">Store Hours</h3>
+                        <div className="text-sm space-y-1">
+                          <p><span className="font-medium">Mon-Fri:</span> 8:00 AM - 6:00 PM</p>
+                          <p><span className="font-medium">Saturday:</span> 9:00 AM - 4:00 PM</p>
+                          <p><span className="font-medium">Sunday:</span> Closed</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
 
             {/* Contact Form */}
@@ -128,7 +211,18 @@ const Contact = () => {
                 </CardContent>
               </Card>
 
-              {/* ... (Map Placeholder section remains the same) ... */}
+              {/* Map Placeholder */}
+              <Card className="mt-8">
+                <CardContent className="p-0">
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                    <div className="text-center text-muted-foreground">
+                      <MapPin className="h-16 w-16 mx-auto mb-4" />
+                      <p className="text-lg font-medium">Store Location Map</p>
+                      <p className="text-sm">Interactive map would be embedded here</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
