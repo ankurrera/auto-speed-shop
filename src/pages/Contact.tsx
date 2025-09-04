@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 const Contact = () => {
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -35,7 +36,9 @@ const Contact = () => {
 
       if (response.ok) {
         setStatusMessage('Your message has been sent successfully!');
-        e.currentTarget.reset(); // Reset the form fields
+        if (formRef.current) {
+          formRef.current.reset(); // Use the ref to reset the form
+        }
       } else {
         let errorMessage = 'Failed to send message.';
         const contentType = response.headers.get('content-type');
@@ -165,7 +168,7 @@ const Contact = () => {
                       {statusMessage}
                     </div>
                   )}
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">First Name</Label>
