@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Search, ShoppingCart, User, Heart, Menu, X, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ShoppingCart, User, Heart, Menu, X, ChevronDown, LogOut, LayoutDashboard, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -15,15 +14,78 @@ import { SimpleThemeToggle } from "./SimpleThemeToggle";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import CarWrenchLogo from "@/assets/car-wrench-logo.png";
+import { supabase } from "@/integrations/supabase/client";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [userSession, setUserSession] = useState(null);
+  const [userInfo, setUserInfo] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    is_admin: false,
+    is_seller: false,
+  });
   const location = useLocation();
+  const navigate = useNavigate();
   const { cartItems } = useCart();
   const { wishlistItems } = useWishlist();
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
   const wishlistCount = wishlistItems.length;
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserSession(session);
+      if (session) {
+        fetchUserProfile(session.user.id);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserSession(session);
+      if (session) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setUserInfo({
+          firstName: "",
+          lastName: "",
+          email: "",
+          phone: "",
+          is_admin: false,
+          is_seller: false,
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("first_name, last_name, email, phone, is_admin, is_seller")
+      .eq("user_id", userId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching user profile:", error.message);
+    } else if (data) {
+      setUserInfo({
+        firstName: data.first_name || "",
+        lastName: data.last_name || "",
+        email: data.email || "",
+        phone: data.phone || "",
+        is_admin: data.is_admin || false,
+        is_seller: data.is_seller || false,
+      });
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -42,6 +104,7 @@ const Header = () => {
     { name: "Nissan" },
     { name: "Subaru" },
     { name: "Toyota" },
+    { name: "Ford" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -97,25 +160,6 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Search bar */}
-        <div className="md:hidden mt-4">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Search parts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-4 pr-12 h-9"
-            />
-            <Button
-              size="sm"
-              className="absolute right-1 top-1 h-7 px-3"
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
         {/* Desktop Layout */}
         <div className="hidden md:flex items-center justify-between">
           {/* Logo */}
@@ -126,22 +170,6 @@ const Header = () => {
               <p className="text-sm text-muted-foreground">Premium Auto Parts</p>
             </div>
           </Link>
-
-          {/* Search bar - Desktop */}
-          <div className="flex-1 max-w-2xl mx-8">
-            <div className="relative w-full">
-              <Input
-                type="text"
-                placeholder="Search by part name, brand, or part number..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-4 pr-12 h-12 text-base"
-              />
-              <Button size="sm" className="absolute right-1 top-1 h-10 px-4">
-                <Search className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
 
           {/* Action buttons - Desktop */}
           <div className="flex items-center space-x-2">
@@ -165,11 +193,59 @@ const Header = () => {
                 )}
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" asChild className="relative">
-              <Link to="/account">
-                <User className="h-5 w-5" />
-              </Link>
-            </Button>
+            
+            {userSession ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="relative">
+                    <User className="h-5 w-5" />
+                    <span className="sr-only">User Account Menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/account">Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account/addresses">Addresses</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account/orders">Order History</Link>
+                  </DropdownMenuItem>
+                  
+                  {userInfo.is_admin && userInfo.is_seller && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/account/admin-dashboard">
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          Admin Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/account/analytics-dashboard">
+                          <TrendingUp className="mr-2 h-4 w-4" />
+                          Analytics Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="ghost" size="sm" asChild className="relative">
+                <Link to="/account">
+                  <User className="h-5 w-5" />
+                </Link>
+              </Button>
+            )}
+
             <SimpleThemeToggle />
           </div>
         </div>
