@@ -299,7 +299,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useCart = () => {
   const context = useContext(CartContext);
   if (context === undefined) {
