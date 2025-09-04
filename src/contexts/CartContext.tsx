@@ -56,13 +56,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Use a listener to update the userId whenever auth state changes
   useEffect(() => {
-    // Corrected initial check using await
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setUserId(session?.user?.id ?? null);
-    };
-
-    getSession();
+    });
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user?.id ?? null);
@@ -161,7 +157,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
-      const existingItem = cartItems.find((cartItem) => cartItem.id === item.id);
+      const existingItem = cartItems.find((cartItem) => cartItem.id === item.id && cartItem.is_part === item.is_part);
 
       let upsertData;
       const onConflictColumns = item.is_part ? "user_id, part_id" : "user_id, product_id";
@@ -303,6 +299,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useCart = () => {
   const context = useContext(CartContext);
   if (context === undefined) {
