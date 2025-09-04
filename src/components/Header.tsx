@@ -106,6 +106,7 @@ const Header = () => {
     { name: "Nissan" },
     { name: "Subaru" },
     { name: "Toyota" },
+    { name: "Ford" },
   ];
 
   const isActive = (path: string) => location.pathname === path;

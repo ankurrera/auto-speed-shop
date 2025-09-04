@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import audiLogo from '@/assets/logos/audi.png';
 import bmwLogo from '@/assets/logos/bmw.png';
 import chevroletLogo from '@/assets/logos/chevrolet.png';
-// import fordLogo from '@/assets/logos/ford.png';
+import fordLogo from '@/assets/logos/ford.png';
 import hondaLogo from '@/assets/logos/honda.png';
 import mazdaLogo from '@/assets/logos/mazda.png';
 import mercedesLogo from '@/assets/logos/mercedes.png';
@@ -18,7 +18,7 @@ const logos = [
   { src: audiLogo, alt: 'Audi' },
   { src: bmwLogo, alt: 'BMW' },
   { src: chevroletLogo, alt: 'Chevrolet' },
-//   { src: fordLogo, alt: 'Ford' },
+  { src: fordLogo, alt: 'Ford' },
   { src: hondaLogo, alt: 'Honda' },
   { src: mazdaLogo, alt: 'Mazda' },
   { src: mercedesLogo, alt: 'Mercedes' },
