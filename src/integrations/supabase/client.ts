@@ -2,13 +2,11 @@ import { createClient } from "@supabase/supabase-js";
 
 // Ensure a fallback for environments where Vercel might not inject the variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY; // Fixed: use PUBLISHABLE_KEY instead of ANON_KEY
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   // This error will be visible in the Vercel deployment logs
   console.error("Supabase URL and/or Anon Key not found in environment variables.");
-  console.error("VITE_SUPABASE_URL:", supabaseUrl);
-  console.error("VITE_SUPABASE_PUBLISHABLE_KEY:", supabaseAnonKey);
   throw new Error("Supabase credentials not found. Please check your Vercel environment variables.");
 }
 
