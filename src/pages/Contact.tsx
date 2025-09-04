@@ -76,7 +76,7 @@ const Contact = () => {
               <div>
                 <h2 className="text-2xl font-bold mb-6">Get in Touch</h2>
                 <p className="text-muted-foreground mb-8">
-                  Have questions about parts compatibility, installation, or need expert advice? 
+                  Have questions about parts compatibility, installation, or need expert advice?
                   Our team is here to help.
                 </p>
               </div>
