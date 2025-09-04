@@ -4,8 +4,58 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useState, useRef } from "react";
 
 const Contact = () => {
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setStatusMessage('');
+
+    const formData = {
+      firstName: (e.currentTarget.elements.namedItem('firstName') as HTMLInputElement)?.value,
+      lastName: (e.currentTarget.elements.namedItem('lastName') as HTMLInputElement)?.value,
+      email: (e.currentTarget.elements.namedItem('email') as HTMLInputElement)?.value,
+      phone: (e.currentTarget.elements.namedItem('phone') as HTMLInputElement)?.value,
+      subject: (e.currentTarget.elements.namedItem('subject') as HTMLInputElement)?.value,
+      message: (e.currentTarget.elements.namedItem('message') as HTMLTextAreaElement)?.value,
+    };
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        setStatusMessage('Your message has been sent successfully!');
+        if (formRef.current) {
+          formRef.current.reset(); // Use the ref to reset the form
+        }
+      } else {
+        let errorMessage = 'Failed to send message.';
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        }
+        setStatusMessage(`Error: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error('Submission failed:', error);
+      setStatusMessage('An unexpected error occurred. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -26,7 +76,7 @@ const Contact = () => {
               <div>
                 <h2 className="text-2xl font-bold mb-6">Get in Touch</h2>
                 <p className="text-muted-foreground mb-8">
-                  Have questions about parts compatibility, installation, or need expert advice? 
+                  Have questions about parts compatibility, installation, or need expert advice?
                   Our team is here to help.
                 </p>
               </div>
@@ -113,45 +163,52 @@ const Contact = () => {
                   <CardTitle className="text-2xl">Send us a Message</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <form className="space-y-6">
+                  {statusMessage && (
+                    <div className={`mb-4 p-3 rounded ${statusMessage.startsWith('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                      {statusMessage}
+                    </div>
+                  )}
+                  <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">First Name</Label>
-                        <Input id="firstName" placeholder="Enter your first name" />
+                        <Input id="firstName" name="firstName" placeholder="Enter your first name" required />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="lastName">Last Name</Label>
-                        <Input id="lastName" placeholder="Enter your last name" />
+                        <Input id="lastName" name="lastName" placeholder="Enter your last name" required />
                       </div>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" placeholder="Enter your email" />
+                        <Input id="email" name="email" type="email" placeholder="Enter your email" required />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="phone">Phone</Label>
-                        <Input id="phone" type="tel" placeholder="Enter your phone number" />
+                        <Input id="phone" name="phone" type="tel" placeholder="Enter your phone number" />
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="subject">Subject</Label>
-                      <Input id="subject" placeholder="What can we help you with?" />
+                      <Input id="subject" name="subject" placeholder="What can we help you with?" required />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="message">Message</Label>
                       <Textarea
                         id="message"
+                        name="message"
                         placeholder="Tell us about your vehicle, the part you need, or any questions you have..."
                         rows={6}
+                        required
                       />
                     </div>
 
-                    <Button type="submit" size="lg" className="w-full">
-                      Send Message
+                    <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? "Sending..." : "Send Message"}
                     </Button>
                   </form>
                 </CardContent>
