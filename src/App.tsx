@@ -1,3 +1,4 @@
+// ankurrera/auto-speed-shop/auto-speed-shop-dc8d047f644a887aa7568eb0a88e87e2ca711b4f/src/App.tsx
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -57,7 +58,9 @@ const App = () => {
                     <Route path="/account/orders" element={<Account />} />
                     <Route path="/account/admin-dashboard" element={<Account />} />
                     <Route path="/account/analytics-dashboard" element={<AnalyticsDashboard />} />
-                    <Route path="/account/reset-password" element={<ResetPassword />} />
+                    {/* The next line is redundant, remove it to prevent routing issues */}
+                    {/* <Route path="/account/reset-password" element={<ResetPassword />} /> */}
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/products/:id" element={<ProductDetails />} />
                     <Route path="*" element={<NotFound />} />

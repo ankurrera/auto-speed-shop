@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/use-toast";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Database } from "@/database.types";
 import { v4 as uuidv4 } from 'uuid';
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -99,7 +100,8 @@ const Account = () => {
     postal_code: "",
     country: "US",
     phone: "",
-    type: "shipping"
+    type: "shipping",
+    is_default: false,
   });
 
   const [orders, setOrders] = useState([]);
@@ -930,39 +932,81 @@ if (product.specifications) {
     }
   };
 
+  const handleSetDefaultAddress = async (addressId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+  
+    // First, set all other addresses to not be the default
+    const { error: unsetError } = await supabase
+      .from('addresses')
+      .update({ is_default: false })
+      .eq('user_id', session.user.id);
+  
+    if (unsetError) {
+      toast({ title: "Error", description: "Could not unset other default addresses.", variant: "destructive" });
+      return;
+    }
+  
+    // Then, set the selected address as the default
+    const { error: setError } = await supabase
+      .from('addresses')
+      .update({ is_default: true })
+      .eq('id', addressId);
+  
+    if (setError) {
+      toast({ title: "Error", description: "Could not set the new default address.", variant: "destructive" });
+    } else {
+      toast({ title: "Success!", description: "Default address updated." });
+      fetchUserAddresses(session.user.id);
+    }
+  };
+
   const handleAddressFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-
+  
+    if (formAddress.is_default) {
+      // If the new address is set to default, unset all other addresses for the user
+      const { error: unsetError } = await supabase
+        .from('addresses')
+        .update({ is_default: false })
+        .eq('user_id', session.user.id);
+  
+      if (unsetError) {
+        toast({ title: "Error", description: "Could not unset other default addresses.", variant: "destructive" });
+        return;
+      }
+    }
+  
     const addressToSave = { ...formAddress, user_id: session.user.id };
-
+  
     if (editingAddressId) {
       const { error } = await supabase
         .from("addresses")
         .update(addressToSave)
         .eq("id", editingAddressId);
-
+  
       if (error) {
-      console.error("Error updating address:", error.message);
+        console.error("Error updating address:", error.message);
         alert("Failed to update address.");
       }
     } else {
       const { error } = await supabase
         .from("addresses")
         .insert([addressToSave]);
-
+  
       if (error) {
         console.error("Error adding address:", error.message);
         alert("Failed to add new address.");
       }
     }
-
+  
     setShowAddressForm(false);
     setEditingAddressId(null);
     setFormAddress({
       first_name: "", last_name: "", address_line_1: "", address_line_2: "",
-      city: "", state: "", postal_code: "", country: "US", phone: "", type: "shipping"
+      city: "", state: "", postal_code: "", country: "US", phone: "", type: "shipping", is_default: false
     });
     fetchUserAddresses(session.user.id);
   };
@@ -1044,7 +1088,7 @@ if (product.specifications) {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                            supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
+                            redirectTo: `${window.location.origin}/reset-password`,
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
@@ -1487,6 +1531,10 @@ if (product.specifications) {
         <Button onClick={() => {
           setShowAddressForm(true);
           setEditingAddressId(null);
+          setFormAddress({
+            first_name: "", last_name: "", address_line_1: "", address_line_2: "",
+            city: "", state: "", postal_code: "", country: "US", phone: "", type: "shipping", is_default: false
+          });
         }}>
           Add New Address
         </Button>
@@ -1575,6 +1623,16 @@ if (product.specifications) {
                   required
                 />
               </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_default"
+                  checked={formAddress.is_default}
+                  onCheckedChange={(checked) =>
+                    setFormAddress({ ...formAddress, is_default: !!checked })
+                  }
+                />
+                <Label htmlFor="is_default">Set as default address</Label>
+              </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setShowAddressForm(false)}>Cancel</Button>
                 <Button type="submit">{editingAddressId ? "Save Changes" : "Add Address"}</Button>
@@ -1609,6 +1667,9 @@ if (product.specifications) {
                   <div className="flex space-x-2 mt-4">
                     <Button variant="outline" size="sm" onClick={() => handleEditAddress(address)}>Edit</Button>
                     <Button variant="outline" size="sm" onClick={() => handleDeleteAddress(address.id)}>Delete</Button>
+                    {!address.is_default && (
+                      <Button variant="secondary" size="sm" onClick={() => handleSetDefaultAddress(address.id)}>Set as Default</Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
