@@ -38,12 +38,12 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <ScrollToTop />
-          <CartProvider>
-            <WishlistProvider>
-              <div className="min-h-screen flex flex-col">
-                <Header />
+          <BrowserRouter>
+            <ScrollToTop />
+            <CartProvider>
+              <WishlistProvider>
+                <div className="min-h-screen flex flex-col">
+                  <Header />
                 <main className="flex-1">
                   <Routes>
                     <Route path="/" element={<Home />} />
@@ -58,6 +58,7 @@ const App = () => {
                     <Route path="/account/admin-dashboard" element={<Account />} />
                     <Route path="/account/analytics-dashboard" element={<AnalyticsDashboard />} />
                     <Route path="/account/reset-password" element={<ResetPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/products/:id" element={<ProductDetails />} />
                     <Route path="*" element={<NotFound />} />

@@ -9,7 +9,7 @@ interface SupabaseWishlistItem {
   user_id: string;
   product_id: string | null;
   part_id: string | null;
-  // Single objects, not arrays
+
   products: {
     name: string;
     brand: string;
@@ -63,7 +63,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchWishlistItems = async (): Promise<WishlistItem[]> => {
     if (!userId) return [];
-    
+
     const { data, error } = await supabase
       .from('wishlist')
       .select(`
@@ -204,6 +204,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useWishlist = () => {
   const context = useContext(WishlistContext);
   if (context === undefined) {
