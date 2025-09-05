@@ -1011,7 +1011,7 @@ if (product.specifications) {
     fetchUserAddresses(session.user.id);
   };
 
-  if (!isLoggedIn || view === "reset") {
+  if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-16">
@@ -1021,7 +1021,6 @@ if (product.specifications) {
                 <CardTitle className="text-2xl">
                   {view === "login" && "Login to Your Account"}
                   {view === "signup" && "Create a New Account"}
-                  {view === "reset" && "Reset Your Password"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1088,7 +1087,7 @@ if (product.specifications) {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                            supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
+                            redirectTo: `${window.location.origin}/reset-password`,
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);
@@ -1108,7 +1107,7 @@ if (product.specifications) {
                       </p>
                     </div>
                   </>
-                ) : view === "signup" ? (
+                ) : (
                   <>
                     <form onSubmit={handleSignup} className="space-y-4">
                       <div className="grid md:grid-cols-2 gap-4">
@@ -1180,8 +1179,6 @@ if (product.specifications) {
                       </p>
                     </div>
                   </>
-                ) : (
-                  <PasswordResetForm />
                 )}
               </CardContent>
             </Card>
@@ -1220,6 +1217,8 @@ if (product.specifications) {
         return renderOrdersContent();
       case 'admin-dashboard':
         return renderAdminDashboardContent();
+      case 'analytics-dashboard':
+        return <AnalyticsDashboard />;
       default:
         return renderProfileContent();
     }
