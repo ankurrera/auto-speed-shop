@@ -1088,7 +1088,7 @@ if (product.specifications) {
                         const emailInput = prompt("Please enter your email address to reset your password:");
                         if (emailInput) {
                            supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: 'https://auto-speed-shop-qsal.vercel.app/account',
+                            redirectTo: `${window.location.origin}/reset-password`,
                           }).then(({ error }) => {
                             if (error) {
                               alert("Error sending password reset email: " + error.message);

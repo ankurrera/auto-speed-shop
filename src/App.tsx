@@ -38,12 +38,12 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <ScrollToTop />
-          <CartProvider>
-            <WishlistProvider>
-              <div className="min-h-screen flex flex-col">
-                <Header />
+          <BrowserRouter>
+            <ScrollToTop />
+            <CartProvider>
+              <WishlistProvider>
+                <div className="min-h-screen flex flex-col">
+                  <Header />
                 <main className="flex-1">
                   <Routes>
                     <Route path="/" element={<Home />} />
