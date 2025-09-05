@@ -1,7 +1,10 @@
+// ankurrera/auto-speed-shop/auto-speed-shop-dc8d047f644a887aa7568eb0a88e87e2ca711b4f/src/pages/ResetPassword.tsx
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const ResetPassword = () => {
     const [newPassword, setNewPassword] = useState('');
@@ -10,6 +13,7 @@ const ResetPassword = () => {
     const [statusMessage, setStatusMessage] = useState('Please enter your new password.');
     const [showForm, setShowForm] = useState(false);
     const [error, setError] = useState('');
+    const navigate = useNavigate(); // Initialize useNavigate
 
     useEffect(() => {
         // Log URL parameters for debugging
@@ -73,8 +77,7 @@ const ResetPassword = () => {
             console.error(error);
         } else {
             setStatusMessage("Password updated successfully! You will be redirected to the login page.");
-            // Removed setTimeout for instant redirection
-            window.location.href = '/account'; 
+            navigate('/account'); // Use navigate instead of window.location.href
         }
         setIsUpdating(false);
     };
