@@ -1,3 +1,4 @@
+// src/pages/Checkout.tsx
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,15 @@ import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 
 const TAX_RATE = 0.0825;
 
@@ -17,6 +27,8 @@ const Checkout = () => {
   const { cartItems, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
 
   const [shippingInfo, setShippingInfo] = useState({
     firstName: "",
@@ -30,10 +42,58 @@ const Checkout = () => {
   const [isFormValid, setIsFormValid] = useState(false);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
+  const fetchUserAddresses = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const { data, error } = await supabase
+      .from("addresses")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching addresses:", error.message);
+    } else {
+      setAddresses(data);
+      const defaultAddress = data.find(addr => addr.is_default);
+      if (defaultAddress) {
+        setSelectedAddress(defaultAddress.id);
+        setShippingInfo({
+          firstName: defaultAddress.first_name,
+          lastName: defaultAddress.last_name,
+          address: defaultAddress.address_line_1,
+          city: defaultAddress.city,
+          state: defaultAddress.state,
+          zip: defaultAddress.postal_code,
+        })
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserAddresses();
+  }, [fetchUserAddresses]);
+
   const handleShippingChange = (e) => {
     const { id, value } = e.target;
     setShippingInfo((prev) => ({ ...prev, [id]: value }));
   };
+  
+  const handleAddressSelect = (addressId) => {
+    const address = addresses.find(addr => addr.id === addressId);
+    if (address) {
+      setSelectedAddress(address.id);
+      setShippingInfo({
+        firstName: address.first_name,
+        lastName: address.last_name,
+        address: address.address_line_1,
+        city: address.city,
+        state: address.state,
+        zip: address.postal_code,
+      });
+    }
+  };
+
 
   const isShippingInfoValid = useCallback(() => {
     return Object.values(shippingInfo).every(field => field.trim() !== "");
@@ -112,6 +172,23 @@ const Checkout = () => {
                 <CardTitle>Shipping Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+              {addresses.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="saved-addresses">Select a saved address</Label>
+                    <Select onValueChange={handleAddressSelect} value={selectedAddress}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an address" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {addresses.map((address) => (
+                          <SelectItem key={address.id} value={address.id}>
+                            {address.address_line_1}, {address.city} {address.is_default && "(Default)"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
