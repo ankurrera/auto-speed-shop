@@ -415,6 +415,7 @@ export type Database = {
           name: string
           part_number: string | null
           price: number
+          product_type: string
           seller_id: string | null
           sku: string | null
           specifications: string | null
@@ -441,6 +442,7 @@ export type Database = {
           name: string
           part_number?: string | null
           price: number
+          product_type?: string
           seller_id?: string | null
           sku?: string | null
           specifications?: string | null
@@ -467,6 +469,7 @@ export type Database = {
           name?: string
           part_number?: string | null
           price?: number
+          product_type?: string
           seller_id?: string | null
           sku?: string | null
           specifications?: string | null
