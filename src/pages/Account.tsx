@@ -68,8 +68,7 @@ const Account = () => {
   const [phone, setPhone] = useState("");
   const [loginMode, setLoginMode] = useState("user");
   const [adminExists, setAdminExists] = useState(true);
-  const [partSearchQuery, setPartSearchQuery] = useState("");
-  const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [newSellerName, setNewSellerName] = useState("");
   const [newSellerAddress, setNewSellerAddress] = useState("");
@@ -779,7 +778,7 @@ if (product.specifications) {
         vin: specs.vin || ""
     });
     setModalOpen(true);
-};
+  };
 
   const handleEditPart = (part: PartWithSpecs) => {
     setEditingProductId(part.id);
@@ -1183,17 +1182,17 @@ if (product.specifications) {
   };
   
   const renderAdminDashboardContent = () => {
+    const lowercasedQuery = searchQuery.toLowerCase();
+
     const filteredParts = parts.filter(part => {
-      const searchTerm = partSearchQuery.toLowerCase();
       const partSpecs = JSON.stringify(part.specifications || {});
       const partString = `${part.name} ${part.brand} ${part.part_number} ${partSpecs}`.toLowerCase();
-      return partString.includes(searchTerm);
+      return partString.includes(lowercasedQuery);
     });
 
     const filteredProducts = products.filter(product => {
-      const searchTerm = productSearchQuery.toLowerCase();
       const productString = `${product.name} ${product.brand} ${product.category} ${product.part_number} ${product.sku} ${product.specifications || ''}`.toLowerCase();
-      return productString.includes(searchTerm);
+      return productString.includes(lowercasedQuery);
     });
 
     return (
@@ -1344,83 +1343,64 @@ if (product.specifications) {
         <Separator className="my-8" />
 
         <div className="flex items-center space-x-4 mb-4">
-          <h2 className="text-2xl font-bold">Your Listed Parts</h2>
+          <h2 className="text-2xl font-bold">Your Listed Parts and Products</h2>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search parts or products..."
               className="pl-9"
-              value={partSearchQuery}
-              onChange={(e) => setPartSearchQuery(e.target.value)}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
         <div className="space-y-4">
-          {filteredParts.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">No parts found matching your search.</div>
+          {filteredParts.length === 0 && filteredProducts.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">No items found matching your search.</div>
           ) : (
-            filteredParts.map((part) => (
-              <Card key={part.id}>
-                <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-                  <div className="flex-1 space-y-1">
-                    <h3 className="font-semibold text-lg">{part.name} (Part)</h3>
-                    <p className="text-muted-foreground text-sm">{part.brand}</p>
-                    <p className="text-lg font-bold">${part.price}</p>
-                    <p className="text-sm">In Stock: {part.stock_quantity}</p>
-                    <p className={`text-sm font-medium ${part.is_active ? 'text-green-500' : 'text-yellow-500'}`}>
-                      Status: {part.is_active ? 'Active' : 'Archived'}
-                    </p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEditPart(part)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleArchivePart(part.id, part.is_active)}>
-                      <Archive className="h-4 w-4 mr-2" />
-                      {part.is_active ? 'Archive' : 'Unarchive'}
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeletePart(part.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-
-        <Separator className="my-8" />
-
-        <div className="flex items-center space-x-4 mb-4">
-          <h2 className="text-2xl font-bold">Your Listed Products</h2>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search products..."
-              className="pl-9"
-              value={productSearchQuery}
-              onChange={(e) => setProductSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="space-y-4">
-          {filteredProducts.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">No products found matching your search.</div>
-          ) : (
-            filteredProducts.map((product) => (
-              <Card key={product.id}>
-                <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-                  <div className="flex-1 space-y-1">
-                    <h3 className="font-semibold text-lg">{product.name} (Product)</h3>
-                    <p className="text-muted-foreground text-sm">{product.category}</p>
-                    <p className="text-lg font-bold">${product.price}</p>
-                    <p className="text-sm">In Stock: {product.stock_quantity}</p>
-                    <p className={`text-sm font-medium ${product.is_active ? 'text-green-500' : 'text-yellow-500'}`}>Status: {product.is_active ? 'Active' : 'Archived'}</p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleArchiveProduct(product.id, product.is_active)}><Archive className="h-4 w-4 mr-2" />{product.is_active ? 'Archive' : 'Unarchive'}</Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+            <>
+              {filteredParts.map((part) => (
+                <Card key={part.id}>
+                  <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+                    <div className="flex-1 space-y-1">
+                      <h3 className="font-semibold text-lg">{part.name} (Part)</h3>
+                      <p className="text-muted-foreground text-sm">{part.brand}</p>
+                      <p className="text-lg font-bold">${part.price}</p>
+                      <p className="text-sm">In Stock: {part.stock_quantity}</p>
+                      <p className={`text-sm font-medium ${part.is_active ? 'text-green-500' : 'text-yellow-500'}`}>
+                        Status: {part.is_active ? 'Active' : 'Archived'}
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEditPart(part)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleArchivePart(part.id, part.is_active)}>
+                        <Archive className="h-4 w-4 mr-2" />
+                        {part.is_active ? 'Archive' : 'Unarchive'}
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeletePart(part.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {filteredProducts.map((product) => (
+                <Card key={product.id}>
+                  <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+                    <div className="flex-1 space-y-1">
+                      <h3 className="font-semibold text-lg">{product.name} (Product)</h3>
+                      <p className="text-muted-foreground text-sm">{product.category}</p>
+                      <p className="text-lg font-bold">${product.price}</p>
+                      <p className="text-sm">In Stock: {product.stock_quantity}</p>
+                      <p className={`text-sm font-medium ${product.is_active ? 'text-green-500' : 'text-yellow-500'}`}>Status: {product.is_active ? 'Active' : 'Archived'}</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleArchiveProduct(product.id, product.is_active)}><Archive className="h-4 w-4 mr-2" />{product.is_active ? 'Archive' : 'Unarchive'}</Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </>
           )}
         </div>
       </div>
