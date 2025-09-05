@@ -10,6 +10,7 @@ import AddressesSection from "@/components/account/AddressesSection";
 import OrdersSection from "@/components/account/OrdersSection";
 import AdminDashboardSection from "@/components/account/AdminDashboardSection";
 import AnalyticsDashboard from "./AnalyticsDashboard";
+import LoginSignupSection from "@/components/account/LoginSignupSection";
 import {
   fetchUserAddresses,
   fetchUserOrders,
@@ -17,20 +18,10 @@ import {
   checkSellerExists,
 } from "@/components/account/utils";
 
-// Add any type imports as needed
-
 const Account = () => {
   // ---- State ----
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [view, setView] = useState("login");
-  const [showPassword, setShowPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [loginMode, setLoginMode] = useState("user");
   const [adminExists, setAdminExists] = useState(true);
   const [userInfo, setUserInfo] = useState({
     firstName: "",
@@ -65,7 +56,7 @@ const Account = () => {
   const navigate = useNavigate();
 
   // ---- Fetch and Session logic ----
-  const fetchAndSetUserData = useCallback(async (userId) => {
+  const fetchAndSetUserData = useCallback(async (userId: string) => {
     setIsLoading(true);
     await fetchUserProfile(userId, setUserInfo, setAdminExists);
     await fetchUserAddresses(userId, setAddresses);
@@ -76,13 +67,15 @@ const Account = () => {
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') setView("reset");
       if (session) {
         setIsLoggedIn(true);
         fetchAndSetUserData(session.user.id);
       } else {
         setIsLoggedIn(false);
-        setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false, is_seller: false });
+        setUserInfo({
+          firstName: "", lastName: "", email: "", phone: "",
+          is_admin: false, is_seller: false
+        });
         setAddresses([]);
         setOrders([]);
         setIsLoading(false);
@@ -105,18 +98,27 @@ const Account = () => {
     };
   }, [fetchAndSetUserData]);
 
-  // ---- Auth Handlers (simplified for brevity, can be expanded as needed) ----
+  // ---- Logout ----
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
-    setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false, is_seller: false });
+    setUserInfo({
+      firstName: "", lastName: "", email: "", phone: "",
+      is_admin: false, is_seller: false
+    });
     navigate("/");
   };
 
-  // ---- Render logic ----
+  // ---- Render ----
   if (!isLoggedIn) {
-    // You can extract login/signup to a separate component if desired
-    return <div>Login or Signup forms here...</div>;
+    return (
+      <LoginSignupSection
+        adminExists={adminExists}
+        setAdminExists={setAdminExists}
+        setIsLoggedIn={setIsLoggedIn}
+        fetchAndSetUserData={fetchAndSetUserData}
+      />
+    );
   }
   if (isLoading) {
     return <div>Loading...</div>;
