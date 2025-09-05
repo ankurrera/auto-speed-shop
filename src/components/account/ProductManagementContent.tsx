@@ -381,7 +381,8 @@ const ProductManagementContent = ({ userInfo }: ProductManagementContentProps) =
   // Edit handlers
   const handleEditProduct = (product: Product | Part) => {
     setEditingProductId(product.id);
-    setListingType('seller_id' in product ? 'part' : 'product');
+    // Check if it's a product by looking for product_type field
+    setListingType('product_type' in product ? 'product' : 'part');
 
     let specs: PartSpecifications = {};
 
