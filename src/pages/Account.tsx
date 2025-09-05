@@ -738,7 +738,7 @@ const Account = () => {
             variant: "destructive"
         });
     }
-};
+  };
 
   const handleEditProduct = (product: Product | Part) => {
     setEditingProductId(product.id);
