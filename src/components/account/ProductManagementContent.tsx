@@ -72,6 +72,7 @@ const ProductManagementContent = ({ userInfo }: ProductManagementContentProps) =
         return null;
       }
       
+      // Update local state for backward compatibility with form submissions
       setSellerId(data.id);
       return data;
     },
@@ -80,34 +81,34 @@ const ProductManagementContent = ({ userInfo }: ProductManagementContentProps) =
 
   // Fetch products
   const { data: products = [] } = useQuery({
-    queryKey: ['seller-products', sellerId],
+    queryKey: ['seller-products', sellerData?.id],
     queryFn: async () => {
-      if (!sellerId) return [];
+      if (!sellerData?.id) return [];
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('seller_id', sellerId);
+        .eq('seller_id', sellerData.id);
       
       if (error) throw error;
       return data as Product[];
     },
-    enabled: !!sellerId,
+    enabled: !!sellerData?.id,
   });
 
   // Fetch parts
   const { data: parts = [] } = useQuery({
-    queryKey: ['seller-parts', sellerId],
+    queryKey: ['seller-parts', sellerData?.id],
     queryFn: async () => {
-      if (!sellerId) return [];
+      if (!sellerData?.id) return [];
       const { data, error } = await supabase
         .from('parts')
         .select('*')
-        .eq('seller_id', sellerId);
+        .eq('seller_id', sellerData.id);
       
       if (error) throw error;
       return data as PartWithSpecs[];
     },
-    enabled: !!sellerId,
+    enabled: !!sellerData?.id,
   });
 
   // Fetch vehicle data
@@ -286,8 +287,8 @@ const ProductManagementContent = ({ userInfo }: ProductManagementContentProps) =
         specifications: "", category: "", make: "", model: "", year: "", vin: "",
       });
       setProductFiles([]);
-      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
-      queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
+      queryClient.invalidateQueries({ queryKey: ['seller-products', sellerData?.id] });
+      queryClient.invalidateQueries({ queryKey: ['seller-parts', sellerData?.id] });
     };
 
     try {
@@ -444,7 +445,7 @@ const ProductManagementContent = ({ userInfo }: ProductManagementContentProps) =
     },
     onSuccess: () => {
       toast.success("Product has been deleted.");
-      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
+      queryClient.invalidateQueries({ queryKey: ['seller-products', sellerData?.id] });
     },
     onError: (error: Error) => {
       toast.error("Failed to delete product.");
@@ -458,7 +459,7 @@ const ProductManagementContent = ({ userInfo }: ProductManagementContentProps) =
     },
     onSuccess: () => {
       toast.success("Part has been deleted.");
-      queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
+      queryClient.invalidateQueries({ queryKey: ['seller-parts', sellerData?.id] });
     },
     onError: (error: Error) => {
       toast.error("Failed to delete part.");
@@ -485,7 +486,7 @@ const ProductManagementContent = ({ userInfo }: ProductManagementContentProps) =
     },
     onSuccess: (_, variables) => {
       toast.success(`Product has been ${variables.is_active ? 'archived' : 'unarchived'}.`);
-      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
+      queryClient.invalidateQueries({ queryKey: ['seller-products', sellerData?.id] });
     },
     onError: (error: Error) => {
       toast.error("Failed to update product status.");
@@ -503,7 +504,7 @@ const ProductManagementContent = ({ userInfo }: ProductManagementContentProps) =
     },
     onSuccess: (_, variables) => {
       toast.success(`Part has been ${variables.is_active ? 'archived' : 'unarchived'}.`);
-      queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
+      queryClient.invalidateQueries({ queryKey: ['seller-parts', sellerData?.id] });
     },
     onError: (error: Error) => {
       toast.error("Failed to update part status.");
