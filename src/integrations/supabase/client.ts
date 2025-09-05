@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 // Ensure a fallback for environments where Vercel might not inject the variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   // This error will be visible in the Vercel deployment logs
