@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import CarWrenchLogo from "@/assets/car-wrench-logo.png";
-import { useState } from "react"; //
-import { supabase } from "@/integrations/supabase/client"; //
-import { toast } from "sonner"; //
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
@@ -14,30 +14,34 @@ const Footer = () => {
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Form submitted with email:", email);
     setIsSubscribing(true);
 
-    if (!email) {
+    if (!email || !email.includes("@")) {
       toast.error("Please enter a valid email address.");
       setIsSubscribing(false);
       return;
     }
 
     try {
+      console.log("Attempting to insert email:", email);
       const { data, error } = await supabase
         .from("subscribers")
-        .insert([{ email }])
-        .select();
+        .insert([{ email: email.trim().toLowerCase() }]);
+
+      console.log("Supabase response:", { data, error });
 
       if (error) {
-        if (error.code === '23505') { // PostgreSQL unique constraint violation error code
+        console.error("Subscription error details:", error.message, error.code, error.details, error);
+        if (error.code === '23505') {
           toast.info("You are already subscribed!");
         } else {
-          console.error("Subscription error:", error);
-          toast.error("Failed to subscribe. Please try again later.");
+          toast.error(`Failed to subscribe: ${error.message || 'Unknown error'}`);
         }
       } else {
+        console.log("Successfully subscribed:", data);
         toast.success("You have been successfully subscribed!");
-        setEmail(""); // Clear the input field
+        setEmail("");
       }
     } catch (err) {
       console.error("An unexpected error occurred:", err);
