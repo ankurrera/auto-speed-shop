@@ -11,11 +11,9 @@ import {
   ProfileContent,
   AddressesContent,
   OrdersContent,
+  AdminDashboardContent,
   UserInfo
 } from "@/components/account";
-
-// Import the AdminDashboard content temporarily - this will be extracted later
-import { OldAdminDashboard } from "./OldAdminDashboard";
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -146,8 +144,7 @@ const Account = () => {
       case 'orders':
         return <OrdersContent userId={userId} />;
       case 'admin-dashboard':
-        // TODO: Extract AdminDashboardContent component
-        return <OldAdminDashboard userInfo={userInfo} />;
+        return <AdminDashboardContent userInfo={userInfo} />;
       case 'analytics-dashboard':
         return <AnalyticsDashboard />;
       default:
