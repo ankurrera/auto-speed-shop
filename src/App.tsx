@@ -59,7 +59,7 @@ const App = () => {
                     <Route path="/account/*" element={<Account />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/products/:id" element={<ProductDetails />} />
-                    <Route path="/new-arrivals" element={<NewArrivals />} /> {/* Add this line */}
+
                     <Route path="/account/analytics-dashboard" element={<AnalyticsDashboard />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
