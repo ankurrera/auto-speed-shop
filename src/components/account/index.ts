@@ -4,4 +4,5 @@ export { default as ProfileContent } from './ProfileContent';
 export { default as AddressesContent } from './AddressesContent';
 export { default as OrdersContent } from './OrdersContent';
 export { default as AdminDashboardContent } from './AdminDashboardContent';
+export { default as ProductManagementContent } from './ProductManagementContent';
 export * from './types';

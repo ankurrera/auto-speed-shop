@@ -1,13 +1,31 @@
-import { Shield, Users, ShoppingCart, Package, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { Shield, Users, ShoppingCart, Package, TrendingUp, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UserInfo } from "./types";
+import ProductManagementContent from "./ProductManagementContent";
 
 interface AdminDashboardContentProps {
   userInfo: UserInfo;
 }
 
 const AdminDashboardContent = ({ userInfo }: AdminDashboardContentProps) => {
+  const [currentView, setCurrentView] = useState<'dashboard' | 'products'>('dashboard');
+
+  if (currentView === 'products') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" onClick={() => setCurrentView('dashboard')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          <h1 className="text-2xl font-bold">Product Management</h1>
+        </div>
+        <ProductManagementContent userInfo={userInfo} />
+      </div>
+    );
+  }
   return (
     <div className="space-y-6">
       <Card>
@@ -105,7 +123,7 @@ const AdminDashboardContent = ({ userInfo }: AdminDashboardContentProps) => {
                 </div>
               </Button>
               
-              <Button variant="outline" className="justify-start h-auto p-4" disabled>
+              <Button variant="outline" className="justify-start h-auto p-4" onClick={() => setCurrentView('products')}>
                 <Package className="h-4 w-4 mr-2" />
                 <div className="text-left">
                   <div className="font-medium">Manage Products</div>
