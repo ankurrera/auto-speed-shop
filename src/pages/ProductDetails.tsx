@@ -5,9 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { toast } from "sonner";
 import {
   Carousel,
@@ -26,6 +27,7 @@ type Part = Database['public']['Tables']['parts']['Row'];
 const ProductDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { addToCart } = useCart();
+  const { isWishlisted, toggleWishlist } = useWishlist();
   const [dominantColor, setDominantColor] = useState('bg-muted');
 
   const fetchProduct = async (productId: string) => {
@@ -125,6 +127,18 @@ const ProductDetails = () => {
     toast.success(`${product.name} added to cart!`);
   };
 
+  const handleWishlist = () => {
+    const wishlistData = {
+      id: product.id,
+      name: product.name,
+      brand: 'brand' in product ? product.brand || '' : '',
+      price: product.price,
+      image: product.image_urls[0],
+      is_part: product.type === 'part'
+    };
+    toggleWishlist(wishlistData);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid md:grid-cols-2 gap-12">
@@ -165,7 +179,19 @@ const ProductDetails = () => {
           <Separator />
           
           <div className="flex items-center space-x-4">
-            <Button className="w-full sm:w-auto" onClick={handleAddToCart}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleWishlist}
+              className={cn(
+                "w-12 h-12",
+                isWishlisted(product.id) ? "bg-red-500 text-white hover:bg-red-600" : "hover:bg-accent hover:text-accent-foreground"
+              )}
+              title={isWishlisted(product.id) ? "Remove from Wishlist" : "Add to Wishlist"}
+            >
+              <Heart className={cn("h-5 w-5", isWishlisted(product.id) ? "fill-white" : "fill-none")} />
+            </Button>
+            <Button className="flex-1 h-12" onClick={handleAddToCart}>
               <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
             </Button>
             {product.stock_quantity > 0 ? (

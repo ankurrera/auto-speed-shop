@@ -2,7 +2,7 @@ import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useWishlist } from "@/contexts/WishlistContext";
+import { useWishlist, type WishlistItem } from "@/contexts/WishlistContext";
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
@@ -11,8 +11,15 @@ const Wishlist = () => {
   const { wishlistItems, toggleWishlist } = useWishlist();
   const { addToCart } = useCart();
 
-  const handleAddToCartFromWishlist = (product: { id: string; name: string; brand: string; price: number; image: string }) => {
-    addToCart(product);
+  const handleAddToCartFromWishlist = (product: WishlistItem) => {
+    addToCart({
+      id: product.item_id,
+      name: product.name,
+      brand: product.brand,
+      price: 0, // Price will be fetched from database
+      image: product.image,
+      is_part: product.is_part
+    });
     toast.success(`${product.name} added to cart!`);
   };
 
@@ -57,14 +64,20 @@ const Wishlist = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleAddToCartFromWishlist({ id: item.product_id, name: item.name, brand: item.brand, price: 0, image: item.image})}
+                    onClick={() => handleAddToCartFromWishlist(item)}
                   >
                     <ShoppingCart className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => toggleWishlist({ id: item.product_id, name: item.name, brand: item.brand, image: item.image })}
+                    onClick={() => toggleWishlist({ 
+                      id: item.item_id, 
+                      name: item.name, 
+                      brand: item.brand, 
+                      image: item.image,
+                      is_part: item.is_part
+                    })}
                   >
                     <Heart className="h-4 w-4 fill-red-500 text-red-500" />
                   </Button>

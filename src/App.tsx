@@ -25,53 +25,64 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 const queryClient = new QueryClient();
 
-// Use the environment variable for the client ID
+// Use the environment variable for the client ID - make it optional
+const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 const paypalOptions = {
-  "clientId": import.meta.env.VITE_PAYPAL_CLIENT_ID,
+  "clientId": paypalClientId || "test", // Provide fallback
   "currency": "USD",
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+const App = () => {
+  const AppContent = () => (
     <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-      <PayPalScriptProvider options={paypalOptions}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <ScrollToTop />
-            <CartProvider>
-              <WishlistProvider>
-                <div className="min-h-screen flex flex-col">
-                  <Header />
-                  <main className="flex-1">
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/shop" element={<Shop />} />
-                      <Route path="/about" element={<About />} />
-                      <Route path="/contact" element={<Contact />} />
-                      <Route path="/cart" element={<Cart />} />
-                      <Route path="/wishlist" element={<Wishlist />} />
-                      <Route path="/account" element={<Account />} />
-                      <Route path="/account/addresses" element={<Account />} />
-                      <Route path="/account/orders" element={<Account />} />
-                      <Route path="/account/admin-dashboard" element={<Account />} />
-                      <Route path="/account/analytics-dashboard" element={<AnalyticsDashboard />} />
-                      <Route path="/account/reset-password" element={<ResetPassword />} />
-                      <Route path="/checkout" element={<Checkout />} />
-                      <Route path="/products/:id" element={<ProductDetails />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </main>
-                  <Footer />
-                </div>
-              </WishlistProvider>
-            </CartProvider>
-          </BrowserRouter>
-        </TooltipProvider>
-      </PayPalScriptProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <ScrollToTop />
+          <CartProvider>
+            <WishlistProvider>
+              <div className="min-h-screen flex flex-col">
+                <Header />
+                <main className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/shop" element={<Shop />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/wishlist" element={<Wishlist />} />
+                    <Route path="/account" element={<Account />} />
+                    <Route path="/account/addresses" element={<Account />} />
+                    <Route path="/account/orders" element={<Account />} />
+                    <Route path="/account/admin-dashboard" element={<Account />} />
+                    <Route path="/account/analytics-dashboard" element={<AnalyticsDashboard />} />
+                    <Route path="/account/reset-password" element={<ResetPassword />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/products/:id" element={<ProductDetails />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </main>
+                <Footer />
+              </div>
+            </WishlistProvider>
+          </CartProvider>
+        </BrowserRouter>
+      </TooltipProvider>
     </ThemeProvider>
-  </QueryClientProvider>
-);
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      {paypalClientId ? (
+        <PayPalScriptProvider options={paypalOptions}>
+          <AppContent />
+        </PayPalScriptProvider>
+      ) : (
+        <AppContent />
+      )}
+    </QueryClientProvider>
+  );
+};
 
 export default App;
