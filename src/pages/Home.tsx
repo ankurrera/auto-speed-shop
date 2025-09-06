@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Search, Wrench, Truck, Shield, Star, Sparkles } from "lucide-react";
+import { Search, Wrench, Truck, Shield, Star, Sparkles, Car, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProductCard from "@/components/ProductCard";
-import heroImage from "@/assets/McLaren_Home_Hero.jpg";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -157,15 +156,28 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center bg-background overflow-hidden">
+      <section className="relative h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 overflow-hidden">
         <div className="absolute inset-0">
-          <img
-            src={heroImage}
-            alt="Auto Parts Hero"
-            className="w-full h-full object-cover opacity-80" 
-          />
+          {/* Animated background pattern */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.3)_100%)]"></div>
+          <div className="absolute inset-0 bg-[linear-gradient(45deg,_transparent_25%,_rgba(255,255,255,0.02)_50%,_transparent_75%)] bg-[length:60px_60px] animate-pulse"></div>
+          
+          {/* Floating car icons */}
+          <div className="absolute top-20 left-10 text-white/10 animate-bounce" style={{animationDelay: '0s', animationDuration: '3s'}}>
+            <Car size={24} />
+          </div>
+          <div className="absolute top-40 right-20 text-white/10 animate-bounce" style={{animationDelay: '1s', animationDuration: '4s'}}>
+            <Car size={32} />
+          </div>
+          <div className="absolute bottom-40 left-20 text-white/10 animate-bounce" style={{animationDelay: '2s', animationDuration: '3.5s'}}>
+            <Car size={28} />
+          </div>
+          <div className="absolute bottom-20 right-10 text-white/10 animate-bounce" style={{animationDelay: '0.5s', animationDuration: '4.5s'}}>
+            <Car size={26} />
+          </div>
+          
           {/* Semi-transparent overlay for text contrast */}
-          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+          <div className="absolute inset-0 bg-black bg-opacity-20"></div>
         </div>
         <div className="relative container mx-auto px-4 text-center z-10">
           <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight animate-fade-in-up">
@@ -176,6 +188,25 @@ const Home = () => {
           <p className="text-lg md:text-xl mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100 text-white">
             Discover premium parts and accessories for a ride that reflects your style and performance needs.
           </p>
+
+          {/* Interactive 3D Car Visualizer Button */}
+          <div className="mt-8 animate-fade-in-up delay-150">
+            <a
+              href="https://carvisualizer.plus360degrees.com/threejs/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block"
+            >
+              <Button 
+                size="lg" 
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 px-8 py-6 text-lg rounded-full"
+              >
+                <Car className="h-6 w-6 mr-3" />
+                View 3D Car Visualizer
+                <ExternalLink className="h-5 w-5 ml-3" />
+              </Button>
+            </a>
+          </div>
             
           {/* Vehicle Search */}
           <Card className="mt-12 w-full max-w-4xl mx-auto bg-card/70 backdrop-blur-md shadow-lg animate-fade-in-up delay-200">
