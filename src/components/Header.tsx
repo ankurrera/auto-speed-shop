@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ShoppingCart, User, Heart, Menu, X, ChevronDown, LogOut, LayoutDashboard, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,9 +59,9 @@ const Header = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchUserProfile]);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("first_name, last_name, email, phone, is_admin, is_seller")
@@ -69,7 +69,37 @@ const Header = () => {
       .single();
 
     if (error) {
-      console.error("Error fetching user profile:", error.message);
+      console.error("Header: Error fetching user profile:", error.message, error);
+      
+      // If profile doesn't exist, try to create one from auth user data
+      if (error.code === 'PGRST116') { // No rows returned
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { error: createError } = await supabase.from("profiles").upsert(
+              {
+                user_id: user.id,
+                first_name: user.user_metadata?.first_name || "",
+                last_name: user.user_metadata?.last_name || "",
+                email: user.email || "",
+                phone: user.user_metadata?.phone || "",
+                is_admin: false,
+                is_seller: false,
+              },
+              { onConflict: "user_id" }
+            );
+            
+            if (!createError) {
+              // Retry fetching the profile
+              fetchUserProfile(userId);
+            } else {
+              console.error("Header: Failed to create profile:", createError);
+            }
+          }
+        } catch (createProfileError) {
+          console.error("Header: Error creating profile:", createProfileError);
+        }
+      }
     } else if (data) {
       setUserInfo({
         firstName: data.first_name || "",
@@ -80,7 +110,7 @@ const Header = () => {
         is_seller: data.is_seller || false,
       });
     }
-  };
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
