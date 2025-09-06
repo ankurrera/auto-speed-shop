@@ -253,8 +253,16 @@ const Account = () => {
         alert('Product listed successfully!');
         products.cleanupAndRefetch();
       } else {
-        const errorData = await response.json();
-        alert(`Failed to list product: ${errorData.message || 'Unknown error'}`);
+        // Handle potential JSON parsing errors
+        let errorMessage = 'Unknown error';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || 'Unknown error';
+        } catch (jsonError) {
+          console.error('Failed to parse error response as JSON:', jsonError);
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        alert(`Failed to list product: ${errorMessage}`);
       }
     } catch (error) {
       console.error("Error listing product:", error);
