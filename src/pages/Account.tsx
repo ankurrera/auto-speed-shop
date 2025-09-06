@@ -40,6 +40,7 @@ import { Database } from "@/database.types";
 import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
+import AdminOrderManagement from "@/components/AdminOrderManagement";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -79,7 +80,7 @@ const Account = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
-
+  const [showOrderManagement, setShowOrderManagement] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -304,6 +305,7 @@ const Account = () => {
       .select("first_name, last_name, email, phone, is_admin, is_seller")
       .eq("user_id", userId)
       .single();
+    
     if (!error && data) {
       setUserInfo({
         firstName: data.first_name || "",
@@ -314,6 +316,38 @@ const Account = () => {
         is_seller: data.is_seller || false,
       });
       setSellerExistsForAdmin(data.is_seller || false);
+    } else {
+      console.error("Account: Error fetching profile or no data:", error, "User ID:", userId);
+      
+      // If profile doesn't exist, try to create one from auth user data
+      if (error && error.code === 'PGRST116') { // No rows returned
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { error: createError } = await supabase.from("profiles").upsert(
+              {
+                user_id: user.id,
+                first_name: user.user_metadata?.first_name || "",
+                last_name: user.user_metadata?.last_name || "",
+                email: user.email || "",
+                phone: user.user_metadata?.phone || "",
+                is_admin: false,
+                is_seller: false,
+              },
+              { onConflict: "user_id" }
+            );
+            
+            if (!createError) {
+              // Retry fetching the profile
+              fetchUserProfile(userId);
+            } else {
+              console.error("Account: Failed to create profile:", createError);
+            }
+          }
+        } catch (createProfileError) {
+          console.error("Account: Error creating profile:", createProfileError);
+        }
+      }
     }
   }, []);
 
@@ -469,7 +503,30 @@ const Account = () => {
       alert("Signup failed: " + error.message);
       return;
     }
+
+    // Create profile record in profiles table
+    if (data.user) {
+      const { error: profileError } = await supabase.from("profiles").upsert(
+        {
+          user_id: data.user.id,
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+          phone: phone,
+          is_admin: loginMode === "admin",
+          is_seller: false,
+        },
+        { onConflict: "user_id" }
+      );
+      
+      if (profileError) {
+        console.error("Profile creation failed:", profileError);
+        // Don't fail the signup entirely, but log the error
+      }
+    }
+
     if (loginMode === "admin") {
+      // Update the profile to set admin status (redundant but safe)
       await supabase
         .from("profiles")
         .update({ is_admin: true })
@@ -1234,6 +1291,9 @@ const Account = () => {
   const currentPath = location.pathname.split("/").pop();
 
   const renderContent = () => {
+    if (showOrderManagement) {
+      return <AdminOrderManagement onBack={() => setShowOrderManagement(false)} />;
+    }
     switch (currentPath) {
       case "addresses":
         return renderAddressesContent();
@@ -1356,7 +1416,7 @@ const Account = () => {
                     title="View Orders"
                     description="Monitor and process orders"
                     icon={<Package className="h-5 w-5" />}
-                    disabled
+                    onClick={() => setShowOrderManagement(true)}
                   />
                 </div>
               </div>
@@ -2333,5 +2393,4 @@ const ListingRow = ({
     </div>
   </div>
 );
-
 export default Account;
