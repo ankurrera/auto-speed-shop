@@ -96,5 +96,4 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
     </Card>
   );
 };
-
 export default AdminOrderManagement;

@@ -2337,5 +2337,4 @@ const ListingRow = ({
     </div>
   </div>
 );
-
 export default Account;
