@@ -1,10 +1,43 @@
 import { createClient } from '@supabase/supabase-js';
+import formidable from 'formidable';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://dkopohqiihhxmbjhzark.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrb3BvaHFpaWhoeG1iamh6YXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2NzE2NDMsImV4cCI6MjA3MTI0NzY0M30.6EF5ivhFPmK5B7Y_zLY-FkbN3LHAglvRHW7U0U5LoXA';
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Disable default body parser for this API route to handle FormData manually
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+// Helper function to parse FormData
+const parseFormData = (req) => {
+  return new Promise((resolve, reject) => {
+    const form = formidable({
+      multiples: true,
+      keepExtensions: true,
+    });
+
+    form.parse(req, (err, fields, files) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      // formidable returns arrays for fields, so we need to extract the first value
+      const parsedFields = {};
+      for (const [key, value] of Object.entries(fields)) {
+        parsedFields[key] = Array.isArray(value) ? value[0] : value;
+      }
+
+      resolve({ fields: parsedFields, files });
+    });
+  });
+};
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -21,22 +54,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parse the request body robustly
-    let body = req.body;
 
-    // Handle case when body is a Buffer or string (common in Vercel/Next.js if JSON parse fails)
-    if (!body || typeof body !== 'object') {
-      try {
-        body = JSON.parse(req.body);
-      } catch (e) {
-        body = undefined;
-      }
-    }
-    // Debug log for body
-    // console.log('Parsed request body:', body);
-
-    if (!body || typeof body !== 'object') {
-      return res.status(400).json({ message: 'Missing or invalid request body' });
     }
 
     const { name, description, price, stock_quantity, category, specifications } = body;
@@ -80,8 +98,7 @@ export default async function handler(req, res) {
 
     // Handle image uploads (if any)
     let imageUrls = [];
-    // File upload handling would go here if needed
-    // For now, just an empty array
+
 
     // Prepare data for database insertion
     const productData = {
