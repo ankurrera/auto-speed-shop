@@ -40,6 +40,7 @@ import { Database } from "@/database.types";
 import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
+import AdminOrderManagement from "@/components/AdminOrderManagement";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -79,7 +80,7 @@ const Account = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
-
+  const [showOrderManagement, setShowOrderManagement] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -1234,6 +1235,9 @@ const Account = () => {
   const currentPath = location.pathname.split("/").pop();
 
   const renderContent = () => {
+    if (showOrderManagement) {
+      return <AdminOrderManagement onBack={() => setShowOrderManagement(false)} />;
+    }
     switch (currentPath) {
       case "addresses":
         return renderAddressesContent();
@@ -1356,7 +1360,7 @@ const Account = () => {
                     title="View Orders"
                     description="Monitor and process orders"
                     icon={<Package className="h-5 w-5" />}
-                    disabled
+                    onClick={() => setShowOrderManagement(true)}
                   />
                 </div>
               </div>
@@ -2333,5 +2337,4 @@ const ListingRow = ({
     </div>
   </div>
 );
-
 export default Account;
