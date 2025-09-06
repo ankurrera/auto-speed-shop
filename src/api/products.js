@@ -21,35 +21,43 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parse the form data - handle both JSON and FormData
-    let body;
-    if (req.headers['content-type']?.includes('application/json')) {
-      body = req.body;
-    } else {
-      // Handle FormData - for multipart/form-data requests
-      body = req.body;
+    // Parse the request body robustly
+    let body = req.body;
+
+    // Handle case when body is a Buffer or string (common in Vercel/Next.js if JSON parse fails)
+    if (!body || typeof body !== 'object') {
+      try {
+        body = JSON.parse(req.body);
+      } catch (e) {
+        body = undefined;
+      }
     }
-    
+    // Debug log for body
+    // console.log('Parsed request body:', body);
+
+    if (!body || typeof body !== 'object') {
+      return res.status(400).json({ message: 'Missing or invalid request body' });
+    }
+
     const { name, description, price, stock_quantity, category, specifications } = body;
-    
+
     // Validate required fields
     if (!name || !description || !price || !category) {
       return res.status(400).json({ message: 'Missing required fields: name, description, price, category' });
     }
 
     // Get user from Authorization header
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
     if (!authHeader) {
       return res.status(401).json({ message: 'Authorization header required' });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    
+    const token = authHeader.replace('Bearer ', '').trim();
+
     // Try to get user from token
     let user;
     try {
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
-      
       if (authError || !authUser) {
         return res.status(401).json({ message: 'Invalid or expired token' });
       }
@@ -72,11 +80,8 @@ export default async function handler(req, res) {
 
     // Handle image uploads (if any)
     let imageUrls = [];
-    if (req.files && req.files.images) {
-      // This is a simplified version - in a real app you'd upload to Supabase storage
-      // For now, we'll just use empty array since the original code doesn't handle file uploads in the API
-      imageUrls = [];
-    }
+    // File upload handling would go here if needed
+    // For now, just an empty array
 
     // Prepare data for database insertion
     const productData = {
@@ -91,7 +96,7 @@ export default async function handler(req, res) {
       p_brand: '', // Default empty - could be extracted from specifications
       p_make: '', // Default empty - could be extracted from specifications  
       p_model: '', // Default empty - could be extracted from specifications
-      p_year: '2024' // Default current year
+      p_year: '2024' // Default current year (or use `${new Date().getFullYear()}`)
     };
 
     // Call the appropriate Supabase stored procedure
