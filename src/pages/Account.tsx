@@ -300,7 +300,6 @@ const Account = () => {
   }, []);
 
   const fetchUserProfile = useCallback(async (userId: string) => {
-    console.log("Account: Fetching profile for user ID:", userId);
     const { data, error } = await supabase
       .from("profiles")
       .select("first_name, last_name, email, phone, is_admin, is_seller")
@@ -308,7 +307,6 @@ const Account = () => {
       .single();
     
     if (!error && data) {
-      console.log("Account: Profile data received:", data);
       setUserInfo({
         firstName: data.first_name || "",
         lastName: data.last_name || "",
@@ -323,7 +321,6 @@ const Account = () => {
       
       // If profile doesn't exist, try to create one from auth user data
       if (error && error.code === 'PGRST116') { // No rows returned
-        console.log("Account: No profile found, attempting to create from auth data");
         try {
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
@@ -341,7 +338,6 @@ const Account = () => {
             );
             
             if (!createError) {
-              console.log("Account: Profile created, retrying fetch");
               // Retry fetching the profile
               fetchUserProfile(userId);
             } else {
@@ -441,13 +437,10 @@ const Account = () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      console.log("Account: Initial session check:", session);
       if (session) {
-        console.log("Account: Found session, user ID:", session.user.id);
         setIsLoggedIn(true);
         fetchAndSetUserData(session.user.id);
       } else {
-        console.log("Account: No session found");
         setIsLoading(false);
       }
     };

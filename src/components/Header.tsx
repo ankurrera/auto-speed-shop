@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ShoppingCart, User, Heart, Menu, X, ChevronDown, LogOut, LayoutDashboard, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,19 +36,15 @@ const Header = () => {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Header: Initial session:", session);
       setUserSession(session);
       if (session) {
-        console.log("Header: Session user ID:", session.user.id);
         fetchUserProfile(session.user.id);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Header: Auth state changed:", _event, session);
       setUserSession(session);
       if (session) {
-        console.log("Header: New session user ID:", session.user.id);
         fetchUserProfile(session.user.id);
       } else {
         setUserInfo({
@@ -63,10 +59,9 @@ const Header = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchUserProfile]);
 
-  const fetchUserProfile = async (userId: string) => {
-    console.log("Header: Fetching profile for user ID:", userId);
+  const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("first_name, last_name, email, phone, is_admin, is_seller")
@@ -78,7 +73,6 @@ const Header = () => {
       
       // If profile doesn't exist, try to create one from auth user data
       if (error.code === 'PGRST116') { // No rows returned
-        console.log("Header: No profile found, attempting to create from auth data");
         try {
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
@@ -96,7 +90,6 @@ const Header = () => {
             );
             
             if (!createError) {
-              console.log("Header: Profile created, retrying fetch");
               // Retry fetching the profile
               fetchUserProfile(userId);
             } else {
@@ -108,7 +101,6 @@ const Header = () => {
         }
       }
     } else if (data) {
-      console.log("Header: Profile data received:", data);
       setUserInfo({
         firstName: data.first_name || "",
         lastName: data.last_name || "",
@@ -117,10 +109,8 @@ const Header = () => {
         is_admin: data.is_admin || false,
         is_seller: data.is_seller || false,
       });
-    } else {
-      console.log("Header: No profile data found for user ID:", userId);
     }
-  };
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
