@@ -18,31 +18,14 @@ import { ProductList } from "@/components/admin/ProductList";
 import { SellerAccountForm } from "@/components/admin/SellerAccountForm";
 import PasswordResetForm from "@/components/PasswordResetForm";
 import AnalyticsDashboard from "./AnalyticsDashboard";
-import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/database.types";
 
-type Product = Database['public']['Tables']['products']['Row'];
-type Part = Database['public']['Tables']['parts']['Row'];
-
-const Account = () => {
-  const [view, setView] = useState("login");
   const [adminExists, setAdminExists] = useState(true);
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [sellerExistsForAdmin, setSellerExistsForAdmin] = useState(false);
   
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const { isLoggedIn, isLoading, user, login, signup, logout, resetPassword } = useAuth();
-  const { userInfo, setUserInfo, isEditing, setIsEditing, fetchUserProfile, updateProfile } = useProfile();
-  const { addresses, showAddressForm, setShowAddressForm, editingAddressId, formAddress, setFormAddress, fetchAddresses, saveAddress, deleteAddress, setDefaultAddress, editAddress } = useAddresses();
-  const { orders, fetchOrders } = useOrders();
-  const products = useProducts(sellerId);
 
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setView("reset");
       }
     });
 
@@ -54,49 +37,6 @@ const Account = () => {
       setAdminExists(count > 0);
     };
 
-    checkAdminExists();
-    return () => authListener.subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      fetchUserProfile(user.id);
-      fetchAddresses(user.id);
-      fetchOrders(user.id);
-      checkSellerExists(user.id);
-    }
-  }, [user, fetchUserProfile, fetchAddresses, fetchOrders]);
-
-  const checkSellerExists = async (userId: string) => {
-    const { data: sellerData } = await supabase
-      .from('sellers')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-    
-    if (sellerData) {
-      setSellerId(sellerData.id);
-      setSellerExistsForAdmin(true);
-    }
-  };
-
-  if (view === "reset") {
-    return <PasswordResetForm />;
-  }
-
-  if (!isLoggedIn) {
-    return view === "login" ? (
-      <LoginForm 
-        onLogin={login}
-        onSwitchToSignup={() => setView("signup")}
-        onForgotPassword={resetPassword}
-      />
-    ) : (
-      <SignupForm 
-        onSignup={signup}
-        onSwitchToLogin={() => setView("login")}
-        adminExists={adminExists}
-      />
     );
   }
 
