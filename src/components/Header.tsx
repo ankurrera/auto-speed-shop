@@ -34,33 +34,6 @@ const Header = () => {
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
   const wishlistCount = wishlistItems.length;
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserSession(session);
-      if (session) {
-        fetchUserProfile(session.user.id);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserSession(session);
-      if (session) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setUserInfo({
-          firstName: "",
-          lastName: "",
-          email: "",
-          phone: "",
-          is_admin: false,
-          is_seller: false,
-        });
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [fetchUserProfile]);
-
   const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
@@ -111,6 +84,33 @@ const Header = () => {
       });
     }
   }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserSession(session);
+      if (session) {
+        fetchUserProfile(session.user.id);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserSession(session);
+      if (session) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setUserInfo({
+          firstName: "",
+          lastName: "",
+          email: "",
+          phone: "",
+          is_admin: false,
+          is_seller: false,
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [fetchUserProfile]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
