@@ -168,31 +168,35 @@ const Account = () => {
               </Button>
             </div>
             {!sellerExistsForAdmin && <SellerAccountForm onSellerCreated={() => checkSellerExists(user!.id)} />}
-            <ProductForm 
-              listingType={products.listingType}
-              setListingType={products.setListingType}
-              editingProductId={products.editingProductId}
-              productInfo={products.productInfo}
-              setProductInfo={products.setProductInfo}
-              vehicleYears={products.vehicleYears}
-              vehicleMakes={products.vehicleMakes}
-              vehicleModels={products.vehicleModels}
-              onImageUpload={products.handleImageUpload}
-              onRemoveImage={products.removeImage}
-              onSubmit={handleProductSubmit} 
-            />
-            <ProductList 
-              products={products.products}
-              parts={products.parts}
-              searchQuery={products.searchQuery}
-              setSearchQuery={products.setSearchQuery}
-              onEditProduct={products.handleEditProduct}
-              onEditPart={(part) => products.handleEditProduct(part as Product | Part)}
-              onDeleteProduct={products.handleDeleteProduct}
-              onDeletePart={products.handleDeletePart}
-              onArchiveProduct={products.handleArchiveProduct}
-              onArchivePart={products.handleArchivePart}
-            />
+            {sellerExistsForAdmin && (
+              <>
+                <ProductForm 
+                  listingType={products.listingType}
+                  setListingType={products.setListingType}
+                  editingProductId={products.editingProductId}
+                  productInfo={products.productInfo}
+                  setProductInfo={products.setProductInfo}
+                  vehicleYears={products.vehicleYears}
+                  vehicleMakes={products.vehicleMakes}
+                  vehicleModels={products.vehicleModels}
+                  onImageUpload={products.handleImageUpload}
+                  onRemoveImage={products.removeImage}
+                  onSubmit={handleProductSubmit} 
+                />
+                <ProductList 
+                  products={products.products}
+                  parts={products.parts}
+                  searchQuery={products.searchQuery}
+                  setSearchQuery={products.setSearchQuery}
+                  onEditProduct={products.handleEditProduct}
+                  onEditPart={(part) => products.handleEditProduct(part as Product | Part)}
+                  onDeleteProduct={products.handleDeleteProduct}
+                  onDeletePart={products.handleDeletePart}
+                  onArchiveProduct={products.handleArchiveProduct}
+                  onArchivePart={products.handleArchivePart}
+                />
+              </>
+            )}
           </div>
         );
       case 'analytics-dashboard':
