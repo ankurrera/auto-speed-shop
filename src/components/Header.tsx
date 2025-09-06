@@ -36,15 +36,19 @@ const Header = () => {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Header: Initial session:", session);
       setUserSession(session);
       if (session) {
+        console.log("Header: Session user ID:", session.user.id);
         fetchUserProfile(session.user.id);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("Header: Auth state changed:", _event, session);
       setUserSession(session);
       if (session) {
+        console.log("Header: New session user ID:", session.user.id);
         fetchUserProfile(session.user.id);
       } else {
         setUserInfo({
@@ -62,6 +66,7 @@ const Header = () => {
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
+    console.log("Header: Fetching profile for user ID:", userId);
     const { data, error } = await supabase
       .from("profiles")
       .select("first_name, last_name, email, phone, is_admin, is_seller")
@@ -69,8 +74,41 @@ const Header = () => {
       .single();
 
     if (error) {
-      console.error("Error fetching user profile:", error.message);
+      console.error("Header: Error fetching user profile:", error.message, error);
+      
+      // If profile doesn't exist, try to create one from auth user data
+      if (error.code === 'PGRST116') { // No rows returned
+        console.log("Header: No profile found, attempting to create from auth data");
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { error: createError } = await supabase.from("profiles").upsert(
+              {
+                user_id: user.id,
+                first_name: user.user_metadata?.first_name || "",
+                last_name: user.user_metadata?.last_name || "",
+                email: user.email || "",
+                phone: user.user_metadata?.phone || "",
+                is_admin: false,
+                is_seller: false,
+              },
+              { onConflict: "user_id" }
+            );
+            
+            if (!createError) {
+              console.log("Header: Profile created, retrying fetch");
+              // Retry fetching the profile
+              fetchUserProfile(userId);
+            } else {
+              console.error("Header: Failed to create profile:", createError);
+            }
+          }
+        } catch (createProfileError) {
+          console.error("Header: Error creating profile:", createProfileError);
+        }
+      }
     } else if (data) {
+      console.log("Header: Profile data received:", data);
       setUserInfo({
         firstName: data.first_name || "",
         lastName: data.last_name || "",
@@ -79,6 +117,8 @@ const Header = () => {
         is_admin: data.is_admin || false,
         is_seller: data.is_seller || false,
       });
+    } else {
+      console.log("Header: No profile data found for user ID:", userId);
     }
   };
 
