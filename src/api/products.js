@@ -1,10 +1,43 @@
 import { createClient } from '@supabase/supabase-js';
+import formidable from 'formidable';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://dkopohqiihhxmbjhzark.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrb3BvaHFpaWhoeG1iamh6YXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2NzE2NDMsImV4cCI6MjA3MTI0NzY0M30.6EF5ivhFPmK5B7Y_zLY-FkbN3LHAglvRHW7U0U5LoXA';
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Disable default body parser for this API route to handle FormData manually
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+// Helper function to parse FormData
+const parseFormData = (req) => {
+  return new Promise((resolve, reject) => {
+    const form = formidable({
+      multiples: true,
+      keepExtensions: true,
+    });
+
+    form.parse(req, (err, fields, files) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      // formidable returns arrays for fields, so we need to extract the first value
+      const parsedFields = {};
+      for (const [key, value] of Object.entries(fields)) {
+        parsedFields[key] = Array.isArray(value) ? value[0] : value;
+      }
+
+      resolve({ fields: parsedFields, files });
+    });
+  });
+};
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -23,11 +56,41 @@ export default async function handler(req, res) {
   try {
     // Parse the form data - handle both JSON and FormData
     let body;
-    if (req.headers['content-type']?.includes('application/json')) {
-      body = req.body;
+    let files = {};
+    
+    const contentType = req.headers['content-type'] || '';
+    
+    if (contentType.includes('application/json')) {
+      // Handle JSON requests (for backward compatibility)
+      let rawBody = '';
+      req.on('data', chunk => {
+        rawBody += chunk.toString();
+      });
+      
+      await new Promise((resolve) => {
+        req.on('end', () => {
+          try {
+            body = JSON.parse(rawBody);
+            resolve();
+          } catch (e) {
+            body = {};
+            resolve();
+          }
+        });
+      });
+    } else if (contentType.includes('multipart/form-data')) {
+      // Handle FormData requests
+      try {
+        const { fields, files: parsedFiles } = await parseFormData(req);
+        body = fields;
+        files = parsedFiles;
+      } catch (parseError) {
+        console.error('Error parsing FormData:', parseError);
+        return res.status(400).json({ message: 'Invalid form data' });
+      }
     } else {
-      // Handle FormData - for multipart/form-data requests
-      body = req.body;
+      // Fallback for other content types
+      body = req.body || {};
     }
     
     const { name, description, price, stock_quantity, category, specifications } = body;
@@ -72,9 +135,10 @@ export default async function handler(req, res) {
 
     // Handle image uploads (if any)
     let imageUrls = [];
-    if (req.files && req.files.images) {
+    if (files && files.images) {
       // This is a simplified version - in a real app you'd upload to Supabase storage
       // For now, we'll just use empty array since the original code doesn't handle file uploads in the API
+      // The files object contains the uploaded file information that could be processed further
       imageUrls = [];
     }
 
