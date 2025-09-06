@@ -17,19 +17,18 @@ const AdminUserManagement = () => {
   const { toast } = useToast();
 
   const { data: users, isLoading, error } = useQuery<Profile[]>({
-    queryKey: ['admin-users'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('is_admin', false)
-        .eq('is_seller', false)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
-
+  queryKey: ['admin-users'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('is_admin', 'false')
+      .eq('is_seller', 'false')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+});
   const updateAdminStatusMutation = useMutation({
     mutationFn: async ({ userId, isAdmin }: { userId: string, isAdmin: boolean }) => {
       const { error } = await supabase
