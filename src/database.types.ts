@@ -497,6 +497,7 @@ export type Database = {
           is_seller: boolean | null
           last_name: string | null
           phone: string | null
+          role: string | null
           updated_at: string
           user_id: string
         }
@@ -511,6 +512,7 @@ export type Database = {
           is_seller?: boolean | null
           last_name?: string | null
           phone?: string | null
+          role?: string | null
           updated_at?: string
           user_id: string
         }
@@ -525,6 +527,7 @@ export type Database = {
           is_seller?: boolean | null
           last_name?: string | null
           phone?: string | null
+          role?: string | null
           updated_at?: string
           user_id?: string
         }

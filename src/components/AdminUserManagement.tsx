@@ -22,8 +22,8 @@ const AdminUserManagement = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .neq('is_admin', true)
-        .neq('is_seller', true)
+        .eq('is_admin', false)
+        .eq('is_seller', false)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
