@@ -18,8 +18,8 @@ type PartialProfile = {
   email: string | null;
   first_name: string | null;
   last_name: string | null;
-  is_admin: string | null;
-  is_seller: string | null;
+  is_admin: boolean | null;
+  is_seller: boolean | null;
 };
 
 const AdminUserManagement = () => {
@@ -32,8 +32,8 @@ const AdminUserManagement = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('user_id, email, first_name, last_name, is_admin, is_seller')
-        .eq('is_admin', 'false')
-        .eq('is_seller', 'false')
+        .eq('is_admin', false)
+        .eq('is_seller', false)
         .order('created_at', { ascending: false });
       if (error) throw error;
       console.log('Fetched users:', data); // Add this line to debug
@@ -45,7 +45,7 @@ const AdminUserManagement = () => {
     mutationFn: async ({ userId, isAdmin }: { userId: string, isAdmin: boolean }) => {
       const { error } = await supabase
         .from('profiles')
-        .update({ is_admin: isAdmin ? 'true' : 'false' }) // Correctly handle boolean to string conversion
+        .update({ is_admin: isAdmin }) // Use boolean directly
         .eq('user_id', userId);
       if (error) throw error;
     },
@@ -144,13 +144,13 @@ const AdminUserManagement = () => {
                   <div className="flex items-center space-x-2">
                     <Switch
                       id={`admin-switch-${user.user_id}`}
-                      checked={user.is_admin === 'true'}
+                      checked={user.is_admin === true}
                       onCheckedChange={(checked) => updateAdminStatusMutation.mutate({ userId: user.user_id, isAdmin: checked })}
                     />
                     <Label htmlFor={`admin-switch-${user.user_id}`} className="sr-only">Toggle Admin</Label>
                   </div>
                 </TableCell>
-                <TableCell>{user.is_seller === 'true' ? 'Yes' : 'No'}</TableCell>
+                <TableCell>{user.is_seller === true ? 'Yes' : 'No'}</TableCell>
                 <TableCell>
                   <Button
                     variant="destructive"
