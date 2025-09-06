@@ -54,10 +54,11 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Parse the request body using formidable
+    const { fields } = await parseFormData(req);
 
-    }
-
-    const { name, description, price, stock_quantity, category, specifications } = body;
+    // Destructure the required fields from the parsed 'fields' object
+    const { name, description, price, stock_quantity, category, specifications } = fields;
 
     // Validate required fields
     if (!name || !description || !price || !category) {
