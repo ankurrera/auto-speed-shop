@@ -54,65 +54,28 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parse the form data - handle both JSON and FormData
-    let body;
-    let files = {};
-    
-    const contentType = req.headers['content-type'] || '';
-    
-    if (contentType.includes('application/json')) {
-      // Handle JSON requests (for backward compatibility)
-      let rawBody = '';
-      req.on('data', chunk => {
-        rawBody += chunk.toString();
-      });
-      
-      await new Promise((resolve) => {
-        req.on('end', () => {
-          try {
-            body = JSON.parse(rawBody);
-            resolve();
-          } catch (e) {
-            body = {};
-            resolve();
-          }
-        });
-      });
-    } else if (contentType.includes('multipart/form-data')) {
-      // Handle FormData requests
-      try {
-        const { fields, files: parsedFiles } = await parseFormData(req);
-        body = fields;
-        files = parsedFiles;
-      } catch (parseError) {
-        console.error('Error parsing FormData:', parseError);
-        return res.status(400).json({ message: 'Invalid form data' });
-      }
-    } else {
-      // Fallback for other content types
-      body = req.body || {};
+
     }
-    
+
     const { name, description, price, stock_quantity, category, specifications } = body;
-    
+
     // Validate required fields
     if (!name || !description || !price || !category) {
       return res.status(400).json({ message: 'Missing required fields: name, description, price, category' });
     }
 
     // Get user from Authorization header
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
     if (!authHeader) {
       return res.status(401).json({ message: 'Authorization header required' });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    
+    const token = authHeader.replace('Bearer ', '').trim();
+
     // Try to get user from token
     let user;
     try {
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
-      
       if (authError || !authUser) {
         return res.status(401).json({ message: 'Invalid or expired token' });
       }
@@ -135,12 +98,7 @@ export default async function handler(req, res) {
 
     // Handle image uploads (if any)
     let imageUrls = [];
-    if (files && files.images) {
-      // This is a simplified version - in a real app you'd upload to Supabase storage
-      // For now, we'll just use empty array since the original code doesn't handle file uploads in the API
-      // The files object contains the uploaded file information that could be processed further
-      imageUrls = [];
-    }
+
 
     // Prepare data for database insertion
     const productData = {
@@ -155,7 +113,7 @@ export default async function handler(req, res) {
       p_brand: '', // Default empty - could be extracted from specifications
       p_make: '', // Default empty - could be extracted from specifications  
       p_model: '', // Default empty - could be extracted from specifications
-      p_year: '2024' // Default current year
+      p_year: '2024' // Default current year (or use `${new Date().getFullYear()}`)
     };
 
     // Call the appropriate Supabase stored procedure
