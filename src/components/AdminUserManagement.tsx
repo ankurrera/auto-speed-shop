@@ -19,7 +19,12 @@ const AdminUserManagement = () => {
   const { data: users, isLoading, error } = useQuery<Profile[]>({
     queryKey: ['admin-users'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .neq('is_admin', true)
+        .neq('is_seller', true)
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
