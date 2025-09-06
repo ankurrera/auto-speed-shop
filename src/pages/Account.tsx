@@ -39,6 +39,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Database } from "@/database.types";
 import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
+import AdminUserManagement from "@/components/AdminUserManagement";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -77,6 +78,8 @@ const Account = () => {
   const [view, setView] = useState<"login" | "signup">("login");
   const [showPassword, setShowPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showUserManagement, setShowUserManagement] = useState(false);
+
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -1249,171 +1252,184 @@ const Account = () => {
   const renderAdminDashboardContent = () => {
     return (
       <div className="space-y-10">
-        {/* Main Admin Card */}
-        <div className="bg-[#121212] text-foreground rounded-xl border border-neutral-800 p-6 lg:p-8 shadow-sm">
-          <div className="space-y-2 mb-6">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <ShieldCheck className="h-6 w-6 text-primary" />
-              Admin Dashboard
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Welcome, {userInfo.firstName || "Administrator"} - Administrative controls and
-              overview
-            </p>
+        {showUserManagement ? (
+          <div className="space-y-4">
+            <Button variant="outline" onClick={() => setShowUserManagement(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <AdminUserManagement />
           </div>
-
-            <div className="bg-neutral-800/60 rounded-lg p-4 flex items-center justify-between mb-8">
-              <div>
-                <p className="font-medium">Administrator Status</p>
+        ) : (
+          <>
+            {/* Main Admin Card */}
+            <div className="bg-[#121212] text-foreground rounded-xl border border-neutral-800 p-6 lg:p-8 shadow-sm">
+              <div className="space-y-2 mb-6">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <ShieldCheck className="h-6 w-6 text-primary" />
+                  Admin Dashboard
+                </h2>
                 <p className="text-sm text-muted-foreground">
-                  User Role: {userInfo.is_admin ? "Administrator" : "User"}
-                  {userInfo.is_seller ? " | Seller" : ""}
+                  Welcome, {userInfo.firstName || "Administrator"} - Administrative controls and
+                  overview
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-sm font-medium text-green-400">
-                <span className="h-2 w-2 rounded-full bg-green-500 inline-block" />
-                Active
+
+              <div className="bg-neutral-800/60 rounded-lg p-4 flex items-center justify-between mb-8">
+                <div>
+                  <p className="font-medium">Administrator Status</p>
+                  <p className="text-sm text-muted-foreground">
+                    User Role: {userInfo.is_admin ? "Administrator" : "User"}
+                    {userInfo.is_seller ? " | Seller" : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-green-400">
+                  <span className="h-2 w-2 rounded-full bg-green-500 inline-block" />
+                  Active
+                </div>
               </div>
-            </div>
 
-            {/* Stats Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-10">
-              <StatCard
-                title="Total Users"
-                value={
-                  adminMetrics
-                    ? Intl.NumberFormat().format(adminMetrics.users)
-                    : "--"
-                }
-                subtitle="System users"
-                icon={<Users className="h-5 w-5" />}
-              />
-              <StatCard
-                title="Total Orders"
-                value={
-                  adminMetrics
-                    ? Intl.NumberFormat().format(adminMetrics.orders)
-                    : "--"
-                }
-                subtitle="All time orders"
-                icon={<Package className="h-5 w-5" />}
-              />
-              <StatCard
-                title="Products"
-                value={
-                  adminMetrics
-                    ? Intl.NumberFormat().format(adminMetrics.productsActive)
-                    : "--"
-                }
-                subtitle="Available products"
-                icon={<Boxes className="h-5 w-5" />}
-              />
-              <StatCard
-                title="Revenue"
-                value={
-                  adminMetrics
-                    ? "$" +
-                      Intl.NumberFormat().format(
-                        Math.round(adminMetrics.revenue)
-                      )
-                    : "--"
-                }
-                subtitle="Total revenue"
-                icon={<TrendingUp className="h-5 w-5" />}
-              />
-            </div>
-
-            {/* Quick Actions */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-              <div className="grid gap-4 md:grid-cols-3">
-                <ActionCard
-                  title="Manage Users"
-                  description="View and edit user accounts"
+              {/* Stats Grid */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-10">
+                <StatCard
+                  title="Total Users"
+                  value={
+                    adminMetrics
+                      ? Intl.NumberFormat().format(adminMetrics.users)
+                      : "--"
+                  }
+                  subtitle="System users"
                   icon={<Users className="h-5 w-5" />}
-                  disabled
                 />
-                <ActionCard
-                  title="Manage Products"
-                  description="Add, edit, or remove products"
-                  icon={<Boxes className="h-5 w-5" />}
-                  onClick={() => setShowManageProducts(true)}
-                />
-                <ActionCard
-                  title="View Orders"
-                  description="Monitor and process orders"
+                <StatCard
+                  title="Total Orders"
+                  value={
+                    adminMetrics
+                      ? Intl.NumberFormat().format(adminMetrics.orders)
+                      : "--"
+                  }
+                  subtitle="All time orders"
                   icon={<Package className="h-5 w-5" />}
-                  disabled
+                />
+                <StatCard
+                  title="Products"
+                  value={
+                    adminMetrics
+                      ? Intl.NumberFormat().format(adminMetrics.productsActive)
+                      : "--"
+                  }
+                  subtitle="Available products"
+                  icon={<Boxes className="h-5 w-5" />}
+                />
+                <StatCard
+                  title="Revenue"
+                  value={
+                    adminMetrics
+                      ? "$" +
+                        Intl.NumberFormat().format(
+                          Math.round(adminMetrics.revenue)
+                        )
+                      : "--"
+                  }
+                  subtitle="Total revenue"
+                  icon={<TrendingUp className="h-5 w-5" />}
                 />
               </div>
-            </div>
-        </div>
 
-        {/* Seller Creation (if admin, optional) */}
-        {userInfo.is_admin && !userInfo.is_seller && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Create Seller Account (Admin)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form
-                onSubmit={handleCreateSellerAccount}
-                className="grid gap-4 md:grid-cols-2"
-              >
-                <div className="space-y-1 md:col-span-1">
-                  <Label>Name</Label>
-                  <Input
-                    value={newSellerName}
-                    onChange={(e) => setNewSellerName(e.target.value)}
-                    required
+              {/* Quick Actions */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <ActionCard
+                    title="Manage Users"
+                    description="View and edit user accounts"
+                    icon={<Users className="h-5 w-5" />}
+                    onClick={() => setShowUserManagement(true)}
+                  />
+                  <ActionCard
+                    title="Manage Products"
+                    description="Add, edit, or remove products"
+                    icon={<Boxes className="h-5 w-5" />}
+                    onClick={() => setShowManageProducts(true)}
+                  />
+                  <ActionCard
+                    title="View Orders"
+                    description="Monitor and process orders"
+                    icon={<Package className="h-5 w-5" />}
+                    disabled
                   />
                 </div>
-                <div className="space-y-1 md:col-span-1">
-                  <Label>Address</Label>
-                  <Input
-                    value={newSellerAddress}
-                    onChange={(e) => setNewSellerAddress(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Phone</Label>
-                  <Input
-                    value={newSellerPhoneNumber}
-                    onChange={(e) =>
-                      setNewSellerPhoneNumber(e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={newSellerEmail}
-                    onChange={(e) => setNewSellerEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Password</Label>
-                  <Input
-                    type="password"
-                    value={newSellerPassword}
-                    onChange={(e) => setNewSellerPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex items-end">
-                  <Button type="submit" className="w-full">
-                    Create Seller
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+              </div>
+            </div>
+
+            {/* Seller Creation (if admin, optional) */}
+            {userInfo.is_admin && !userInfo.is_seller && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Create Seller Account (Admin)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form
+                    onSubmit={handleCreateSellerAccount}
+                    className="grid gap-4 md:grid-cols-2"
+                  >
+                    <div className="space-y-1 md:col-span-1">
+                      <Label>Name</Label>
+                      <Input
+                        value={newSellerName}
+                        onChange={(e) => setNewSellerName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1 md:col-span-1">
+                      <Label>Address</Label>
+                      <Input
+                        value={newSellerAddress}
+                        onChange={(e) => setNewSellerAddress(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Phone</Label>
+                      <Input
+                        value={newSellerPhoneNumber}
+                        onChange={(e) =>
+                          setNewSellerPhoneNumber(e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={newSellerEmail}
+                        onChange={(e) => setNewSellerEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Password</Label>
+                      <Input
+                        type="password"
+                        value={newSellerPassword}
+                        onChange={(e) => setNewSellerPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button type="submit" className="w-full">
+                        Create Seller
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
       </div>
     );
   };
+
 
   // Profile Content
   const renderProfileContent = () => (
