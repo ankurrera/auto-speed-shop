@@ -1,6 +1,29 @@
-// src/pages/Account.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Updated Admin Dashboard layout with "Manage Products" modal
+// Moves the existing part/product listing + management UI behind the "Manage Products" quick action
+// Preserves prior profile / addresses / orders logic
+
 import { useState, useEffect, useCallback, ChangeEvent, FormEvent } from "react";
-import { User, MapPin, Package, LogOut, Edit, Eye, EyeOff, Lock, TrendingUp, Archive, Trash2, Image as ImageIcon, ChevronDown, Search } from "lucide-react";
+import {
+  User as UserIcon,
+  MapPin,
+  Package,
+  LogOut,
+  Edit,
+  Eye,
+  EyeOff,
+  Archive,
+  Trash2,
+  Search,
+  ShieldCheck,
+  TrendingUp,
+  Boxes,
+  Users,
+  X,
+  Plus,
+  RefreshCcw
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,23 +31,14 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import PasswordResetForm from "@/components/PasswordResetForm";
+import { useNavigate, useLocation } from "react-router-dom";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Database } from "@/database.types";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -58,19 +72,22 @@ const categories = [
 ];
 
 const Account = () => {
+  // Auth / profile
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [view, setView] = useState("login");
+  const [view, setView] = useState<"login" | "signup">("login");
   const [showPassword, setShowPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Auth form
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [loginMode, setLoginMode] = useState("user");
+  const [loginMode, setLoginMode] = useState<"user" | "admin">("user");
   const [adminExists, setAdminExists] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
 
+  // Seller creation (admin)
   const [newSellerName, setNewSellerName] = useState("");
   const [newSellerAddress, setNewSellerAddress] = useState("");
   const [newSellerPhoneNumber, setNewSellerPhoneNumber] = useState("");
@@ -78,6 +95,7 @@ const Account = () => {
   const [newSellerPassword, setNewSellerPassword] = useState("");
   const [sellerExistsForAdmin, setSellerExistsForAdmin] = useState(false);
 
+  // User info
   const [userInfo, setUserInfo] = useState({
     firstName: "",
     lastName: "",
@@ -87,9 +105,10 @@ const Account = () => {
     is_seller: false,
   });
 
-  const [addresses, setAddresses] = useState([]);
+  // Addresses
+  const [addresses, setAddresses] = useState<any[]>([]);
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [formAddress, setFormAddress] = useState({
     first_name: "",
     last_name: "",
@@ -104,14 +123,12 @@ const Account = () => {
     is_default: false,
   });
 
-  const [orders, setOrders] = useState([]);
+  // Orders (user personal)
+  const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-  const location = useLocation();
 
-  const [listingType, setListingType] = useState("part");
+  // Admin product management
+  const [listingType, setListingType] = useState<"part" | "product">("part");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [productInfo, setProductInfo] = useState({
     name: "",
@@ -128,45 +145,68 @@ const Account = () => {
   });
   const [productFiles, setProductFiles] = useState<File[]>([]);
   const [sellerId, setSellerId] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [showManageProducts, setShowManageProducts] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Queries for Filter Dropdowns
+  // Routing / utilities
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const location = useLocation();
+
+  // Vehicle dropdown queries
   const { data: vehicleYears = [] } = useQuery({
-    queryKey: ['vehicle-years'],
+    queryKey: ["vehicle-years"],
     queryFn: async () => {
-      const { data, error } = await supabase.from('vehicle_years').select('year').order('year', { ascending: false });
+      const { data, error } = await supabase
+        .from("vehicle_years")
+        .select("year")
+        .order("year", { ascending: false });
       if (error) throw error;
-      return data.map(item => item.year);
-    }
+      return data.map((item) => item.year);
+    },
   });
 
-  const { data: vehicleMakes = [] } = useQuery<{ id: string; name: string; }[]>({
-    queryKey: ['vehicle-makes'],
+  const { data: vehicleMakes = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["vehicle-makes"],
     queryFn: async () => {
-      const { data, error } = await supabase.from('vehicle_makes').select('id, name').order('name');
+      const { data, error } = await supabase
+        .from("vehicle_makes")
+        .select("id, name")
+        .order("name");
       if (error) throw error;
       return data;
-    }
+    },
   });
 
-  const { data: vehicleModels = [] } = useQuery<{ name: string; }[]>({
-    queryKey: ['vehicle-models', productInfo.make],
+  const { data: vehicleModels = [] } = useQuery<{ name: string }[]>({
+    queryKey: ["vehicle-models", productInfo.make],
     queryFn: async () => {
-      const makeId = vehicleMakes.find(make => make.name === productInfo.make)?.id;
+      const makeId = vehicleMakes.find(
+        (make) => make.name === productInfo.make
+      )?.id;
       if (!makeId) return [];
-      const { data, error } = await supabase.from('vehicle_models').select('name').eq('make_id', makeId).order('name');
+      const { data, error } = await supabase
+        .from("vehicle_models")
+        .select("name")
+        .eq("make_id", makeId)
+        .order("name");
       if (error) throw error;
       return data;
     },
     enabled: !!productInfo.make,
   });
 
-  // Queries for Products and Parts
+  // Products & parts (seller-specific)
   const { data: products = [] } = useQuery<Product[]>({
-    queryKey: ['seller-products', sellerId],
+    queryKey: ["seller-products", sellerId],
     queryFn: async () => {
       if (!sellerId) return [];
-      const { data, error } = await supabase.from('products').select('*').eq('seller_id', sellerId).order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("seller_id", sellerId)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -174,59 +214,94 @@ const Account = () => {
   });
 
   const { data: parts = [] } = useQuery<PartWithSpecs[]>({
-    queryKey: ['seller-parts', sellerId],
+    queryKey: ["seller-parts", sellerId],
     queryFn: async () => {
       if (!sellerId) return [];
-      const { data, error } = await supabase.from('parts').select('*').eq('seller_id', sellerId).order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from("parts")
+        .select("*")
+        .eq("seller_id", sellerId)
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as PartWithSpecs[];
     },
     enabled: !!sellerId,
   });
-  
-  const fetchUserAddresses = useCallback(async (userId) => {
+
+  // Admin metrics (totals)
+  const { data: adminMetrics } = useQuery({
+    queryKey: ["admin-metrics"],
+    enabled: userInfo.is_admin,
+    queryFn: async () => {
+      const [{ count: userCount }, { count: orderCount }, productRes, partRes, revenueRes] =
+        await Promise.all([
+          supabase.from("profiles").select("*", { count: "exact", head: true }),
+            supabase.from("orders").select("*", { count: "exact", head: true }),
+            supabase.from("products").select("id, price, stock_quantity, is_active"),
+            supabase.from("parts").select("id, price, stock_quantity, is_active"),
+            supabase.from("orders").select("total_amount")
+        ]);
+
+      let revenue = 0;
+      if (revenueRes.data) {
+        revenue = revenueRes.data.reduce(
+          (sum: number, row: { total_amount: number }) => sum + (row.total_amount || 0),
+          0
+        );
+      }
+
+      return {
+        users: userCount ?? 0,
+        orders: orderCount ?? 0,
+        productsActive: [
+          ...(productRes.data || []),
+          ...(partRes.data || []),
+        ].filter((p: any) => p.is_active).length,
+        revenue,
+      };
+    },
+  });
+
+  // Utility fetchers
+  const fetchUserAddresses = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("addresses")
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
-    if (error) {
-      console.error("Error fetching addresses:", error.message);
-    } else {
-      setAddresses(data);
-    }
+    if (!error) setAddresses(data || []);
   }, []);
 
-  const fetchUserOrders = useCallback(async (userId) => {
+  const fetchUserOrders = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("orders")
       .select("id, created_at, order_number, status, total_amount")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching orders:", error.message);
-    } else {
-      setOrders(data.map(order => ({
-        id: order.id,
-        date: new Date(order.created_at).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' }),
-        orderNumber: order.order_number,
-        status: order.status,
-        total: order.total_amount
-      })));
+    if (!error && data) {
+      setOrders(
+        data.map((order) => ({
+          id: order.id,
+            date: new Date(order.created_at).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          }),
+          orderNumber: order.order_number,
+          status: order.status,
+          total: order.total_amount,
+        }))
+      );
     }
   }, []);
 
-  const fetchUserProfile = useCallback(async (userId) => {
+  const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("first_name, last_name, email, phone, is_admin, is_seller")
       .eq("user_id", userId)
       .single();
-
-    if (error) {
-      console.error("Error fetching user profile:", error.message);
-    } else if (data) {
+    if (!error && data) {
       setUserInfo({
         firstName: data.first_name || "",
         lastName: data.last_name || "",
@@ -239,44 +314,42 @@ const Account = () => {
     }
   }, []);
 
-  const checkSellerExists = useCallback(async (userId) => {
-    const { data, count, error } = await supabase
-      .from('profiles')
-      .select('is_seller', { count: 'exact' })
-      .eq('is_seller', true);
-
-    if (error) {
-      console.error("Error checking seller status:", error.message);
-      setSellerExistsForAdmin(false);
-    } else {
-      setSellerExistsForAdmin(count > 0);
-      if (count > 0) {
-        const { data: sellerInfoData, error: sellerInfoError } = await supabase
-          .from('sellers')
-          .select('id')
-          .eq('user_id', userId)
+  const checkSellerExists = useCallback(async (userId: string) => {
+    const { count, error } = await supabase
+      .from("profiles")
+      .select("is_seller", { count: "exact" })
+      .eq("is_seller", true);
+    if (!error) {
+      setSellerExistsForAdmin((count || 0) > 0);
+      if ((count || 0) > 0) {
+        const { data: sellerInfoData } = await supabase
+          .from("sellers")
+          .select("id")
+          .eq("user_id", userId)
           .single();
         if (sellerInfoData) setSellerId(sellerInfoData.id);
       }
     }
   }, []);
 
-  const fetchAndSetUserData = useCallback(async (userId) => {
-    setIsLoading(true);
-    await fetchUserProfile(userId);
-    await fetchUserAddresses(userId);
-    await fetchUserOrders(userId);
-    await checkSellerExists(userId);
-    setIsLoading(false);
-  }, [fetchUserProfile, fetchUserAddresses, fetchUserOrders, checkSellerExists]);
+  const fetchAndSetUserData = useCallback(
+    async (userId: string) => {
+      setIsLoading(true);
+      await fetchUserProfile(userId);
+      await fetchUserAddresses(userId);
+      await fetchUserOrders(userId);
+      await checkSellerExists(userId);
+      setIsLoading(false);
+    },
+    [fetchUserProfile, fetchUserAddresses, fetchUserOrders, checkSellerExists]
+  );
 
+  // Save profile
   const handleSaveProfile = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.error("No active session found.");
-      return;
-    }
-
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) return;
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -285,47 +358,48 @@ const Account = () => {
         phone: userInfo.phone,
       })
       .eq("user_id", session.user.id);
-
-    if (error) {
-      console.error("Error updating profile:", error.message);
-      alert("Failed to update profile.");
-    } else {
-      console.log("Profile updated successfully!");
-      setIsEditing(false);
-    }
+    if (!error) setIsEditing(false);
   };
 
+  // Auth listener
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setView("reset");
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "PASSWORD_RECOVERY") {
+          // could show a reset view if desired
+        }
+        if (session) {
+          setIsLoggedIn(true);
+          fetchAndSetUserData(session.user.id);
+        } else {
+          setIsLoggedIn(false);
+          setUserInfo({
+            firstName: "",
+            lastName: "",
+            email: "",
+            phone: "",
+            is_admin: false,
+            is_seller: false,
+          });
+          setAddresses([]);
+          setOrders([]);
+          setIsLoading(false);
+        }
       }
-      if (session) {
-        setIsLoggedIn(true);
-        fetchAndSetUserData(session.user.id);
-      } else {
-        setIsLoggedIn(false);
-        setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false, is_seller: false });
-        setAddresses([]);
-        setOrders([]);
-        setIsLoading(false);
-      }
-    });
+    );
 
     const checkAdminExists = async () => {
-      const { data, count } = await supabase
-        .from('profiles')
-        .select('is_admin', { count: 'exact' })
-        .eq('is_admin', true);
-      if (count > 0) {
-        setAdminExists(true);
-      } else {
-        setAdminExists(false);
-      }
+      const { count } = await supabase
+        .from("profiles")
+        .select("is_admin", { count: "exact" })
+        .eq("is_admin", true);
+      setAdminExists((count || 0) > 0);
     };
 
-    const initialCheck = async () => {
-      const { data: { session } = {} } = await supabase.auth.getSession();
+    const initial = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session) {
         setIsLoggedIn(true);
         fetchAndSetUserData(session.user.id);
@@ -333,8 +407,7 @@ const Account = () => {
         setIsLoading(false);
       }
     };
-
-    initialCheck();
+    initial();
     checkAdminExists();
 
     return () => {
@@ -342,675 +415,626 @@ const Account = () => {
     };
   }, [fetchAndSetUserData]);
 
+  // Auth handlers
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-
     const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-
     if (error) {
-      console.error("Login failed:", error.message);
       alert("Login failed: " + error.message);
+      return;
+    }
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("user_id", data.user.id)
+      .single();
+
+    if (profileError) {
+      alert("Could not retrieve profile info");
+      await supabase.auth.signOut();
+      return;
+    }
+    if (profileData?.is_admin && loginMode === "admin") {
+      setIsLoggedIn(true);
+      fetchAndSetUserData(data.user.id);
+    } else if (!profileData?.is_admin && loginMode === "user") {
+      setIsLoggedIn(true);
+      fetchAndSetUserData(data.user.id);
     } else {
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("user_id", data.user.id)
-        .single();
-
-      const { data: sellerData, error: sellerError } = await supabase
-        .from("sellers")
-        .select("user_id")
-        .eq("user_id", data.user.id)
-        .single();
-
-      if (profileError) {
-        console.error("Error fetching profile:", profileError.message);
-        alert("Login failed: Could not retrieve profile information.");
-        await supabase.auth.signOut();
-      } else if (profileData?.is_admin && loginMode === "admin") {
-        if (sellerData) {
-          navigate("/");
-        } else {
-          setIsLoggedIn(true);
-          fetchAndSetUserData(data.user.id);
-        }
-      } else if (!profileData?.is_admin && loginMode === "user") {
-        setIsLoggedIn(true);
-        fetchAndSetUserData(data.user.id);
-      } else {
-        alert("Invalid login mode selected.");
-        await supabase.auth.signOut();
-      }
+      alert("Invalid login mode for this account.");
+      await supabase.auth.signOut();
     }
   };
 
   const handleSignup = async (e: FormEvent) => {
     e.preventDefault();
-
     if (loginMode === "admin" && adminExists) {
-      alert("Admin account has already been created. Please log in.");
+      alert("Admin already exists.");
       return;
     }
-
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone,
-        },
+        data: { first_name: firstName, last_name: lastName, phone },
       },
     });
-
     if (error) {
-      console.error('Signup error:', error.message);
       alert("Signup failed: " + error.message);
-    } else {
-      console.log('Signup successful, user:', data.user);
-
-      if (loginMode === "admin") {
-        await supabase
-          .from('profiles')
-          .update({ is_admin: true })
-          .eq('user_id', data.user.id);
-        setAdminExists(true);
-        alert("Admin account created. Please log in to your account page.");
-      } else {
-        alert("Please check your email to confirm your account!");
-      }
-      setView("login");
+      return;
     }
+    if (loginMode === "admin") {
+      await supabase
+        .from("profiles")
+        .update({ is_admin: true })
+        .eq("user_id", data.user?.id);
+      setAdminExists(true);
+      alert("Admin account created. Please log in.");
+    } else {
+      alert("Check your email to confirm your account.");
+    }
+    setView("login");
   };
 
+  // Seller creation
   const handleCreateSellerAccount = async (e: FormEvent) => {
     e.preventDefault();
+    let userId: string | null = null;
 
-    let userId = null;
-    let signUpError = null;
-
-    const { data: newUserData, error: userSignUpError } = await supabase.auth.signUp({
-      email: newSellerEmail,
-      password: newSellerPassword,
-      options: {
-        data: {
-          first_name: newSellerName,
-          is_seller: true,
+    const { data: newUserData, error: signUpError } = await supabase.auth.signUp(
+      {
+        email: newSellerEmail,
+        password: newSellerPassword,
+        options: {
+          data: { first_name: newSellerName, is_seller: true },
         },
-      },
-    });
-    signUpError = userSignUpError;
-
-    if (signUpError && signUpError.message.includes("User already registered")) {
-      const { data: existingProfileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id, email')
-        .eq('email', newSellerEmail)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error("Error retrieving existing user profile:", profileError.message);
-        alert("Failed to create seller account. User exists but profile could not be retrieved.");
-        return;
       }
-      if (existingProfileData) {
-        userId = existingProfileData.user_id;
-      } else {
-        const { data: signedInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: newSellerEmail,
-          password: newSellerPassword
-        });
-        if (signInError) {
-          console.error("Failed to sign in existing user:", signInError.message);
-          alert("A user with this email exists, but we couldn't sign in. Please log in directly.");
-          return;
-        }
-        userId = signedInData.user.id;
-      }
-    } else if (signUpError) {
-      console.error('Seller account creation error:', signUpError.message);
-      alert("Failed to create seller account: " + signUpError.message);
-      return;
-    } else {
-      userId = newUserData?.user?.id;
-    }
+    );
 
-    if (userId) {
-        const { error: upsertError } = await supabase
-            .from('profiles')
-            .upsert({
-                user_id: userId,
-                is_seller: true,
-                email: newSellerEmail,
-                first_name: newSellerName
-            }, { onConflict: 'user_id' });
-
-        if (upsertError) {
-            console.error('Error upserting profiles table:', upsertError.message);
-            alert('Error updating profiles table. Please try again.');
+    if (signUpError) {
+      if (signUpError.message.includes("User already registered")) {
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("email", newSellerEmail)
+          .maybeSingle();
+        if (existingProfile) {
+          userId = existingProfile.user_id;
+        } else {
+          const { data: signInData, error: signInError } =
+            await supabase.auth.signInWithPassword({
+              email: newSellerEmail,
+              password: newSellerPassword,
+            });
+          if (signInError) {
+            alert("User exists; sign in failed.");
             return;
+          }
+          userId = signInData.user.id;
         }
-    } else {
-        alert("User ID could not be determined. Seller creation failed.");
+      } else {
+        alert("Seller creation failed: " + signUpError.message);
         return;
+      }
+    } else {
+      userId = newUserData?.user?.id || null;
     }
 
-    const { error: sellerInsertError } = await supabase
-        .from('sellers')
-        .insert({
-            user_id: userId,
-            name: newSellerName,
-            address: newSellerAddress,
-            email: newSellerEmail,
-            phone: newSellerPhoneNumber,
-        });
-
-    if (sellerInsertError) {
-      console.error('Error inserting into sellers table:', sellerInsertError.message);
-      alert('Error creating seller account. Please try again.');
+    if (!userId) {
+      alert("Could not resolve user ID.");
       return;
     }
 
-    const { error: profileUpdateError } = await supabase
-      .from('profiles')
-      .update({ is_seller: true })
-      .eq('user_id', userId);
-
-    if (profileUpdateError) {
-      console.error("Error updating profile with seller status:", profileUpdateError.message);
+    const { error: upsertError } = await supabase.from("profiles").upsert(
+      {
+        user_id: userId,
+        is_seller: true,
+        email: newSellerEmail,
+        first_name: newSellerName,
+      },
+      { onConflict: "user_id" }
+    );
+    if (upsertError) {
+      alert("Profile update failed.");
+      return;
     }
 
-    alert(`Seller account created successfully for ${newSellerEmail}!`);
+    const { error: sellerInsertError } = await supabase.from("sellers").insert({
+      user_id: userId,
+      name: newSellerName,
+      address: newSellerAddress,
+      email: newSellerEmail,
+      phone: newSellerPhoneNumber,
+    });
+    if (sellerInsertError) {
+      alert("Seller creation failed.");
+      return;
+    }
+
+    await supabase
+      .from("profiles")
+      .update({ is_seller: true })
+      .eq("user_id", userId);
+
+    alert("Seller created successfully.");
     setNewSellerName("");
     setNewSellerAddress("");
     setNewSellerEmail("");
     setNewSellerPassword("");
     setNewSellerPhoneNumber("");
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      await fetchAndSetUserData(session.user.id);
-    }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session) fetchAndSetUserData(session.user.id);
   };
 
+  // Product/Part submission
   const handleProductSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) {
-        toast({ title: "Error", description: "You must be logged in to list a product.", variant: "destructive" });
-        return;
+      toast({
+        title: "Error",
+        description: "You must be logged in.",
+        variant: "destructive",
+      });
+      return;
     }
 
     let currentSellerId = sellerId;
     if (!currentSellerId) {
-        console.log("Seller ID not found in state, fetching...");
-        const { data: sellerData, error: sellerError } = await supabase.from('sellers').select('id').eq('user_id', session.user.id).single();
-        if (sellerError) {
-            console.error('Error fetching seller ID:', sellerError);
-            toast({ title: "Error", description: "Could not find seller ID. Please check your account settings.", variant: "destructive" });
-            return;
-        }
-        currentSellerId = sellerData.id;
-        setSellerId(currentSellerId);
-    }
-    console.log("Using Seller ID:", currentSellerId);
-
-    const imageUrls: string[] = [];
-    try {
-        if (productFiles.length > 0) {
-            const bucketName = listingType === 'part' ? 'part_images' : 'products_images';
-            for (const file of productFiles) {
-                const fileExtension = file.name.split('.').pop();
-                const filePath = `${session.user.id}/${uuidv4()}.${fileExtension}`;
-                const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file, { upsert: true });
-                if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
-                const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
-                imageUrls.push(publicUrlData.publicUrl);
-            }
-        }
-    } catch (uploadError) {
-        console.error('Image upload failed:', uploadError);
-        toast({ title: "Error", description: "Image upload failed. Please try again.", variant: "destructive" });
+      const { data: sellerData, error: sellerError } = await supabase
+        .from("sellers")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .single();
+      if (sellerError) {
+        toast({
+          title: "Error",
+          description: "Seller ID not found.",
+          variant: "destructive",
+        });
         return;
+      }
+      currentSellerId = sellerData.id;
+      setSellerId(currentSellerId);
     }
 
-    const finalImageUrls = editingProductId ? [...productInfo.image_urls, ...imageUrls] : imageUrls;
+    const uploadedImageUrls: string[] = [];
+    if (productFiles.length > 0) {
+      const bucketName =
+        listingType === "part" ? "part_images" : "products_images";
+      for (const f of productFiles) {
+        const ext = f.name.split(".").pop();
+        const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, f, { upsert: true });
+        if (uploadError) {
+          toast({
+            title: "Error",
+            description: "Image upload failed.",
+            variant: "destructive",
+          });
+          return;
+        }
+        const { data: publicUrlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+        uploadedImageUrls.push(publicUrlData.publicUrl);
+      }
+    }
 
+    const finalImageUrls = editingProductId
+      ? [...productInfo.image_urls, ...uploadedImageUrls]
+      : uploadedImageUrls;
+
+    // Vehicle compatibility (optional)
     let vehicleId: string | null = null;
     if (productInfo.year && productInfo.make && productInfo.model) {
-    try {
-        const makeId = vehicleMakes.find(m => m.name === productInfo.make)?.id;
-        if (!makeId) {
-            console.error("Error: Could not find make ID for name:", productInfo.make);
-            toast({ title: "Error", description: "Selected vehicle make not found in database.", variant: "destructive" });
-            return;
-        }
-
-        const { data: yearIdRow, error: yearError } = await supabase.from('vehicle_years').select('id').eq('year', parseInt(productInfo.year, 10)).single();
-        if (yearError) {
-            console.error("Error fetching vehicle year ID:", yearError);
-            toast({ title: "Error", description: "Selected vehicle year not found in database.", variant: "destructive" });
-            return;
-        }
-
-        const { data: modelIdRow, error: modelError } = await supabase.from('vehicle_models').select('id').eq('name', productInfo.model).eq('make_id', makeId).single();
-        if (modelError) {
-            console.error("Error fetching vehicle model ID:", modelError);
-            toast({ title: "Error", description: "Selected vehicle model not found in database.", variant: "destructive" });
-            return;
-        }
-
-        const { data: existingVehicle, error: existingVehicleError } = await supabase
-            .from('vehicles_new')
-            .select('id')
-            .eq('make_id', makeId)
-            .eq('model_id', modelIdRow.id)
-            .eq('year_id', yearIdRow.id)
-            .single();
-
-        if (existingVehicleError && existingVehicleError.code !== 'PGRST116') {
-             console.error('Error checking for existing vehicle:', existingVehicleError);
-             throw new Error(`Error checking for existing vehicle: ${existingVehicleError.message}`);
-        }
-
+      try {
+        const makeId = vehicleMakes.find(
+          (m) => m.name === productInfo.make
+        )?.id;
+        if (!makeId) throw new Error("Make not found");
+        const { data: yearRow } = await supabase
+          .from("vehicle_years")
+          .select("id")
+          .eq("year", parseInt(productInfo.year, 10))
+          .single();
+        const { data: modelRow } = await supabase
+          .from("vehicle_models")
+          .select("id")
+          .eq("name", productInfo.model)
+          .eq("make_id", makeId)
+          .single();
+        const { data: existingVehicle, error: exErr } = await supabase
+          .from("vehicles_new")
+          .select("id")
+          .eq("make_id", makeId)
+          .eq("model_id", modelRow?.id)
+          .eq("year_id", yearRow?.id)
+          .maybeSingle();
+        if (exErr && exErr.code !== "PGRST116") throw exErr;
         if (existingVehicle) {
-            vehicleId = existingVehicle.id;
-            console.log("Existing vehicle found:", vehicleId);
+          vehicleId = existingVehicle.id;
         } else {
-            console.log("No existing vehicle found, attempting to create new one.");
-            const { data: newVehicle, error: newVehicleError } = await supabase
-                .from('vehicles_new')
-                .insert({ make_id: makeId, model_id: modelIdRow.id, year_id: yearIdRow.id })
-                .select('id')
-                .single();
-            
-            if (newVehicleError) {
-                console.error(`Failed to create new vehicle:`, newVehicleError);
-                throw new Error(`Failed to create new vehicle: ${newVehicleError.message}`);
-            }
-            vehicleId = newVehicle.id;
-            console.log("New vehicle created:", vehicleId);
+          const { data: newVehicle, error: vehicleInsertError } =
+            await supabase
+              .from("vehicles_new")
+              .insert({
+                make_id: makeId,
+                model_id: modelRow?.id,
+                year_id: yearRow?.id,
+              })
+              .select("id")
+              .single();
+          if (vehicleInsertError) throw vehicleInsertError;
+          vehicleId = newVehicle.id;
         }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (e: any) {
-        console.error("Vehicle compatibility logic failed:", e);
-        toast({ title: "Error", description: `Failed to process vehicle compatibility. Details: ${e.message}`, variant: "destructive" });
-        return;
-    }
-}
-
-    const cleanupAndRefetch = () => {
-        setEditingProductId(null);
-        setProductInfo({
-            name: "", description: "", price: "", stock_quantity: 0, image_urls: [],
-            specifications: "", category: "", make: "", model: "", year: "", vin: "",
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description:
+            "Vehicle compatibility failed: " + (err.message || "Unknown"),
+          variant: "destructive",
         });
-        setProductFiles([]);
-        queryClient.invalidateQueries({ queryKey: ['seller-products'] });
-        queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
+        return;
+      }
+    }
+
+    const isPart = listingType === "part";
+    const priceValue = parseFloat(productInfo.price);
+    const stockValue = Number(productInfo.stock_quantity);
+    if (isNaN(priceValue) || isNaN(stockValue)) {
+      toast({
+        title: "Error",
+        description: "Price / quantity invalid",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const specificationsPayload = {
+      category: productInfo.category,
+      make: productInfo.make,
+      model: productInfo.model,
+      year: productInfo.year,
+      vin: productInfo.vin,
+      additional: productInfo.specifications,
     };
 
-    try {
-        const isPart = listingType === 'part';
-        const specificationsPayload = {
-            category: productInfo.category,
-            make: productInfo.make,
-            model: productInfo.model,
-            year: productInfo.year,
-            vin: productInfo.vin,
-            additional: productInfo.specifications
-        };
-
-        const priceValue = parseFloat(productInfo.price);
-        const stockValue = Number(productInfo.stock_quantity);
-
-        if (isNaN(priceValue) || isNaN(stockValue)) {
-            toast({ title: "Error", description: "Price and Quantity must be valid numbers.", variant: "destructive" });
-            return;
-        }
-
-        const table = isPart ? 'parts' : 'products';
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let payload: any = {};
-
-        if (isPart) {
-            payload = {
-                name: productInfo.name,
-                description: productInfo.description,
-                price: priceValue,
-                stock_quantity: stockValue,
-                brand: productInfo.make, // Use the vehicle make as the brand for parts
-                seller_id: currentSellerId,
-                specifications: specificationsPayload,
-                image_urls: finalImageUrls,
-                is_active: stockValue > 0,
-            };
-        } else {
-            payload = {
-                name: productInfo.name,
-                description: productInfo.description,
-                price: priceValue,
-                stock_quantity: stockValue,
-                seller_id: currentSellerId,
-                image_urls: finalImageUrls,
-                is_active: stockValue > 0,
-                is_featured: false,
-                category: productInfo.category,
-                product_type: 'GENERIC',
-            };
-        }
-
-        console.log("Final Payload:", payload);
-        
-        const { data: itemData, error } = editingProductId
-            ? await supabase.from(table).update(payload).eq('id', editingProductId).select().single()
-            : await supabase.from(table).insert([payload]).select().single();
-        
-        if (error) {
-            console.error(`Supabase Insert/Update Error:`, error.message, error.code, error.hint);
-            toast({ title: "Error", description: `Database error: ${error.message}`, variant: "destructive" });
-            return;
-        }
-        console.log("Supabase operation successful:", itemData);
-
-        if (itemData && vehicleId) {
-            const fitmentTable = isPart ? 'part_fitments' : 'product_fitments';
-            const fitmentPayload = isPart ? { part_id: itemData.id, vehicle_id: vehicleId } : { product_id: itemData.id, vehicle_id: vehicleId };
-            
-            const { error: fitmentError } = await supabase.from(fitmentTable).upsert([fitmentPayload], { onConflict: isPart ? 'part_id, vehicle_id' : 'product_id, vehicle_id' });
-            if (fitmentError) {
-                console.error(`Error inserting into ${fitmentTable}:`, fitmentError);
-                toast({ title: "Warning", description: `Item listed, but vehicle fitment failed to save: ${fitmentError.message}`, variant: "default" });
-            }
-        }
-        
-        toast({ title: "Success!", description: `${isPart ? 'Part' : 'Product'} ${editingProductId ? 'updated' : 'listed'} successfully.` });
-        cleanupAndRefetch();
-    } catch (error) {
-        console.error('Unexpected error:', error);
-        toast({
-            title: "Error",
-            description: `An unexpected error occurred: ${error.message}`,
-            variant: "destructive"
-        });
+    let payload: any;
+    if (isPart) {
+      payload = {
+        name: productInfo.name,
+        description: productInfo.description,
+        price: priceValue,
+        stock_quantity: stockValue,
+        brand: productInfo.make,
+        seller_id: currentSellerId,
+        specifications: specificationsPayload,
+        image_urls: finalImageUrls,
+        is_active: stockValue > 0,
+      };
+    } else {
+      payload = {
+        name: productInfo.name,
+        description: productInfo.description,
+        price: priceValue,
+        stock_quantity: stockValue,
+        seller_id: currentSellerId,
+        image_urls: finalImageUrls,
+        is_active: stockValue > 0,
+        is_featured: false,
+        category: productInfo.category,
+        product_type: "GENERIC",
+      };
     }
+
+    const table = isPart ? "parts" : "products";
+    const { data: savedItem, error } = editingProductId
+      ? await supabase
+          .from(table)
+          .update(payload)
+          .eq("id", editingProductId)
+          .select()
+          .single()
+      : await supabase.from(table).insert([payload]).select().single();
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (savedItem && vehicleId) {
+      const fitmentTable = isPart ? "part_fitments" : "product_fitments";
+      const fitmentPayload = isPart
+        ? { part_id: savedItem.id, vehicle_id: vehicleId }
+        : { product_id: savedItem.id, vehicle_id: vehicleId };
+      await supabase.from(fitmentTable).upsert([fitmentPayload]);
+    }
+
+    toast({
+      title: "Success",
+      description: `${isPart ? "Part" : "Product"} ${
+        editingProductId ? "updated" : "listed"
+      }.`,
+    });
+    cleanupAndRefetch();
   };
 
-  const handleEditProduct = (product: Product | Part) => {
-    setEditingProductId(product.id);
-    setListingType('seller_id' in product ? 'part' : 'product');
-
-    let specs: PartSpecifications = {};
-if (product.specifications) {
-    if (typeof product.specifications === 'string') {
-        try {
-            // Try to parse the string into a JSON object
-            specs = JSON.parse(product.specifications);
-        } catch (error) {
-            // If parsing fails, it's not valid JSON. Treat it as a simple string.
-            console.error("Failed to parse specifications, treating as raw string:", error);
-            specs = { additional: product.specifications };
-        }
-    } else if (typeof product.specifications === 'object') {
-        // If it's already a JSON object, check for a null value
-        if (product.specifications !== null) {
-            specs = product.specifications as PartSpecifications;
-        } else {
-            // Handle null case explicitly
-            specs = {};
-        }
-    }
-}
-
+  const cleanupAndRefetch = () => {
+    setEditingProductId(null);
     setProductInfo({
-        name: product.name,
-        description: product.description || "",
-        price: product.price?.toString() || "",
-        stock_quantity: product.stock_quantity || 0,
-        image_urls: product.image_urls || [],
-        specifications: specs.additional || "",
-        category: specs.category || ('category' in product ? product.category : "") || "",
-        make: specs.make || "",
-        model: specs.model || "",
-        year: specs.year || "",
-        vin: specs.vin || ""
+      name: "",
+      description: "",
+      price: "",
+      stock_quantity: 0,
+      image_urls: [],
+      specifications: "",
+      category: "",
+      make: "",
+      model: "",
+      year: "",
+      vin: "",
     });
-    setModalOpen(true);
+    setProductFiles([]);
+    queryClient.invalidateQueries({ queryKey: ["seller-products"] });
+    queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProductId(product.id);
+    setListingType("product");
+    let specs: PartSpecifications = {};
+    if (product.specifications) {
+      if (typeof product.specifications === "string") {
+        try {
+          specs = JSON.parse(product.specifications);
+        } catch {
+          specs = { additional: product.specifications };
+        }
+      } else if (typeof product.specifications === "object") {
+        specs = product.specifications as PartSpecifications;
+      }
+    }
+    setProductInfo({
+      name: product.name,
+      description: product.description || "",
+      price: product.price?.toString() || "",
+      stock_quantity: product.stock_quantity || 0,
+      image_urls: product.image_urls || [],
+      specifications: specs.additional || "",
+      category: product.category || specs.category || "",
+      make: specs.make || "",
+      model: specs.model || "",
+      year: specs.year || "",
+      vin: specs.vin || "",
+    });
+    setShowManageProducts(true);
   };
 
   const handleEditPart = (part: PartWithSpecs) => {
     setEditingProductId(part.id);
     const specs = part.specifications;
-    setProductInfo({
-        name: part.name,
-        description: part.description || "",
-        price: part.price?.toString() || "",
-        stock_quantity: part.stock_quantity || 0,
-        image_urls: part.image_urls || [],
-        specifications: specs?.additional || "",
-        category: specs?.category || "",
-        make: part.brand || "",
-        model: specs?.model || "",
-        year: specs?.year || "",
-        vin: specs?.vin || ""
-    });
     setListingType("part");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setProductInfo({
+      name: part.name,
+      description: part.description || "",
+      price: part.price?.toString() || "",
+      stock_quantity: part.stock_quantity || 0,
+      image_urls: part.image_urls || [],
+      specifications: specs?.additional || "",
+      category: specs?.category || "",
+      make: part.brand || specs?.make || "",
+      model: specs?.model || "",
+      year: specs?.year || "",
+      vin: specs?.vin || "",
+    });
+    setShowManageProducts(true);
   };
 
+  // Deletion / archive mutations
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const { error } = await supabase.from("products").delete().eq("id", productId);
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", productId);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "Success!", description: "Product has been deleted." });
-      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: "Failed to delete product.", variant: "destructive" });
+      toast({ title: "Deleted", description: "Product removed." });
+      queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     },
   });
 
   const deletePartMutation = useMutation({
     mutationFn: async (partId: string) => {
-      const { error } = await supabase.from("parts").delete().eq("id", partId);
+      const { error } = await supabase
+        .from("parts")
+        .delete()
+        .eq("id", partId);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "Success!", description: "Part has been deleted." });
-      queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: "Failed to delete part.", variant: "destructive" });
+      toast({ title: "Deleted", description: "Part removed." });
+      queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
     },
   });
-
-  const handleDeleteProduct = (productId: string) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      deleteProductMutation.mutate(productId);
-    }
-  };
-
-  const handleDeletePart = (partId: string) => {
-    if (window.confirm("Are you sure you want to delete this part?")) {
-      deletePartMutation.mutate(partId);
-    }
-  };
 
   const archiveProductMutation = useMutation({
-    mutationFn: async ({ productId, is_active }: { productId: string; is_active: boolean }) => {
-      const { error } = await supabase.from("products").update({ is_active: !is_active }).eq("id", productId);
+    mutationFn: async ({
+      productId,
+      is_active,
+    }: {
+      productId: string;
+      is_active: boolean;
+    }) => {
+      const { error } = await supabase
+        .from("products")
+        .update({ is_active: !is_active })
+        .eq("id", productId);
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      toast({ title: "Success!", description: `Product has been ${variables.is_active ? 'archived' : 'unarchived'}.` });
-      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: "Failed to update product status.", variant: "destructive" });
+      toast({
+        title: "Updated",
+        description: `Product ${
+          variables.is_active ? "archived" : "unarchived"
+        }.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     },
   });
-
-  const handleArchiveProduct = (productId: string, is_active: boolean) => {
-    archiveProductMutation.mutate({ productId, is_active });
-  };
 
   const archivePartMutation = useMutation({
-    mutationFn: async ({ partId, is_active }: { partId: string; is_active: boolean }) => {
-      const { error } = await supabase.from("parts").update({ is_active: !is_active }).eq("id", partId);
+    mutationFn: async ({
+      partId,
+      is_active,
+    }: {
+      partId: string;
+      is_active: boolean;
+    }) => {
+      const { error } = await supabase
+        .from("parts")
+        .update({ is_active: !is_active })
+        .eq("id", partId);
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      toast({ title: "Success!", description: `Part has been ${variables.is_active ? 'archived' : 'unarchived'}.` });
-      queryClient.invalidateQueries({ queryKey: ['seller-parts'] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: "Failed to update part status.", variant: "destructive" });
+      toast({
+        title: "Updated",
+        description: `Part ${
+          variables.is_active ? "archived" : "unarchived"
+        }.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
     },
   });
 
-  const handleArchivePart = (partId: string, is_active: boolean) => {
-    archivePartMutation.mutate({ partId, is_active });
+  const handleDeleteProduct = (id: string) => {
+    if (window.confirm("Delete this product?")) deleteProductMutation.mutate(id);
   };
+  const handleDeletePart = (id: string) => {
+    if (window.confirm("Delete this part?")) deletePartMutation.mutate(id);
+  };
+  const handleArchiveProduct = (id: string, active: boolean) =>
+    archiveProductMutation.mutate({ productId: id, is_active: active });
+  const handleArchivePart = (id: string, active: boolean) =>
+    archivePartMutation.mutate({ partId: id, is_active: active });
 
+  // Image handling
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setProductFiles(files);
-    const imageUrls = files.map(file => URL.createObjectURL(file));
-    setProductInfo(prev => ({
-        ...prev,
-        image_urls: [...prev.image_urls, ...imageUrls]
+    const previewUrls = files.map((f) => URL.createObjectURL(f));
+    setProductInfo((prev) => ({
+      ...prev,
+      image_urls: [...prev.image_urls, ...previewUrls],
     }));
   };
-
   const removeImage = (index: number) => {
-      setProductInfo(prev => {
-          const newUrls = [...prev.image_urls];
-          newUrls.splice(index, 1);
-          return { ...prev, image_urls: newUrls };
-      });
-      setProductFiles(prev => {
-          const newFiles = [...prev];
-          newFiles.splice(index, 1);
-          return newFiles;
-      });
+    setProductInfo((prev) => {
+      const nu = [...prev.image_urls];
+      nu.splice(index, 1);
+      return { ...prev, image_urls: nu };
+    });
+    setProductFiles((prev) => {
+      const nf = [...prev];
+      nf.splice(index, 1);
+      return nf;
+    });
   };
 
+  // Logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
-    setUserInfo({ firstName: "", lastName: "", email: "", phone: "", is_admin: false, is_seller: false });
-    setSellerExistsForAdmin(false);
     navigate("/");
   };
 
-  const handleEditAddress = (address) => {
+  // Address CRUD
+  const handleEditAddress = (address: any) => {
     setEditingAddressId(address.id);
     setFormAddress(address);
     setShowAddressForm(true);
   };
-
-  const handleDeleteAddress = async (addressId) => {
-    const { error } = await supabase
-      .from("addresses")
-      .delete()
-      .eq("id", addressId);
-
-    if (error) {
-      console.error("Error deleting address:", error.message);
-      alert("Failed to delete address.");
-    } else {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        fetchUserAddresses(session.user.id);
-      }
-    }
+  const handleDeleteAddress = async (id: string) => {
+    await supabase.from("addresses").delete().eq("id", id);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session) fetchUserAddresses(session.user.id);
   };
-
   const handleSetDefaultAddress = async (addressId: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) return;
-  
-    // First, set all other addresses to not be the default
-    const { error: unsetError } = await supabase
-      .from('addresses')
+    await supabase
+      .from("addresses")
       .update({ is_default: false })
-      .eq('user_id', session.user.id);
-  
-    if (unsetError) {
-      toast({ title: "Error", description: "Could not unset other default addresses.", variant: "destructive" });
-      return;
-    }
-  
-    // Then, set the selected address as the default
-    const { error: setError } = await supabase
-      .from('addresses')
+      .eq("user_id", session.user.id);
+    await supabase
+      .from("addresses")
       .update({ is_default: true })
-      .eq('id', addressId);
-  
-    if (setError) {
-      toast({ title: "Error", description: "Could not set the new default address.", variant: "destructive" });
-    } else {
-      toast({ title: "Success!", description: "Default address updated." });
-      fetchUserAddresses(session.user.id);
-    }
+      .eq("id", addressId);
+    fetchUserAddresses(session.user.id);
   };
-
   const handleAddressFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) return;
-  
+
     if (formAddress.is_default) {
-      // If the new address is set to default, unset all other addresses for the user
-      const { error: unsetError } = await supabase
-        .from('addresses')
+      await supabase
+        .from("addresses")
         .update({ is_default: false })
-        .eq('user_id', session.user.id);
-  
-      if (unsetError) {
-        toast({ title: "Error", description: "Could not unset other default addresses.", variant: "destructive" });
-        return;
-      }
+        .eq("user_id", session.user.id);
     }
-  
-    const addressToSave = { ...formAddress, user_id: session.user.id };
-  
+
+    const toSave = { ...formAddress, user_id: session.user.id };
     if (editingAddressId) {
-      const { error } = await supabase
+      await supabase
         .from("addresses")
-        .update(addressToSave)
+        .update(toSave)
         .eq("id", editingAddressId);
-  
-      if (error) {
-        console.error("Error updating address:", error.message);
-        alert("Failed to update address.");
-      }
     } else {
-      const { error } = await supabase
-        .from("addresses")
-        .insert([addressToSave]);
-  
-      if (error) {
-        console.error("Error adding address:", error.message);
-        alert("Failed to add new address.");
-      }
+      await supabase.from("addresses").insert([toSave]);
     }
-  
     setShowAddressForm(false);
     setEditingAddressId(null);
     setFormAddress({
-      first_name: "", last_name: "", address_line_1: "", address_line_2: "",
-      city: "", state: "", postal_code: "", country: "US", phone: "", type: "shipping", is_default: false
+      first_name: "",
+      last_name: "",
+      address_line_1: "",
+      address_line_2: "",
+      city: "",
+      state: "",
+      postal_code: "",
+      country: "US",
+      phone: "",
+      type: "shipping",
+      is_default: false,
     });
     fetchUserAddresses(session.user.id);
   };
 
+  // Unauthenticated screens
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-background">
@@ -1018,167 +1042,168 @@ if (product.specifications) {
           <div className="max-w-md mx-auto">
             <Card>
               <CardHeader className="text-center">
-                <CardTitle className="text-2xl">
-                  {view === "login" && "Login to Your Account"}
-                  {view === "signup" && "Create a New Account"}
+                <CardTitle className="text-2xl font-bold">
+                  {view === "login" ? "Login to Your Account" : "Create Account"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {view === "login" ? (
-                  <>
-                    <form onSubmit={handleLogin} className="space-y-4">
-                      <div className="flex justify-center space-x-2">
-                        <Button
-                          type="button"
-                          variant={loginMode === "user" ? "default" : "outline"}
-                          onClick={() => setLoginMode("user")}
-                        >
-                          User Login
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={loginMode === "admin" ? "default" : "outline"}
-                          onClick={() => setLoginMode("admin")}
-                        >
-                          Admin Login
-                        </Button>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="flex justify-center space-x-2">
+                      <Button
+                        type="button"
+                        variant={loginMode === "user" ? "default" : "outline"}
+                        onClick={() => setLoginMode("user")}
+                      >
+                        User Login
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={loginMode === "admin" ? "default" : "outline"}
+                        onClick={() => setLoginMode("admin")}
+                      >
+                        Admin Login
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Password</Label>
+                      <div className="relative">
                         <Input
-                          id="email"
-                          type="email"
-                          placeholder="Enter your email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
                           required
                         />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                          onClick={() => setShowPassword((p) => !p)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <div className="relative">
-                          <Input
-                            id="password"
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Enter your password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </div>
-                      <Button type="submit" className="w-full">
-                        Login
+                    </div>
+                    <Button type="submit" className="w-full">
+                      Login
+                    </Button>
+                    <div className="text-center mt-4 space-y-2 text-sm">
+                      <Button
+                        type="button"
+                        variant="link"
+                        onClick={() => {
+                          const emailInput = prompt("Enter your email:");
+                          if (emailInput) {
+                            supabase.auth
+                              .resetPasswordForEmail(emailInput, {
+                                redirectTo: `${window.location.origin}/reset-password`,
+                              })
+                              .then(({ error }) => {
+                                if (error)
+                                  alert("Failed: " + error.message);
+                                else
+                                  alert(
+                                    "Password reset email sent. Check inbox."
+                                  );
+                              });
+                          }
+                        }}
+                      >
+                        Forgot password?
                       </Button>
-                    </form>
-
-                    <div className="mt-6 text-center space-y-2">
-                      <Button variant="link" className="text-sm" onClick={() => {
-                        const emailInput = prompt("Please enter your email address to reset your password:");
-                        if (emailInput) {
-                           supabase.auth.resetPasswordForEmail(emailInput, {
-                            redirectTo: `${window.location.origin}/reset-password`,
-                          }).then(({ error }) => {
-                            if (error) {
-                              alert("Error sending password reset email: " + error.message);
-                            } else {
-                              alert("Password reset email sent. Please check your inbox!");
-                            }
-                          });
-                        }
-                      }}>
-                        Forgot your password?
-                      </Button>
-                      <p className="text-sm text-muted-foreground">
-                        Don't have an account?{" "}
-                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("signup")}>
-                          Sign up here
+                      <p>
+                        No account?{" "}
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto"
+                          onClick={() => setView("signup")}
+                        >
+                          Sign up
                         </Button>
                       </p>
                     </div>
-                  </>
+                  </form>
                 ) : (
-                  <>
-                    <form onSubmit={handleSignup} className="space-y-4">
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-first-name">First Name</Label>
-                          <Input
-                            id="signup-first-name"
-                            placeholder="Enter your first name"
-                            value={firstName}
-                            onChange={(e) => setFirstName(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-last-name">Last Name</Label>
-                          <Input
-                            id="signup-last-name"
-                            placeholder="Enter your last name"
-                            value={lastName}
-                            onChange={(e) => setLastName(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
+                  <form onSubmit={handleSignup} className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="signup-email">Email</Label>
+                        <Label>First Name</Label>
                         <Input
-                          id="signup-email"
-                          type="email"
-                          placeholder="Enter your email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
                           required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="signup-password">Password</Label>
-                        <div className="relative">
-                          <Input
-                            id="signup-password"
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Create a password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
-                        </div>
+                        <Label>Last Name</Label>
+                        <Input
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          required
+                        />
                       </div>
-                      <Button type="submit" className="w-full">
-                        Sign Up
-                      </Button>
-                    </form>
-
-                    <div className="mt-6 text-center space-y-2">
-                      <p className="text-sm text-muted-foreground">
-                        Already have an account?{" "}
-                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setView("login")}>
-                          Log in here
-                        </Button>
-                      </p>
                     </div>
-                  </>
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Password</Label>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                          onClick={() => setShowPassword((p) => !p)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    <Button type="submit" className="w-full">
+                      Sign Up
+                    </Button>
+                    <div className="text-center text-sm mt-4">
+                      Already have an account?{" "}
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto"
+                        onClick={() => setView("login")}
+                      >
+                        Log in
+                      </Button>
+                    </div>
+                  </form>
                 )}
               </CardContent>
             </Card>
@@ -1192,275 +1217,216 @@ if (product.specifications) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-between mb-8">
-            <div className="space-y-2">
-              <div className="h-8 w-64 bg-gray-200 rounded-md animate-pulse"></div>
-              <div className="h-5 w-80 bg-gray-200 rounded-md animate-pulse"></div>
-            </div>
-            <div className="h-10 w-24 bg-gray-200 rounded-md animate-pulse"></div>
+          <div className="animate-pulse space-y-6">
+            <div className="h-10 bg-muted rounded w-1/3" />
+            <div className="h-6 bg-muted rounded w-1/2" />
+            <div className="h-40 bg-muted rounded" />
           </div>
-          <div className="h-12 w-full bg-gray-200 rounded-md animate-pulse mb-8"></div>
-          <div className="h-[200px] w-full bg-gray-200 rounded-md animate-pulse"></div>
         </div>
       </div>
     );
   }
 
-  // Determine which view to render based on the URL path
-  const currentPath = location.pathname.split('/').pop();
+  // Determine section by URL (still preserve old routes)
+  const currentPath = location.pathname.split("/").pop();
 
   const renderContent = () => {
     switch (currentPath) {
-      case 'addresses':
+      case "addresses":
         return renderAddressesContent();
-      case 'orders':
+      case "orders":
         return renderOrdersContent();
-      case 'admin-dashboard':
+      case "admin-dashboard":
         return renderAdminDashboardContent();
-      case 'analytics-dashboard':
+      case "analytics-dashboard":
         return <AnalyticsDashboard />;
       default:
         return renderProfileContent();
     }
   };
-  
+
+  // --- NEW ADMIN DASHBOARD DESIGN ---
   const renderAdminDashboardContent = () => {
-    const lowercasedQuery = searchQuery.toLowerCase();
-
-    const filteredParts = parts.filter(part => {
-      const partSpecs = JSON.stringify(part.specifications || {});
-      const partString = `${part.name} ${part.brand} ${part.part_number} ${partSpecs}`.toLowerCase();
-      return partString.includes(lowercasedQuery);
-    });
-
-    const filteredProducts = products.filter(product => {
-      const productString = `${product.name} ${product.brand} ${product.category} ${product.part_number} ${product.sku} ${product.specifications || ''}`.toLowerCase();
-      return productString.includes(lowercasedQuery);
-    });
-
     return (
-      <div className="space-y-8">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-4">
-              <h2 className="text-xl font-bold">{editingProductId ? 'Edit' : 'List a New...'}</h2>
-              <Button variant={listingType === "part" ? "default" : "outline"} onClick={() => setListingType("part")}>Part</Button>
-              <Button variant={listingType === "product" ? "default" : "outline"} onClick={() => setListingType("product")}>Product</Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleProductSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="product-name">{listingType === "part" ? "Part Name" : "Product Name"}</Label>
-                <Input id="product-name" value={productInfo.name} onChange={(e) => setProductInfo({ ...productInfo, name: e.target.value })} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="product-description">Description</Label>
-                <Textarea id="product-description" value={productInfo.description} onChange={(e) => setProductInfo({ ...productInfo, description: e.target.value })} rows={4} required />
-              </div>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="product-price">Price ($)</Label>
-                  <Input id="product-price" type="number" step="0.01" value={productInfo.price} onChange={(e) => setProductInfo({ ...productInfo, price: e.target.value })} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="product-quantity">Quantity</Label>
-                  <Input id="product-quantity" type="number" value={productInfo.stock_quantity.toString()} onChange={(e) => setProductInfo({ ...productInfo, stock_quantity: parseInt(e.target.value, 10) || 0 })} required />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="product-category">Category</Label>
-                {listingType === 'product' ? (
-                  <Input
-                    id="product-category"
-                    placeholder="e.g., 'Performance Tuning', 'Exterior Accessories'"
-                    value={productInfo.category}
-                    onChange={(e) => setProductInfo({ ...productInfo, category: e.target.value })}
-                  />
-                ) : (
-                  <Select value={productInfo.category} onValueChange={(value) => setProductInfo({ ...productInfo, category: value })}>
-                    <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (<SelectItem key={category} value={category}>{category}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="product-images">Product Images</Label>
-                <Input id="product-images" type="file" multiple onChange={handleImageUpload} />
-              </div>
-              {productInfo.image_urls.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-4">
-                      {productInfo.image_urls.map((url, index) => (
-                          <div key={index} className="relative w-24 h-24 border rounded overflow-hidden">
-                              <img src={url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-                              <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="destructive"
-                                  className="absolute top-1 right-1 w-6 h-6 p-0"
-                                  onClick={() => removeImage(index)}
-                              >
-                                  <Trash2 className="h-4 w-4" />
-                              </Button>
-                          </div>
-                      ))}
-                  </div>
-              )}
-
-              {listingType === 'part' && (
-                <>
-                  <Separator className="my-8" />
-                  <h3 className="text-lg font-semibold">Vehicle Compatibility</h3>
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="part-year">Vehicle Year</Label>
-                      <Select value={productInfo.year} onValueChange={(value) => setProductInfo({ ...productInfo, year: value, make: '', model: '' })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Year" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {vehicleYears.map(year => (
-                            <SelectItem key={year} value={year.toString()}>
-                              {year}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="part-make">Vehicle Make</Label>
-                      <Select value={productInfo.make} onValueChange={(value) => setProductInfo({ ...productInfo, make: value, model: '' })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Make" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {vehicleMakes.map(make => (
-                            <SelectItem key={make.name} value={make.name}>
-                              {make.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="part-model">Vehicle Model</Label>
-                      <Select value={productInfo.model} onValueChange={(value) => setProductInfo({ ...productInfo, model: value })} disabled={!productInfo.make}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Model" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {vehicleModels.map(model => (
-                            <SelectItem key={model.name} value={model.name}>
-                              {model.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="product-specs">Specifications</Label>
-                <Textarea id="product-specs" value={productInfo.specifications} onChange={(e) => setProductInfo({ ...productInfo, specifications: e.target.value })} rows={4} placeholder={listingType === "part" ? "Additional specifications, e.g., 'Color: Black'" : "List specifications here."} />
-              </div>
-              <div className="flex space-x-2">
-                <Button type="submit">{editingProductId ? "Update" : "List"} {listingType === "part" ? "Part" : "Product"}</Button>
-                {editingProductId && (
-                  <Button type="button" variant="outline" onClick={() => {
-                    setEditingProductId(null);
-                    setProductInfo({
-                      name: "", description: "", price: "", stock_quantity: 0, image_urls: [],
-                      specifications: "", category: "", make: "", model: "", year: "", vin: "",
-                    });
-                  }}>Cancel Edit</Button>
-                )}
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Separator className="my-8" />
-
-        <div className="flex items-center space-x-4 mb-4">
-          <h2 className="text-2xl font-bold">Your Listed Parts and Products</h2>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search parts or products..."
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+      <div className="space-y-10">
+        {/* Main Admin Card */}
+        <div className="bg-[#121212] text-foreground rounded-xl border border-neutral-800 p-6 lg:p-8 shadow-sm">
+          <div className="space-y-2 mb-6">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <ShieldCheck className="h-6 w-6 text-primary" />
+              Admin Dashboard
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Welcome, {userInfo.firstName || "Administrator"} - Administrative controls and
+              overview
+            </p>
           </div>
+
+            <div className="bg-neutral-800/60 rounded-lg p-4 flex items-center justify-between mb-8">
+              <div>
+                <p className="font-medium">Administrator Status</p>
+                <p className="text-sm text-muted-foreground">
+                  User Role: {userInfo.is_admin ? "Administrator" : "User"}
+                  {userInfo.is_seller ? " | Seller" : ""}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-sm font-medium text-green-400">
+                <span className="h-2 w-2 rounded-full bg-green-500 inline-block" />
+                Active
+              </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-10">
+              <StatCard
+                title="Total Users"
+                value={
+                  adminMetrics
+                    ? Intl.NumberFormat().format(adminMetrics.users)
+                    : "--"
+                }
+                subtitle="System users"
+                icon={<Users className="h-5 w-5" />}
+              />
+              <StatCard
+                title="Total Orders"
+                value={
+                  adminMetrics
+                    ? Intl.NumberFormat().format(adminMetrics.orders)
+                    : "--"
+                }
+                subtitle="All time orders"
+                icon={<Package className="h-5 w-5" />}
+              />
+              <StatCard
+                title="Products"
+                value={
+                  adminMetrics
+                    ? Intl.NumberFormat().format(adminMetrics.productsActive)
+                    : "--"
+                }
+                subtitle="Available products"
+                icon={<Boxes className="h-5 w-5" />}
+              />
+              <StatCard
+                title="Revenue"
+                value={
+                  adminMetrics
+                    ? "$" +
+                      Intl.NumberFormat().format(
+                        Math.round(adminMetrics.revenue)
+                      )
+                    : "--"
+                }
+                subtitle="Total revenue"
+                icon={<TrendingUp className="h-5 w-5" />}
+              />
+            </div>
+
+            {/* Quick Actions */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+              <div className="grid gap-4 md:grid-cols-3">
+                <ActionCard
+                  title="Manage Users"
+                  description="View and edit user accounts"
+                  icon={<Users className="h-5 w-5" />}
+                  disabled
+                />
+                <ActionCard
+                  title="Manage Products"
+                  description="Add, edit, or remove products"
+                  icon={<Boxes className="h-5 w-5" />}
+                  onClick={() => setShowManageProducts(true)}
+                />
+                <ActionCard
+                  title="View Orders"
+                  description="Monitor and process orders"
+                  icon={<Package className="h-5 w-5" />}
+                  disabled
+                />
+              </div>
+            </div>
         </div>
-        <div className="space-y-4">
-          {filteredParts.length === 0 && filteredProducts.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">No items found matching your search.</div>
-          ) : (
-            <>
-              {filteredParts.map((part) => (
-                <Card key={part.id}>
-                  <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-                    <div className="flex-1 space-y-1">
-                      <h3 className="font-semibold text-lg">{part.name} (Part)</h3>
-                      <p className="text-muted-foreground text-sm">{part.brand}</p>
-                      <p className="text-lg font-bold">${part.price}</p>
-                      <p className="text-sm">In Stock: {part.stock_quantity}</p>
-                      <p className={`text-sm font-medium ${part.is_active ? 'text-green-500' : 'text-yellow-500'}`}>
-                        Status: {part.is_active ? 'Active' : 'Archived'}
-                      </p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEditPart(part)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleArchivePart(part.id, part.is_active)}>
-                        <Archive className="h-4 w-4 mr-2" />
-                        {part.is_active ? 'Archive' : 'Unarchive'}
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeletePart(part.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {filteredProducts.map((product) => (
-                <Card key={product.id}>
-                  <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-                    <div className="flex-1 space-y-1">
-                      <h3 className="font-semibold text-lg">{product.name} (Product)</h3>
-                      <p className="text-muted-foreground text-sm">{product.category}</p>
-                      <p className="text-lg font-bold">${product.price}</p>
-                      <p className="text-sm">In Stock: {product.stock_quantity}</p>
-                      <p className={`text-sm font-medium ${product.is_active ? 'text-green-500' : 'text-yellow-500'}`}>Status: {product.is_active ? 'Active' : 'Archived'}</p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}><Edit className="h-4 w-4 mr-2" />Edit</Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleArchiveProduct(product.id, product.is_active)}><Archive className="h-4 w-4 mr-2" />{product.is_active ? 'Archive' : 'Unarchive'}</Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </>
-          )}
-        </div>
+
+        {/* Seller Creation (if admin, optional) */}
+        {userInfo.is_admin && !userInfo.is_seller && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Create Seller Account (Admin)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={handleCreateSellerAccount}
+                className="grid gap-4 md:grid-cols-2"
+              >
+                <div className="space-y-1 md:col-span-1">
+                  <Label>Name</Label>
+                  <Input
+                    value={newSellerName}
+                    onChange={(e) => setNewSellerName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1 md:col-span-1">
+                  <Label>Address</Label>
+                  <Input
+                    value={newSellerAddress}
+                    onChange={(e) => setNewSellerAddress(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Phone</Label>
+                  <Input
+                    value={newSellerPhoneNumber}
+                    onChange={(e) =>
+                      setNewSellerPhoneNumber(e.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={newSellerEmail}
+                    onChange={(e) => setNewSellerEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Password</Label>
+                  <Input
+                    type="password"
+                    value={newSellerPassword}
+                    onChange={(e) => setNewSellerPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button type="submit" className="w-full">
+                    Create Seller
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   };
 
+  // Profile Content
   const renderProfileContent = () => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center">
-          <User className="h-5 w-5 mr-2" />
+          <UserIcon className="h-5 w-5 mr-2" />
           Profile Information
         </CardTitle>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={() => setIsEditing((p) => !p)}
         >
           <Edit className="h-4 w-4 mr-2" />
           {isEditing ? "Cancel" : "Edit"}
@@ -1469,48 +1435,45 @@ if (product.specifications) {
       <CardContent className="space-y-6">
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="firstName">First Name</Label>
+            <Label>First Name</Label>
             <Input
-              id="firstName"
               value={userInfo.firstName}
               disabled={!isEditing}
-              onChange={(e) => setUserInfo({...userInfo, firstName: e.target.value})}
+              onChange={(e) =>
+                setUserInfo({ ...userInfo, firstName: e.target.value })
+              }
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name</Label>
+            <Label>Last Name</Label>
             <Input
-              id="lastName"
               value={userInfo.lastName}
               disabled={!isEditing}
-              onChange={(e) => setUserInfo({...userInfo, lastName: e.target.value})}
+              onChange={(e) =>
+                setUserInfo({ ...userInfo, lastName: e.target.value })
+              }
             />
           </div>
         </div>
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              value={userInfo.email}
-              disabled
-            />
+            <Label>Email</Label>
+            <Input value={userInfo.email} disabled />
           </div>
           <div className="space-y-2">
-  <Label htmlFor="phone">Phone</Label>
-  <Input
-    id="phone"
-    value={userInfo.phone}
-    disabled={!isEditing}
-    onChange={(e) => setUserInfo({...userInfo, phone: e.target.value})}
-  />
-</div>
+            <Label>Phone</Label>
+            <Input
+              value={userInfo.phone}
+              disabled={!isEditing}
+              onChange={(e) =>
+                setUserInfo({ ...userInfo, phone: e.target.value })
+              }
+            />
+          </div>
         </div>
         {isEditing && (
           <div className="flex space-x-4">
-            <Button onClick={handleSaveProfile}>
-              Save Changes
-            </Button>
+            <Button onClick={handleSaveProfile}>Save Changes</Button>
             <Button variant="outline" onClick={() => setIsEditing(false)}>
               Cancel
             </Button>
@@ -1520,6 +1483,7 @@ if (product.specifications) {
     </Card>
   );
 
+  // Addresses
   const renderAddressesContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -1527,14 +1491,25 @@ if (product.specifications) {
           <MapPin className="h-5 w-5 mr-2" />
           Saved Addresses
         </h2>
-        <Button onClick={() => {
-          setShowAddressForm(true);
-          setEditingAddressId(null);
-          setFormAddress({
-            first_name: "", last_name: "", address_line_1: "", address_line_2: "",
-            city: "", state: "", postal_code: "", country: "US", phone: "", type: "shipping", is_default: false
-          });
-        }}>
+        <Button
+          onClick={() => {
+            setShowAddressForm(true);
+            setEditingAddressId(null);
+            setFormAddress({
+              first_name: "",
+              last_name: "",
+              address_line_1: "",
+              address_line_2: "",
+              city: "",
+              state: "",
+              postal_code: "",
+              country: "US",
+              phone: "",
+              type: "shipping",
+              is_default: false,
+            });
+          }}
+        >
           Add New Address
         </Button>
       </div>
@@ -1542,83 +1517,107 @@ if (product.specifications) {
       {showAddressForm ? (
         <Card>
           <CardHeader>
-            <CardTitle>{editingAddressId ? "Edit Address" : "Add New Address"}</CardTitle>
+            <CardTitle>
+              {editingAddressId ? "Edit Address" : "Add New Address"}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAddressFormSubmit} className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="address-first-name">First Name</Label>
+                  <Label>First Name</Label>
                   <Input
-                    id="address-first-name"
                     value={formAddress.first_name}
-                    onChange={(e) => setFormAddress({...formAddress, first_name: e.target.value})}
+                    onChange={(e) =>
+                      setFormAddress({
+                        ...formAddress,
+                        first_name: e.target.value,
+                      })
+                    }
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="address-last-name">Last Name</Label>
+                  <Label>Last Name</Label>
                   <Input
-                    id="address-last-name"
                     value={formAddress.last_name}
-                    onChange={(e) => setFormAddress({...formAddress, last_name: e.target.value})}
+                    onChange={(e) =>
+                      setFormAddress({
+                        ...formAddress,
+                        last_name: e.target.value,
+                      })
+                    }
                     required
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address-line-1">Address Line 1</Label>
+                <Label>Address Line 1</Label>
                 <Input
-                  id="address-line-1"
                   value={formAddress.address_line_1}
-                  onChange={(e) => setFormAddress({...formAddress, address_line_1: e.target.value})}
+                  onChange={(e) =>
+                    setFormAddress({
+                      ...formAddress,
+                      address_line_1: e.target.value,
+                    })
+                  }
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address-line-2">Address Line 2</Label>
+                <Label>Address Line 2</Label>
                 <Input
-                  id="address-line-2"
                   value={formAddress.address_line_2}
-                  onChange={(e) => setFormAddress({...formAddress, address_line_2: e.target.value})}
+                  onChange={(e) =>
+                    setFormAddress({
+                      ...formAddress,
+                      address_line_2: e.target.value,
+                    })
+                  }
                 />
               </div>
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
+                  <Label>City</Label>
                   <Input
-                    id="city"
                     value={formAddress.city}
-                    onChange={(e) => setFormAddress({...formAddress, city: e.target.value})}
+                    onChange={(e) =>
+                      setFormAddress({ ...formAddress, city: e.target.value })
+                    }
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
+                  <Label>State</Label>
                   <Input
-                    id="state"
                     value={formAddress.state}
-                    onChange={(e) => setFormAddress({...formAddress, state: e.target.value})}
+                    onChange={(e) =>
+                      setFormAddress({ ...formAddress, state: e.target.value })
+                    }
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="postal-code">Postal Code</Label>
+                  <Label>Postal Code</Label>
                   <Input
-                    id="postal-code"
                     value={formAddress.postal_code}
-                    onChange={(e) => setFormAddress({...formAddress, postal_code: e.target.value})}
+                    onChange={(e) =>
+                      setFormAddress({
+                        ...formAddress,
+                        postal_code: e.target.value,
+                      })
+                    }
                     required
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address-phone">Phone Number</Label>
+                <Label>Phone Number</Label>
                 <Input
-                  id="address-phone"
-                  type="tel"
                   value={formAddress.phone}
-                  onChange={(e) => setFormAddress({...formAddress, phone: e.target.value})}
+                  onChange={(e) =>
+                    setFormAddress({ ...formAddress, phone: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -1633,8 +1632,16 @@ if (product.specifications) {
                 <Label htmlFor="is_default">Set as default address</Label>
               </div>
               <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setShowAddressForm(false)}>Cancel</Button>
-                <Button type="submit">{editingAddressId ? "Save Changes" : "Add Address"}</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAddressForm(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {editingAddressId ? "Save Changes" : "Add Address"}
+                </Button>
               </div>
             </form>
           </CardContent>
@@ -1644,30 +1651,58 @@ if (product.specifications) {
           {addresses.length > 0 ? (
             addresses.map((address) => (
               <Card key={address.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{address.type} Address</CardTitle>
-                    {address.is_default && (
-                      <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
-                        Default
-                      </span>
-                    )}
-                  </div>
+                <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg capitalize">
+                    {address.type} Address
+                  </CardTitle>
+                  {address.is_default && (
+                    <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
+                      Default
+                    </span>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1 text-sm">
-                    <p className="font-medium">{address.first_name} {address.last_name}</p>
+                    <p className="font-medium">
+                      {address.first_name} {address.last_name}
+                    </p>
                     <p>{address.address_line_1}</p>
-                    {address.address_line_2 && <p>{address.address_line_2}</p>}
-                    <p>{address.city}, {address.state} {address.postal_code}</p>
+                    {address.address_line_2 && (
+                      <p>{address.address_line_2}</p>
+                    )}
+                    <p>
+                      {address.city}, {address.state} {address.postal_code}
+                    </p>
                     <p>{address.country}</p>
-                    {address.phone && <p className="mt-2 text-muted-foreground">{address.phone}</p>}
+                    {address.phone && (
+                      <p className="mt-2 text-muted-foreground">
+                        {address.phone}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex space-x-2 mt-4">
-                    <Button variant="outline" size="sm" onClick={() => handleEditAddress(address)}>Edit</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDeleteAddress(address.id)}>Delete</Button>
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditAddress(address)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteAddress(address.id)}
+                    >
+                      Delete
+                    </Button>
                     {!address.is_default && (
-                      <Button variant="secondary" size="sm" onClick={() => handleSetDefaultAddress(address.id)}>Set as Default</Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleSetDefaultAddress(address.id)}
+                      >
+                        Set Default
+                      </Button>
                     )}
                   </div>
                 </CardContent>
@@ -1675,7 +1710,7 @@ if (product.specifications) {
             ))
           ) : (
             <div className="col-span-2 text-center text-muted-foreground py-8">
-              You have no saved addresses yet.
+              No saved addresses yet.
             </div>
           )}
         </div>
@@ -1683,59 +1718,87 @@ if (product.specifications) {
     </div>
   );
 
+  // Orders
   const renderOrdersContent = () => (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Package className="h-5 w-5 mr-2" />
+        <CardTitle className="flex items-center gap-2">
+          <Package className="h-5 w-5" />
           Order History
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {orders.length > 0 ? (
-            orders.map((order, index) => (
-              <div key={order.id}>
-                <div className="flex items-center justify-between py-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-4">
-                      <span className="font-medium">{order.orderNumber}</span>
-                      <span className="text-sm text-muted-foreground">{order.date}</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        order.status === 'delivered' ? 'bg-green-200 text-green-800' :
-                        order.status === 'shipped' ? 'bg-blue-200 text-blue-800' :
-                        'bg-yellow-200 text-yellow-800'
-                      }`}>
-                        {order.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">${order.total.toFixed(2)}</p>
-                    <Button variant="outline" size="sm" className="mt-2">
-                      View Details
-                    </Button>
+        {orders.length > 0 ? (
+          <div className="divide-y">
+            {orders.map((order, i) => (
+              <div
+                key={order.id}
+                className="py-4 flex items-center justify-between gap-4"
+              >
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="font-medium">{order.orderNumber}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {order.date}
+                    </span>
+                    <span
+                      className={`text-xs px-2 py-1 rounded ${
+                        order.status === "delivered"
+                          ? "bg-green-200 text-green-800"
+                          : order.status === "shipped"
+                          ? "bg-blue-200 text-blue-800"
+                          : "bg-yellow-200 text-yellow-800"
+                      }`}
+                    >
+                      {order.status}
+                    </span>
                   </div>
                 </div>
-                {index < orders.length - 1 && <Separator />}
+                <div className="text-right">
+                  <p className="font-semibold">${order.total.toFixed(2)}</p>
+                  <Button variant="outline" size="sm" className="mt-2">
+                    View Details
+                  </Button>
+                </div>
               </div>
-            ))
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              You have no orders yet.
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground py-8">
+            No orders yet.
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 
+  // Filter & display inside Manage Products modal
+  const lowercasedQuery = searchQuery.toLowerCase();
+  const filteredParts = parts.filter((part) => {
+    const specStr = JSON.stringify(part.specifications || {});
+    return (
+      `${part.name} ${part.brand} ${part.part_number} ${specStr}`
+        .toLowerCase()
+        .includes(lowercasedQuery)
+    );
+  });
+  const filteredProducts = products.filter((p) => {
+    return (
+      `${p.name} ${p.brand} ${p.category} ${p.part_number} ${
+        p.sku
+      } ${p.specifications || ""}`
+        .toLowerCase()
+        .includes(lowercasedQuery)
+    );
+  });
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#0d0d0d] text-foreground">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        {/* Page Header */}
+        <div className="flex items-center justify-between mb-10">
           <div>
-            <h1 className="text-3xl font-bold mb-2">My Account</h1>
+            <h1 className="text-4xl font-bold tracking-tight mb-2">My Account</h1>
             <p className="text-muted-foreground">
               Manage your account information and orders
             </p>
@@ -1746,12 +1809,513 @@ if (product.specifications) {
           </Button>
         </div>
 
-        <div className="space-y-8">
-          {renderContent()}
-        </div>
+        <div className="space-y-8">{renderContent()}</div>
       </div>
+
+      {/* Manage Products Modal (Overlay) */}
+      {showManageProducts && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-6xl bg-[#1a1b1e] rounded-xl border border-neutral-800 shadow-2xl my-10">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-[#1a1b1e]/95 backdrop-blur">
+              <div>
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  <Boxes className="h-5 w-5 text-primary" />
+                  Manage Products & Parts
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Add, edit, archive or remove your listings
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={listingType === "part" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setListingType("part");
+                    setEditingProductId(null);
+                    cleanupAndRefetch();
+                  }}
+                >
+                  Part
+                </Button>
+                <Button
+                  variant={listingType === "product" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setListingType("product");
+                    setEditingProductId(null);
+                    cleanupAndRefetch();
+                  }}
+                >
+                  Product
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowManageProducts(false);
+                    cleanupAndRefetch();
+                  }}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-10">
+              {/* Listing Form */}
+              <Card className="bg-neutral-900/60 border-neutral-800">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    {editingProductId ? "Edit Listing" : "Create New Listing"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <form
+                    onSubmit={handleProductSubmit}
+                    className="space-y-6"
+                    id="listing-form"
+                  >
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label>
+                          {listingType === "part" ? "Part Name" : "Product Name"}
+                        </Label>
+                        <Input
+                          value={productInfo.name}
+                          onChange={(e) =>
+                            setProductInfo({
+                              ...productInfo,
+                              name: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Category</Label>
+                        {listingType === "product" ? (
+                          <Input
+                            placeholder="e.g., Performance"
+                            value={productInfo.category}
+                            onChange={(e) =>
+                              setProductInfo({
+                                ...productInfo,
+                                category: e.target.value,
+                              })
+                            }
+                          />
+                        ) : (
+                          <Select
+                            value={productInfo.category}
+                            onValueChange={(value) =>
+                              setProductInfo({
+                                ...productInfo,
+                                category: value,
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-64">
+                              {categories.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {c}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <Textarea
+                        rows={4}
+                        value={productInfo.description}
+                        onChange={(e) =>
+                          setProductInfo({
+                            ...productInfo,
+                            description: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <Label>Price ($)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={productInfo.price}
+                          onChange={(e) =>
+                            setProductInfo({
+                              ...productInfo,
+                              price: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Quantity</Label>
+                        <Input
+                          type="number"
+                          value={productInfo.stock_quantity}
+                          onChange={(e) =>
+                            setProductInfo({
+                              ...productInfo,
+                              stock_quantity:
+                                parseInt(e.target.value, 10) || 0,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Images</Label>
+                        <Input
+                          type="file"
+                          multiple
+                          onChange={handleImageUpload}
+                        />
+                      </div>
+                    </div>
+
+                    {productInfo.image_urls.length > 0 && (
+                      <div className="flex flex-wrap gap-3">
+                        {productInfo.image_urls.map((url, idx) => (
+                          <div
+                            key={idx}
+                            className="relative group w-24 h-24 rounded border border-neutral-700 overflow-hidden"
+                          >
+                            <img
+                              src={url}
+                              alt=""
+                              className="object-cover w-full h-full"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(idx)}
+                              className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs text-red-400 transition"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {listingType === "part" && (
+                      <div className="space-y-4 border rounded-lg p-4 border-neutral-700">
+                        <h4 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">
+                          Vehicle Compatibility
+                        </h4>
+                        <div className="grid md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label>Year</Label>
+                            <Select
+                              value={productInfo.year}
+                              onValueChange={(value) =>
+                                setProductInfo({
+                                  ...productInfo,
+                                  year: value,
+                                  make: "",
+                                  model: "",
+                                })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Year" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-64">
+                                {vehicleYears.map((y) => (
+                                  <SelectItem
+                                    key={y.toString()}
+                                    value={y.toString()}
+                                  >
+                                    {y}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Make</Label>
+                            <Select
+                              value={productInfo.make}
+                              onValueChange={(value) =>
+                                setProductInfo({
+                                  ...productInfo,
+                                  make: value,
+                                  model: "",
+                                })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Make" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-64">
+                                {vehicleMakes.map((m) => (
+                                  <SelectItem key={m.id} value={m.name}>
+                                    {m.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Model</Label>
+                            <Select
+                              disabled={!productInfo.make}
+                              value={productInfo.model}
+                              onValueChange={(value) =>
+                                setProductInfo({
+                                  ...productInfo,
+                                  model: value,
+                                })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Model" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-64">
+                                {vehicleModels.map((m) => (
+                                  <SelectItem key={m.name} value={m.name}>
+                                    {m.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label>Specifications / Notes</Label>
+                      <Textarea
+                        rows={4}
+                        placeholder={
+                          listingType === "part"
+                            ? "Additional specs (e.g., Color: Black, Material: Steel)"
+                            : "Product specifications..."
+                        }
+                        value={productInfo.specifications}
+                        onChange={(e) =>
+                          setProductInfo({
+                            ...productInfo,
+                            specifications: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      <Button type="submit">
+                        {editingProductId ? "Update" : "List"}{" "}
+                        {listingType === "part" ? "Part" : "Product"}
+                      </Button>
+                      {editingProductId && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingProductId(null);
+                            cleanupAndRefetch();
+                          }}
+                        >
+                          Cancel Edit
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={cleanupAndRefetch}
+                      >
+                        <RefreshCcw className="h-4 w-4 mr-2" />
+                        Reset Form
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* Listings Section */}
+              <div className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <h4 className="text-lg font-semibold">
+                    Your Parts & Products
+                  </h4>
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      className="pl-9"
+                      placeholder="Search listings..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {filteredParts.length === 0 && filteredProducts.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-10 border border-dashed rounded-lg">
+                    No listings match your search.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredParts.map((part) => (
+                      <ListingRow
+                        key={part.id}
+                        title={`${part.name} (Part)`}
+                        metaLeft={part.brand}
+                        metaRight={`$${part.price}`}
+                        quantity={part.stock_quantity}
+                        active={part.is_active}
+                        onEdit={() => handleEditPart(part)}
+                        onArchive={() =>
+                          handleArchivePart(part.id, part.is_active)
+                        }
+                        onDelete={() => handleDeletePart(part.id)}
+                      />
+                    ))}
+                    {filteredProducts.map((product) => (
+                      <ListingRow
+                        key={product.id}
+                        title={`${product.name} (Product)`}
+                        metaLeft={product.category}
+                        metaRight={`$${product.price}`}
+                        quantity={product.stock_quantity}
+                        active={product.is_active}
+                        onEdit={() => handleEditProduct(product)}
+                        onArchive={() =>
+                          handleArchiveProduct(product.id, product.is_active)
+                        }
+                        onDelete={() => handleDeleteProduct(product.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+/* ---------- Small presentational components ---------- */
+
+const StatCard = ({
+  title,
+  value,
+  subtitle,
+  icon,
+}: {
+  title: string;
+  value: string;
+  subtitle: string;
+  icon: React.ReactNode;
+}) => (
+  <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-5 flex flex-col">
+    <div className="flex items-center justify-between mb-3">
+      <p className="text-sm text-muted-foreground font-medium">{title}</p>
+      <div className="text-neutral-400">{icon}</div>
+    </div>
+    <div className="text-3xl font-bold tracking-tight">{value}</div>
+    <span className="mt-2 text-xs text-muted-foreground">{subtitle}</span>
+  </div>
+);
+
+const ActionCard = ({
+  title,
+  description,
+  icon,
+  onClick,
+  disabled,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+}) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`text-left rounded-lg border border-neutral-800 bg-neutral-900/60 p-5 group transition relative ${
+      disabled
+        ? "opacity-50 cursor-not-allowed"
+        : "hover:bg-neutral-800/70 cursor-pointer"
+    }`}
+  >
+    <div className="flex items-center gap-3">
+      <div className="p-2 rounded-md bg-neutral-800 text-neutral-300 group-hover:text-primary group-hover:bg-neutral-700 transition">
+        {icon}
+      </div>
+      <div>
+        <p className="font-medium">{title}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  </button>
+);
+
+const ListingRow = ({
+  title,
+  metaLeft,
+  metaRight,
+  quantity,
+  active,
+  onEdit,
+  onArchive,
+  onDelete,
+}: {
+  title: string;
+  metaLeft?: string;
+  metaRight?: string;
+  quantity: number;
+  active: boolean;
+  onEdit: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+}) => (
+  <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 border border-neutral-800 rounded-lg bg-neutral-900/40">
+    <div className="flex-1 space-y-1">
+      <h5 className="font-semibold">{title}</h5>
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+        {metaLeft && <span>{metaLeft}</span>}
+        {metaRight && <span>{metaRight}</span>}
+        <span>In Stock: {quantity}</span>
+        <span
+          className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+            active ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"
+          }`}
+        >
+          {active ? "Active" : "Archived"}
+        </span>
+      </div>
+    </div>
+    <div className="flex flex-wrap gap-2">
+      <Button variant="outline" size="sm" onClick={onEdit}>
+        <Edit className="h-4 w-4 mr-1" />
+        Edit
+      </Button>
+      <Button variant="ghost" size="sm" onClick={onArchive}>
+        <Archive className="h-4 w-4 mr-1" />
+        {active ? "Archive" : "Unarchive"}
+      </Button>
+      <Button variant="destructive" size="sm" onClick={onDelete}>
+        <Trash2 className="h-4 w-4 mr-1" />
+        Delete
+      </Button>
+    </div>
+  </div>
+);
 
 export default Account;
