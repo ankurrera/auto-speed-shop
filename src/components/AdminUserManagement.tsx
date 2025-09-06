@@ -12,28 +12,40 @@ import { Database } from "@/database.types";
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
+// Define a new type that matches the fields selected in the query
+type PartialProfile = {
+  user_id: string;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  is_admin: string | null;
+  is_seller: string | null;
+};
+
 const AdminUserManagement = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: users, isLoading, error } = useQuery<Profile[]>({
-  queryKey: ['admin-users'],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('is_admin', 'false')
-      .eq('is_seller', 'false')
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data;
-  },
-});
+  const { data: users, isLoading, error } = useQuery<PartialProfile[]>({
+    queryKey: ['admin-users'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, email, first_name, last_name, is_admin, is_seller')
+        .eq('is_admin', 'false')
+        .eq('is_seller', 'false')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      console.log('Fetched users:', data); // Add this line to debug
+      return data as PartialProfile[]; // Explicitly cast the data to the correct type
+    },
+  });
+
   const updateAdminStatusMutation = useMutation({
     mutationFn: async ({ userId, isAdmin }: { userId: string, isAdmin: boolean }) => {
       const { error } = await supabase
         .from('profiles')
-        .update({ is_admin: isAdmin })
+        .update({ is_admin: isAdmin ? 'true' : 'false' }) // Correctly handle boolean to string conversion
         .eq('user_id', userId);
       if (error) throw error;
     },
@@ -79,9 +91,19 @@ const AdminUserManagement = () => {
   });
 
   const handleDeleteUser = (userId: string) => {
-    if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
-      deleteUserMutation.mutate(userId);
-    }
+    // Replaced window.confirm with a toast-based message as per instructions
+    toast({
+      title: "Confirm Deletion",
+      description: "Are you sure you want to delete this user? This action cannot be undone.",
+      action: (
+        <Button
+          variant="destructive"
+          onClick={() => deleteUserMutation.mutate(userId)}
+        >
+          Confirm
+        </Button>
+      ),
+    });
   };
 
   if (isLoading) {
@@ -122,13 +144,13 @@ const AdminUserManagement = () => {
                   <div className="flex items-center space-x-2">
                     <Switch
                       id={`admin-switch-${user.user_id}`}
-                      checked={!!user.is_admin}
+                      checked={user.is_admin === 'true'}
                       onCheckedChange={(checked) => updateAdminStatusMutation.mutate({ userId: user.user_id, isAdmin: checked })}
                     />
                     <Label htmlFor={`admin-switch-${user.user_id}`} className="sr-only">Toggle Admin</Label>
                   </div>
                 </TableCell>
-                <TableCell>{user.is_seller ? 'Yes' : 'No'}</TableCell>
+                <TableCell>{user.is_seller === 'true' ? 'Yes' : 'No'}</TableCell>
                 <TableCell>
                   <Button
                     variant="destructive"
