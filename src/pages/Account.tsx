@@ -19,6 +19,10 @@ import { SellerAccountForm } from "@/components/admin/SellerAccountForm";
 import PasswordResetForm from "@/components/PasswordResetForm";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/database.types";
+
+type Product = Database['public']['Tables']['products']['Row'];
+type Part = Database['public']['Tables']['parts']['Row'];
 
 const Account = () => {
   const [view, setView] = useState("login");
@@ -164,8 +168,31 @@ const Account = () => {
               </Button>
             </div>
             {!sellerExistsForAdmin && <SellerAccountForm onSellerCreated={() => checkSellerExists(user!.id)} />}
-            <ProductForm {...products} onSubmit={handleProductSubmit} />
-            <ProductList {...products} />
+            <ProductForm 
+              listingType={products.listingType}
+              setListingType={products.setListingType}
+              editingProductId={products.editingProductId}
+              productInfo={products.productInfo}
+              setProductInfo={products.setProductInfo}
+              vehicleYears={products.vehicleYears}
+              vehicleMakes={products.vehicleMakes}
+              vehicleModels={products.vehicleModels}
+              onImageUpload={products.handleImageUpload}
+              onRemoveImage={products.removeImage}
+              onSubmit={handleProductSubmit} 
+            />
+            <ProductList 
+              products={products.products}
+              parts={products.parts}
+              searchQuery={products.searchQuery}
+              setSearchQuery={products.setSearchQuery}
+              onEditProduct={products.handleEditProduct}
+              onEditPart={(part) => products.handleEditProduct(part as Product | Part)}
+              onDeleteProduct={products.handleDeleteProduct}
+              onDeletePart={products.handleDeletePart}
+              onArchiveProduct={products.handleArchiveProduct}
+              onArchivePart={products.handleArchivePart}
+            />
           </div>
         );
       case 'analytics-dashboard':
@@ -213,11 +240,12 @@ const Account = () => {
     });
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/products', {
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': `Bearer ${supabase.auth.session()?.access_token}`,
+          'Authorization': `Bearer ${session?.access_token}`,
         }
       });
 
