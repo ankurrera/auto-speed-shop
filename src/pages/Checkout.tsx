@@ -1,4 +1,4 @@
-// src/pages/Checkout.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,16 +19,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { createServerOrder, captureServerOrder } from "@/services/orderService";
 
-
-const TAX_RATE = 0.0825;
+const TAX_RATE = 0.0825; // still used for local pre-display only (server is authoritative)
 
 const Checkout = () => {
   const { cartItems, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [addresses, setAddresses] = useState([]);
-  const [selectedAddress, setSelectedAddress] = useState(null);
+
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
 
   const [shippingInfo, setShippingInfo] = useState({
     firstName: "",
@@ -41,9 +42,13 @@ const Checkout = () => {
 
   const [isFormValid, setIsFormValid] = useState(false);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [localOrderId, setLocalOrderId] = useState<string | null>(null);
+  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
 
   const fetchUserAddresses = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) return;
     const { data, error } = await supabase
       .from("addresses")
@@ -55,45 +60,42 @@ const Checkout = () => {
       console.error("Error fetching addresses:", error.message);
     } else {
       setAddresses(data);
-      const defaultAddress = data.find(addr => addr.is_default);
+      const defaultAddress = data.find((addr: any) => addr.is_default);
       if (defaultAddress) {
         setSelectedAddress(defaultAddress.id);
         setShippingInfo({
-          firstName: defaultAddress.first_name,
-          lastName: defaultAddress.last_name,
-          address: defaultAddress.address_line_1,
-          city: defaultAddress.city,
-          state: defaultAddress.state,
-          zip: defaultAddress.postal_code,
-        })
+          firstName: defaultAddress.first_name || "",
+            lastName: defaultAddress.last_name || "",
+            address: defaultAddress.address_line_1 || "",
+            city: defaultAddress.city || "",
+            state: defaultAddress.state || "",
+            zip: defaultAddress.postal_code || "",
+        });
       }
     }
   }, []);
 
-  useEffect(() => {
-    fetchUserAddresses();
-  }, [fetchUserAddresses]);
+  useEffect(() => { fetchUserAddresses(); }, [fetchUserAddresses]);
 
-  const handleShippingChange = (e) => {
-    const { id, value } = e.target;
-    setShippingInfo((prev) => ({ ...prev, [id]: value }));
-  };
-  
-  const handleAddressSelect = (addressId) => {
-    const address = addresses.find(addr => addr.id === addressId);
-    if (address) {
-      setSelectedAddress(address.id);
+  const handleAddressSelect = (id: string) => {
+    setSelectedAddress(id);
+    const addr = addresses.find(a => a.id === id);
+    if (addr) {
       setShippingInfo({
-        firstName: address.first_name,
-        lastName: address.last_name,
-        address: address.address_line_1,
-        city: address.city,
-        state: address.state,
-        zip: address.postal_code,
+        firstName: addr.first_name || "",
+        lastName: addr.last_name || "",
+        address: addr.address_line_1 || "",
+        city: addr.city || "",
+        state: addr.state || "",
+        zip: addr.postal_code || "",
       });
     }
   };
 
+  const handleShippingChange = (e: any) => {
+    const { id, value } = e.target;
+    setShippingInfo(prev => ({ ...prev, [id]: value }));
+  };
 
   const isShippingInfoValid = useCallback(() => {
     return Object.values(shippingInfo).every(field => field.trim() !== "");
@@ -103,18 +105,16 @@ const Checkout = () => {
     setIsFormValid(isShippingInfoValid());
   }, [shippingInfo, isShippingInfoValid]);
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  // Client-side display only (server recomputes authoritative totals)
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal > 75 ? 0 : 9.99;
   const tax = subtotal * TAX_RATE;
   const total = subtotal + shipping + tax;
 
-  const handleApprove = (details) => {
-    console.log("Payment successful:", details);
-    setIsPaymentProcessing(false);
+  const resetAfterSuccess = () => {
     clearCart();
+    setPaypalOrderId(null);
+    setLocalOrderId(null);
     toast({
       title: "Order Placed!",
       description: "Thank you for your purchase. Your order has been successfully placed.",
@@ -122,23 +122,85 @@ const Checkout = () => {
     navigate("/");
   };
 
-  const createOrder = (data, actions) => {
-    return actions.order.create({
-      purchase_units: [
+  // PayPal Buttons integration (Server-Driven)
+  const createOrder = async () => {
+    if (cartItems.length === 0) {
+      toast({ title: "Cart empty", variant: "destructive" });
+      throw new Error("Empty cart");
+    }
+    setIsPaymentProcessing(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+
+      const serverResp = await createServerOrder(
+        cartItems.map(ci => ({ id: ci.id, quantity: ci.quantity })),
         {
-          amount: {
-            value: total.toFixed(2),
-            currency_code: "USD",
-          },
+          first_name: shippingInfo.firstName,
+          last_name: shippingInfo.lastName,
+          line1: shippingInfo.address,
+          city: shippingInfo.city,
+          state: shippingInfo.state,
+          postal_code: shippingInfo.zip,
+          country: "US",
         },
-      ],
-    });
+        userId
+      );
+
+      setLocalOrderId(serverResp.localOrderId);
+      setPaypalOrderId(serverResp.paypalOrderId);
+      return serverResp.paypalOrderId; // PayPal Buttons expects this string
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Order Error", description: err.message, variant: "destructive" });
+      setIsPaymentProcessing(false);
+      throw err;
+    }
   };
 
-  const onApprove = (data, actions) => {
+  const onApprove = async (data: any, actions: any) => {
+    // With server-based capture we do NOT call actions.order.capture()
+    // Instead we call our capture endpoint
     setIsPaymentProcessing(true);
-    return actions.order.capture().then((details) => {
-      handleApprove(details);
+    try {
+      if (!paypalOrderId || !localOrderId) {
+        throw new Error("Order IDs missing");
+      }
+      const captureResult = await captureServerOrder(paypalOrderId, localOrderId);
+      if (captureResult?.localOrder?.payment_status === "completed") {
+        resetAfterSuccess();
+      } else {
+        toast({
+          title: "Capture Warning",
+          description: "Order captured but payment status not completed.",
+        });
+      }
+    } catch (err: any) {
+      console.error("Capture error:", err);
+      toast({
+        title: "Payment Failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsPaymentProcessing(false);
+    }
+  };
+
+  const onCancel = () => {
+    setIsPaymentProcessing(false);
+    toast({ title: "Payment Cancelled", description: "You cancelled the PayPal approval." });
+  };
+
+  const onError = (err: any) => {
+    console.error("PayPal button error:", err);
+    setIsPaymentProcessing(false);
+    toast({
+      title: "Payment Error",
+      description: "Something went wrong initializing PayPal.",
+      variant: "destructive",
     });
   };
 
@@ -162,7 +224,6 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Added pt-24 to fix the header overlap issue */}
       <div className="container mx-auto px-4 py-8 pt-24">
         <h1 className="text-3xl font-bold mb-6">Checkout</h1>
         <div className="grid md:grid-cols-2 gap-8">
@@ -172,10 +233,10 @@ const Checkout = () => {
                 <CardTitle>Shipping Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-              {addresses.length > 0 && (
+                {addresses.length > 0 && (
                   <div className="space-y-2">
                     <Label htmlFor="saved-addresses">Select a saved address</Label>
-                    <Select onValueChange={handleAddressSelect} value={selectedAddress}>
+                    <Select onValueChange={handleAddressSelect} value={selectedAddress || ""}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select an address" />
                       </SelectTrigger>
@@ -189,32 +250,33 @@ const Checkout = () => {
                     </Select>
                   </div>
                 )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" placeholder="John" value={shippingInfo.firstName} onChange={handleShippingChange} />
+                    <Input id="firstName" value={shippingInfo.firstName} onChange={handleShippingChange} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" placeholder="Doe" value={shippingInfo.lastName} onChange={handleShippingChange} />
+                    <Input id="lastName" value={shippingInfo.lastName} onChange={handleShippingChange} />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="address">Address</Label>
-                  <Input id="address" placeholder="123 Main St" value={shippingInfo.address} onChange={handleShippingChange} />
+                  <Input id="address" value={shippingInfo.address} onChange={handleShippingChange} />
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">City</Label>
-                    <Input id="city" placeholder="Anytown" value={shippingInfo.city} onChange={handleShippingChange} />
+                    <Input id="city" value={shippingInfo.city} onChange={handleShippingChange} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="state">State</Label>
-                    <Input id="state" placeholder="CA" value={shippingInfo.state} onChange={handleShippingChange} />
+                    <Input id="state" value={shippingInfo.state} onChange={handleShippingChange} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="zip">ZIP Code</Label>
-                    <Input id="zip" placeholder="12345" value={shippingInfo.zip} onChange={handleShippingChange} />
+                    <Label htmlFor="zip">ZIP</Label>
+                    <Input id="zip" value={shippingInfo.zip} onChange={handleShippingChange} />
                   </div>
                 </div>
               </CardContent>
@@ -228,18 +290,26 @@ const Checkout = () => {
                 {isFormValid ? (
                   <div className="space-y-2">
                     <p className="text-muted-foreground text-sm">
-                      Click the button below to pay using PayPal or a Credit/Debit Card.
+                      Click below to pay using PayPal or a linked card.
                     </p>
                     <PayPalButtons
-                      style={{ layout: "horizontal" }}
+                      style={{ layout: "vertical" }}
                       createOrder={createOrder}
                       onApprove={onApprove}
+                      onCancel={onCancel}
+                      onError={onError}
                       disabled={isPaymentProcessing}
+                      forceReRender={[JSON.stringify(shippingInfo), cartItems.length]}
                     />
+                    {isPaymentProcessing && (
+                      <p className="text-sm text-muted-foreground">Processing payment...</p>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-muted-foreground">Please fill out all shipping details to enable payment.</p>
+                    <p className="text-muted-foreground text-sm">
+                      Please complete all shipping details to enable payment.
+                    </p>
                     <Button className="w-full" disabled>
                       Pay with PayPal
                     </Button>
@@ -256,46 +326,46 @@ const Checkout = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {cartItems.length > 0 ? (
-                    cartItems.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-muted-foreground">{item.quantity} x</span>
-                          <span className="font-medium">{item.name}</span>
-                        </div>
-                        <span className="font-semibold">${(item.price * item.quantity).toFixed(2)}</span>
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground">{item.quantity} x</span>
+                        <span className="font-medium">{item.name}</span>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-muted-foreground">Your cart is empty.</p>
-                  )}
-                </div>
-                <Separator className="my-4" />
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
-                    <span className="font-medium">${subtotal.toFixed(2)}</span>
+                      <span className="font-semibold">
+                        ${(item.price * item.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                  <Separator />
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span>${subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Shipping</span>
+                      <span>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Tax (est.)</span>
+                      <span>${tax.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold text-base">
+                      <span>Total</span>
+                      <span>${total.toFixed(2)}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Shipping</span>
-                    <span className="font-medium">${shipping.toFixed(2)}</span>
+                  <Separator />
+                  <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                    <Lock className="w-4 h-4" />
+                    <span>Secure checkout with SSL encryption</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Tax</span>
-                    <span className="font-medium">${tax.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span>${total.toFixed(2)}</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-center text-sm text-muted-foreground mt-4">
-                  <Lock className="h-4 w-4 mr-2" />
-                  <span>Secure checkout with SSL encryption</span>
                 </div>
               </CardContent>
             </Card>
           </div>
+
         </div>
       </div>
     </div>
