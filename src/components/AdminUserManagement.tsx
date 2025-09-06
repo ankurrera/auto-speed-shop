@@ -36,7 +36,8 @@ const AdminUserManagement = () => {
         .eq('is_seller', 'false')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      console.log('Fetched users:', data); // Add this line to debug
+      return data as PartialProfile[]; // Explicitly cast the data to the correct type
     },
   });
 
