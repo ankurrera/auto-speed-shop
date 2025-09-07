@@ -13,31 +13,58 @@ import { Database } from "@/database.types";
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
 // Define a new type that matches the fields selected in the query
-type PartialProfile = {
+type UserWithOrderCount = {
   user_id: string;
   email: string | null;
   first_name: string | null;
   last_name: string | null;
   is_admin: boolean | null;
   is_seller: boolean | null;
+  order_count: number;
+  rank: number;
 };
 
 const AdminUserManagement = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: users, isLoading, error } = useQuery<PartialProfile[]>({
+  const { data: users, isLoading, error } = useQuery<UserWithOrderCount[]>({
     queryKey: ['admin-users'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, email, first_name, last_name, is_admin, is_seller')
-        .eq('is_admin', false)
-        .eq('is_seller', false)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      console.log('Fetched users:', data); // Add this line to debug
-      return data as PartialProfile[]; // Explicitly cast the data to the correct type
+      // First get users with their order counts
+      const { data, error } = await supabase.rpc('get_users_with_order_count');
+      
+      if (error) {
+        // Fallback to simple query if the function doesn't exist
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('profiles')
+          .select(`
+            user_id, 
+            email, 
+            first_name, 
+            last_name, 
+            is_admin, 
+            is_seller
+          `)
+          .eq('is_admin', false)
+          .eq('is_seller', false)
+          .order('created_at', { ascending: false });
+        
+        if (fallbackError) throw fallbackError;
+        
+        // Add order_count and rank manually for fallback
+        return (fallbackData || []).map((user, index) => ({
+          ...user,
+          order_count: 0,
+          rank: index + 1
+        })) as UserWithOrderCount[];
+      }
+      
+      // Add rank based on order count
+      return (data || []).map((user: any, index: number) => ({
+        ...user,
+        rank: index + 1
+      })) as UserWithOrderCount[];
     },
   });
 
