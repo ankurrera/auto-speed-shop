@@ -41,7 +41,6 @@ import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
-import { SimpleThemeToggle } from "@/components/SimpleThemeToggle";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -1324,7 +1323,7 @@ const Account = () => {
         ) : (
           <>
             {/* Main Admin Card */}
-            <div className="bg-[#121212] text-foreground rounded-xl border border-neutral-800 p-6 lg:p-8 shadow-sm">
+            <div className="bg-card text-card-foreground rounded-xl border border-border p-6 lg:p-8 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <div className="space-y-2">
                   <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -1336,10 +1335,9 @@ const Account = () => {
                     overview
                   </p>
                 </div>
-                <SimpleThemeToggle />
               </div>
 
-              <div className="bg-neutral-800/60 rounded-lg p-4 flex items-center justify-between mb-8">
+              <div className="bg-muted/60 rounded-lg p-4 flex items-center justify-between mb-8">
                 <div>
                   <p className="font-medium">Administrator Status</p>
                   <p className="text-sm text-muted-foreground">
@@ -1895,8 +1893,8 @@ const Account = () => {
       {/* Manage Products Modal (Overlay) */}
       {showManageProducts && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
-          <div className="relative w-full max-w-6xl bg-[#1a1b1e] rounded-xl border border-neutral-800 shadow-2xl my-10">
-            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-[#1a1b1e]/95 backdrop-blur">
+          <div className="relative w-full max-w-6xl bg-card rounded-xl border border-border shadow-2xl my-10">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-border bg-card/95 backdrop-blur">
               <div>
                 <h3 className="text-xl font-semibold flex items-center gap-2">
                   <Boxes className="h-5 w-5 text-primary" />
@@ -1944,7 +1942,7 @@ const Account = () => {
 
             <div className="p-6 space-y-10">
               {/* Listing Form */}
-              <Card className="bg-neutral-900/60 border-neutral-800">
+              <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     {editingProductId ? "Edit Listing" : "Create New Listing"}
@@ -2302,10 +2300,10 @@ const StatCard = ({
   subtitle: string;
   icon: React.ReactNode;
 }) => (
-  <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-5 flex flex-col">
+  <div className="rounded-lg border border-border bg-card p-5 flex flex-col">
     <div className="flex items-center justify-between mb-3">
       <p className="text-sm text-muted-foreground font-medium">{title}</p>
-      <div className="text-neutral-400">{icon}</div>
+      <div className="text-muted-foreground">{icon}</div>
     </div>
     <div className="text-3xl font-bold tracking-tight">{value}</div>
     <span className="mt-2 text-xs text-muted-foreground">{subtitle}</span>
@@ -2328,14 +2326,14 @@ const ActionCard = ({
   <button
     onClick={onClick}
     disabled={disabled}
-    className={`text-left rounded-lg border border-neutral-800 bg-neutral-900/60 p-5 group transition relative ${
+    className={`text-left rounded-lg border border-border bg-card p-5 group transition relative ${
       disabled
         ? "opacity-50 cursor-not-allowed"
-        : "hover:bg-neutral-800/70 cursor-pointer"
+        : "hover:bg-muted cursor-pointer"
     }`}
   >
     <div className="flex items-center gap-3">
-      <div className="p-2 rounded-md bg-neutral-800 text-neutral-300 group-hover:text-primary group-hover:bg-neutral-700 transition">
+      <div className="p-2 rounded-md bg-muted text-muted-foreground group-hover:text-primary group-hover:bg-muted/80 transition">
         {icon}
       </div>
       <div>
@@ -2365,7 +2363,7 @@ const ListingRow = ({
   onArchive: () => void;
   onDelete: () => void;
 }) => (
-  <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 border border-neutral-800 rounded-lg bg-neutral-900/40">
+  <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 border border-border rounded-lg bg-card/40">
     <div className="flex-1 space-y-1">
       <h5 className="font-semibold">{title}</h5>
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
