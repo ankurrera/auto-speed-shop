@@ -41,6 +41,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
+import { SimpleThemeToggle } from "@/components/SimpleThemeToggle";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -305,6 +306,7 @@ const Account = () => {
       .select("first_name, last_name, email, phone, is_admin, is_seller")
       .eq("user_id", userId)
       .single();
+    
     if (!error && data) {
       setUserInfo({
         firstName: data.first_name || "",
@@ -315,6 +317,38 @@ const Account = () => {
         is_seller: data.is_seller || false,
       });
       setSellerExistsForAdmin(data.is_seller || false);
+    } else {
+      console.error("Account: Error fetching profile or no data:", error, "User ID:", userId);
+      
+      // If profile doesn't exist, try to create one from auth user data
+      if (error && error.code === 'PGRST116') { // No rows returned
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { error: createError } = await supabase.from("profiles").upsert(
+              {
+                user_id: user.id,
+                first_name: user.user_metadata?.first_name || "",
+                last_name: user.user_metadata?.last_name || "",
+                email: user.email || "",
+                phone: user.user_metadata?.phone || "",
+                is_admin: false,
+                is_seller: false,
+              },
+              { onConflict: "user_id" }
+            );
+            
+            if (!createError) {
+              // Retry fetching the profile
+              fetchUserProfile(userId);
+            } else {
+              console.error("Account: Failed to create profile:", createError);
+            }
+          }
+        } catch (createProfileError) {
+          console.error("Account: Error creating profile:", createProfileError);
+        }
+      }
     }
   }, []);
 
@@ -470,7 +504,30 @@ const Account = () => {
       alert("Signup failed: " + error.message);
       return;
     }
+
+    // Create profile record in profiles table
+    if (data.user) {
+      const { error: profileError } = await supabase.from("profiles").upsert(
+        {
+          user_id: data.user.id,
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+          phone: phone,
+          is_admin: loginMode === "admin",
+          is_seller: false,
+        },
+        { onConflict: "user_id" }
+      );
+      
+      if (profileError) {
+        console.error("Profile creation failed:", profileError);
+        // Don't fail the signup entirely, but log the error
+      }
+    }
+
     if (loginMode === "admin") {
+      // Update the profile to set admin status (redundant but safe)
       await supabase
         .from("profiles")
         .update({ is_admin: true })
@@ -1268,15 +1325,18 @@ const Account = () => {
           <>
             {/* Main Admin Card */}
             <div className="bg-[#121212] text-foreground rounded-xl border border-neutral-800 p-6 lg:p-8 shadow-sm">
-              <div className="space-y-2 mb-6">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <ShieldCheck className="h-6 w-6 text-primary" />
-                  Admin Dashboard
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Welcome, {userInfo.firstName || "Administrator"} - Administrative controls and
-                  overview
-                </p>
+              <div className="flex items-center justify-between mb-6">
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <ShieldCheck className="h-6 w-6 text-primary" />
+                    Admin Dashboard
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Welcome, {userInfo.firstName || "Administrator"} - Administrative controls and
+                    overview
+                  </p>
+                </div>
+                <SimpleThemeToggle />
               </div>
 
               <div className="bg-neutral-800/60 rounded-lg p-4 flex items-center justify-between mb-8">
