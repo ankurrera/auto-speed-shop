@@ -41,6 +41,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
+import { SimpleThemeToggle } from "@/components/SimpleThemeToggle";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -1324,15 +1325,18 @@ const Account = () => {
           <>
             {/* Main Admin Card */}
             <div className="bg-[#121212] text-foreground rounded-xl border border-neutral-800 p-6 lg:p-8 shadow-sm">
-              <div className="space-y-2 mb-6">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <ShieldCheck className="h-6 w-6 text-primary" />
-                  Admin Dashboard
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Welcome, {userInfo.firstName || "Administrator"} - Administrative controls and
-                  overview
-                </p>
+              <div className="flex items-center justify-between mb-6">
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <ShieldCheck className="h-6 w-6 text-primary" />
+                    Admin Dashboard
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Welcome, {userInfo.firstName || "Administrator"} - Administrative controls and
+                    overview
+                  </p>
+                </div>
+                <SimpleThemeToggle />
               </div>
 
               <div className="bg-neutral-800/60 rounded-lg p-4 flex items-center justify-between mb-8">

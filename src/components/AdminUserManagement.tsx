@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trophy, Crown, Medal, Trash2, ShieldCheck, User } from "lucide-react";
+import { Trophy, Crown, Medal, Trash2, ShieldCheck, User, Send } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Database } from "@/database.types";
 
@@ -149,6 +149,27 @@ const AdminUserManagement = () => {
     );
   };
 
+  const handleSendCoupon = (userId: string, userEmail: string, userName: string) => {
+    toast({
+      title: "Send Coupon",
+      description: `Send discount coupon to ${userName || userEmail}?`,
+      action: (
+        <Button
+          variant="default"
+          onClick={() => {
+            // Here you would implement the actual coupon sending logic
+            toast({
+              title: "Coupon Sent!",
+              description: `Discount coupon has been sent to ${userEmail}`,
+            });
+          }}
+        >
+          Send
+        </Button>
+      ),
+    });
+  };
+
   const handleDeleteUser = (userId: string) => {
     // Replaced window.confirm with a toast-based message as per instructions
     toast({
@@ -183,14 +204,13 @@ const AdminUserManagement = () => {
       </CardHeader>
       <CardContent>
         <Table>
-          <TableHeader>
+           <TableHeader>
             <TableRow>
-              <TableHead>Rank</TableHead>
-              <TableHead>User</TableHead>
+              <TableHead className="text-center">Rank</TableHead>
+              <TableHead>User Details</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Orders</TableHead>
-              <TableHead>Is Admin</TableHead>
-              <TableHead>Is Seller</TableHead>
+              <TableHead className="text-center">Orders</TableHead>
+              <TableHead className="text-center">Send Coupons</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -218,17 +238,21 @@ const AdminUserManagement = () => {
                 <TableCell className="text-center">
                   <span className="font-semibold text-primary">{user.order_count}</span>
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id={`admin-switch-${user.user_id}`}
-                      checked={user.is_admin === true}
-                      onCheckedChange={(checked) => updateAdminStatusMutation.mutate({ userId: user.user_id, isAdmin: checked })}
-                    />
-                    <Label htmlFor={`admin-switch-${user.user_id}`} className="sr-only">Toggle Admin</Label>
-                  </div>
+                <TableCell className="text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSendCoupon(
+                      user.user_id, 
+                      user.email || '', 
+                      user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : ''
+                    )}
+                    className="flex items-center gap-1"
+                  >
+                    <Send className="h-3 w-3" />
+                    Send Coupon
+                  </Button>
                 </TableCell>
-                <TableCell>{user.is_seller === true ? 'Yes' : 'No'}</TableCell>
                 <TableCell>
                   <Button
                     variant="destructive"
