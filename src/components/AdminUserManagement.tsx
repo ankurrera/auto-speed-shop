@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trash2, ShieldCheck, User } from "lucide-react";
+import { Trophy, Crown, Medal, Trash2, ShieldCheck, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Database } from "@/database.types";
 
@@ -117,6 +117,38 @@ const AdminUserManagement = () => {
     },
   });
 
+  const getRankBadge = (rank: number) => {
+    if (rank === 1) {
+      return (
+        <div className="flex items-center gap-1 text-yellow-500 font-bold">
+          <Crown className="h-4 w-4" />
+          #{rank}
+        </div>
+      );
+    }
+    if (rank === 2) {
+      return (
+        <div className="flex items-center gap-1 text-gray-400 font-bold">
+          <Trophy className="h-4 w-4" />
+          #{rank}
+        </div>
+      );
+    }
+    if (rank === 3) {
+      return (
+        <div className="flex items-center gap-1 text-amber-600 font-bold">
+          <Medal className="h-4 w-4" />
+          #{rank}
+        </div>
+      );
+    }
+    return (
+      <div className="font-medium text-muted-foreground">
+        #{rank}
+      </div>
+    );
+  };
+
   const handleDeleteUser = (userId: string) => {
     // Replaced window.confirm with a toast-based message as per instructions
     toast({
@@ -166,14 +198,23 @@ const AdminUserManagement = () => {
             {users?.map((user) => (
               <TableRow key={user.user_id}>
                 <TableCell className="font-medium text-center">
-                  #{user.rank}
+                  {getRankBadge(user.rank)}
                 </TableCell>
                 <TableCell className="font-medium">
-                  {user.first_name && user.last_name 
-                    ? `${user.first_name} ${user.last_name}` 
-                    : user.email || 'Unknown User'}
+                  <div className="flex flex-col">
+                    <span>
+                      {user.first_name && user.last_name 
+                        ? `${user.first_name} ${user.last_name}` 
+                        : user.email?.split('@')[0] || 'Unknown User'}
+                    </span>
+                    {user.first_name && user.last_name && (
+                      <span className="text-xs text-muted-foreground">{user.email}</span>
+                    )}
+                  </div>
                 </TableCell>
-                <TableCell>{user.email}</TableCell>
+                <TableCell className="font-medium">
+                  {user.first_name && user.last_name ? user.email : '-'}
+                </TableCell>
                 <TableCell className="text-center">
                   <span className="font-semibold text-primary">{user.order_count}</span>
                 </TableCell>
