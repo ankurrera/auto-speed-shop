@@ -155,9 +155,9 @@ const Header = () => {
           </Link>
 
           {/* Action buttons (mobile) */}
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-2">
             {/* Wishlist */}
-            <Button variant="ghost" size="sm" asChild className="relative h-10 w-10 p-0 hover:bg-accent/50 hover:shadow-md transition-all duration-300">
+            <Button variant="ghost" size="sm" asChild className="relative h-8 w-8 p-0">
               <Link to="/wishlist">
                 <Heart className="h-4 w-4" />
                 {wishlistCount > 0 && (
@@ -168,7 +168,7 @@ const Header = () => {
               </Link>
             </Button>
             {/* Cart */}
-            <Button variant="ghost" size="sm" asChild className="relative h-10 w-10 p-0 hover:bg-accent/50 hover:shadow-md transition-all duration-300">
+            <Button variant="ghost" size="sm" asChild className="relative h-8 w-8 p-0">
               <Link to="/cart">
                 <ShoppingCart className="h-4 w-4" />
                 {cartItemCount > 0 && (
@@ -182,7 +182,7 @@ const Header = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="h-10 w-10 p-0 hover:bg-accent/50 hover:shadow-md transition-all duration-300"
+              className="h-8 w-8 p-0"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -203,9 +203,9 @@ const Header = () => {
 
           {/* Action buttons - Desktop */}
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" asChild className="relative hover:bg-accent/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 group">
+            <Button variant="ghost" size="sm" asChild className="relative">
               <Link to="/wishlist">
-                <Heart className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+                <Heart className="h-5 w-5" />
                 {wishlistCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
                     {wishlistCount}
@@ -213,9 +213,9 @@ const Header = () => {
                 )}
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" asChild className="relative hover:bg-accent/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 group">
+            <Button variant="ghost" size="sm" asChild className="relative">
               <Link to="/cart">
-                <ShoppingCart className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+                <ShoppingCart className="h-5 w-5" />
                 {cartItemCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
                     {cartItemCount}
@@ -227,8 +227,8 @@ const Header = () => {
             {userSession ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative hover:bg-accent/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 group">
-                    <User className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+                  <Button variant="ghost" size="sm" className="relative">
+                    <User className="h-5 w-5" />
                     <span className="sr-only">User Account Menu</span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -269,9 +269,9 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" size="sm" asChild className="relative hover:bg-accent/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 group">
+              <Button variant="ghost" size="sm" asChild className="relative">
                 <Link to="/account">
-                  <User className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+                  <User className="h-5 w-5" />
                 </Link>
               </Button>
             )}

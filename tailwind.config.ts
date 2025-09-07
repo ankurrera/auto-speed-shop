@@ -67,7 +67,7 @@ export default {
                     foreground: 'hsl(var(--warning-foreground))'
                 },
                 automotive: {
-                    blue: 'hsl(var(--automotive-blue))',
+                    red: 'hsl(var(--automotive-red))',
                     dark: 'hsl(var(--automotive-dark))',
                     light: 'hsl(var(--automotive-light))'
                 },
