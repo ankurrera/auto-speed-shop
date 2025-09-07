@@ -153,8 +153,10 @@ const AdminUserManagement = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Rank</TableHead>
               <TableHead>User</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Orders</TableHead>
               <TableHead>Is Admin</TableHead>
               <TableHead>Is Seller</TableHead>
               <TableHead>Actions</TableHead>
@@ -163,10 +165,18 @@ const AdminUserManagement = () => {
           <TableBody>
             {users?.map((user) => (
               <TableRow key={user.user_id}>
+                <TableCell className="font-medium text-center">
+                  #{user.rank}
+                </TableCell>
                 <TableCell className="font-medium">
-                  {user.first_name} {user.last_name}
+                  {user.first_name && user.last_name 
+                    ? `${user.first_name} ${user.last_name}` 
+                    : user.email || 'Unknown User'}
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
+                <TableCell className="text-center">
+                  <span className="font-semibold text-primary">{user.order_count}</span>
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     <Switch
