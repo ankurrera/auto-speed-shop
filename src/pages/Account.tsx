@@ -1871,7 +1871,7 @@ const Account = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="flex items-center justify-between mb-10">
