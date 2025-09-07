@@ -21,8 +21,7 @@ import {
   Users,
   X,
   Plus,
-  RefreshCcw,
-  Car
+  RefreshCcw
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -1882,20 +1881,10 @@ const Account = () => {
               Manage your account information and orders
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate("/dashboard")}
-              className="flex items-center gap-2"
-            >
-              <Car className="h-4 w-4" />
-              Dashboard
-            </Button>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
         </div>
 
         <div className="space-y-8">{renderContent()}</div>
