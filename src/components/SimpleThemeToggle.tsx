@@ -29,9 +29,9 @@ export function SimpleThemeToggle() {
       variant="outline" 
       size="icon" 
       onClick={toggleTheme}
-      className="relative border-2 hover:shadow-glow transition-all duration-300"
+      className="relative border-2 hover:shadow-lg hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300 group"
     >
-      <div className="transition-all duration-300">
+      <div className="transition-all duration-300 group-hover:scale-110">
         {getCurrentIcon()}
       </div>
       <span className="sr-only">Toggle theme</span>
