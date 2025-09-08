@@ -522,7 +522,10 @@ const Account = () => {
       
       if (profileError) {
         console.error("Profile creation failed:", profileError);
-        // Don't fail the signup entirely, but log the error
+        alert("Signup was successful, but profile creation failed: " + profileError.message + ". Please contact support.");
+        // This is a critical failure. Consider logging the user out.
+        await supabase.auth.signOut();
+        return;
       }
     }
 
