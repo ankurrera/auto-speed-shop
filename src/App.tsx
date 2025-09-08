@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import ModernHeader from "./components/ModernHeader";
+import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
@@ -19,6 +19,7 @@ import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 import ProductDetails from "./pages/ProductDetails";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
+import Dashboard from "./pages/Dashboard";
 import NewArrivals from "./pages/NewArrivals"; // Import the new component
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
@@ -45,7 +46,7 @@ const App = () => {
           <CartProvider>
             <WishlistProvider>
               <div className="min-h-screen flex flex-col">
-                <ModernHeader />
+                <Header />
                 <main className="flex-1">
                   <Routes>
                     <Route path="/reset-password" element={<ResetPassword />} />
@@ -60,6 +61,7 @@ const App = () => {
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/products/:id" element={<ProductDetails />} />
                     <Route path="/new-arrivals" element={<NewArrivals />} /> {/* Add this line */}
+                    <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/account/analytics-dashboard" element={<AnalyticsDashboard />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
