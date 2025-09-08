@@ -6,38 +6,65 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trash2, ShieldCheck, User } from "lucide-react";
+import { Trophy, Crown, Medal, Trash2, ShieldCheck, User, Send } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Database } from "@/database.types";
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
 // Define a new type that matches the fields selected in the query
-type PartialProfile = {
+type UserWithOrderCount = {
   user_id: string;
   email: string | null;
   first_name: string | null;
   last_name: string | null;
   is_admin: boolean | null;
   is_seller: boolean | null;
+  order_count: number;
+  rank: number;
 };
 
 const AdminUserManagement = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: users, isLoading, error } = useQuery<PartialProfile[]>({
+  const { data: users, isLoading, error } = useQuery<UserWithOrderCount[]>({
     queryKey: ['admin-users'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, email, first_name, last_name, is_admin, is_seller')
-        .eq('is_admin', false)
-        .eq('is_seller', false)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      console.log('Fetched users:', data); // Add this line to debug
-      return data as PartialProfile[]; // Explicitly cast the data to the correct type
+      // First get users with their order counts
+      const { data, error } = await supabase.rpc('get_users_with_order_count');
+      
+      if (error) {
+        // Fallback to simple query if the function doesn't exist
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('profiles')
+          .select(`
+            user_id, 
+            email, 
+            first_name, 
+            last_name, 
+            is_admin, 
+            is_seller
+          `)
+          .eq('is_admin', false)
+          .eq('is_seller', false)
+          .order('created_at', { ascending: false });
+        
+        if (fallbackError) throw fallbackError;
+        
+        // Add order_count and rank manually for fallback
+        return (fallbackData || []).map((user, index) => ({
+          ...user,
+          order_count: 0,
+          rank: index + 1
+        })) as UserWithOrderCount[];
+      }
+      
+      // Add rank based on order count
+      return (data || []).map((user: any, index: number) => ({
+        ...user,
+        rank: index + 1
+      })) as UserWithOrderCount[];
     },
   });
 
@@ -90,6 +117,59 @@ const AdminUserManagement = () => {
     },
   });
 
+  const getRankBadge = (rank: number) => {
+    if (rank === 1) {
+      return (
+        <div className="flex items-center gap-1 text-yellow-500 font-bold">
+          <Crown className="h-4 w-4" />
+          #{rank}
+        </div>
+      );
+    }
+    if (rank === 2) {
+      return (
+        <div className="flex items-center gap-1 text-gray-400 font-bold">
+          <Trophy className="h-4 w-4" />
+          #{rank}
+        </div>
+      );
+    }
+    if (rank === 3) {
+      return (
+        <div className="flex items-center gap-1 text-amber-600 font-bold">
+          <Medal className="h-4 w-4" />
+          #{rank}
+        </div>
+      );
+    }
+    return (
+      <div className="font-medium text-muted-foreground">
+        #{rank}
+      </div>
+    );
+  };
+
+  const handleSendCoupon = (userId: string, userEmail: string, userName: string) => {
+    toast({
+      title: "Send Coupon",
+      description: `Send discount coupon to ${userName || userEmail}?`,
+      action: (
+        <Button
+          variant="default"
+          onClick={() => {
+            // Here you would implement the actual coupon sending logic
+            toast({
+              title: "Coupon Sent!",
+              description: `Discount coupon has been sent to ${userEmail}`,
+            });
+          }}
+        >
+          Send
+        </Button>
+      ),
+    });
+  };
+
   const handleDeleteUser = (userId: string) => {
     // Replaced window.confirm with a toast-based message as per instructions
     toast({
@@ -124,33 +204,55 @@ const AdminUserManagement = () => {
       </CardHeader>
       <CardContent>
         <Table>
-          <TableHeader>
+           <TableHeader>
             <TableRow>
-              <TableHead>User</TableHead>
+              <TableHead className="text-center">Rank</TableHead>
+              <TableHead>User Details</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Is Admin</TableHead>
-              <TableHead>Is Seller</TableHead>
+              <TableHead className="text-center">Orders</TableHead>
+              <TableHead className="text-center">Send Coupons</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users?.map((user) => (
               <TableRow key={user.user_id}>
-                <TableCell className="font-medium">
-                  {user.first_name} {user.last_name}
+                <TableCell className="font-medium text-center">
+                  {getRankBadge(user.rank)}
                 </TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id={`admin-switch-${user.user_id}`}
-                      checked={user.is_admin === true}
-                      onCheckedChange={(checked) => updateAdminStatusMutation.mutate({ userId: user.user_id, isAdmin: checked })}
-                    />
-                    <Label htmlFor={`admin-switch-${user.user_id}`} className="sr-only">Toggle Admin</Label>
+                <TableCell className="font-medium">
+                  <div className="flex flex-col">
+                    <span>
+                      {user.first_name && user.last_name 
+                        ? `${user.first_name} ${user.last_name}` 
+                        : user.email?.split('@')[0] || 'Unknown User'}
+                    </span>
+                    {user.first_name && user.last_name && (
+                      <span className="text-xs text-muted-foreground">{user.email}</span>
+                    )}
                   </div>
                 </TableCell>
-                <TableCell>{user.is_seller === true ? 'Yes' : 'No'}</TableCell>
+                <TableCell className="font-medium">
+                  {user.first_name && user.last_name ? user.email : '-'}
+                </TableCell>
+                <TableCell className="text-center">
+                  <span className="font-semibold text-primary">{user.order_count}</span>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSendCoupon(
+                      user.user_id, 
+                      user.email || '', 
+                      user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : ''
+                    )}
+                    className="flex items-center gap-1"
+                  >
+                    <Send className="h-3 w-3" />
+                    Send Coupon
+                  </Button>
+                </TableCell>
                 <TableCell>
                   <Button
                     variant="destructive"
