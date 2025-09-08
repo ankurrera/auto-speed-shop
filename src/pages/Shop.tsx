@@ -57,7 +57,7 @@ const formatCardData = (item: Product | Part) => {
   if (isProduct(item)) {
     return {
       ...commonData,
-      brand: "Generic", // Placeholder for products without a brand column
+      brand: item.brand || "Generic", // Use actual brand from database
       category: item.category || "General",
       is_part: false,
     };
@@ -228,8 +228,10 @@ const Shop = () => {
       items = items.filter(item => {
         if (isPart(item)) {
           return item.brand === selectedBrand;
+        } else if (isProduct(item)) {
+          return item.brand === selectedBrand;
         }
-        return true; // Keep products in the list
+        return false; // Don't keep items that are neither parts nor products
       });
     }
 
