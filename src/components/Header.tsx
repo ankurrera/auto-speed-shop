@@ -15,6 +15,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import CarWrenchLogo from "@/assets/car-wrench-logo.png";
 import { supabase } from "@/integrations/supabase/client";
+import Navbar from "./Navbar";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -285,46 +286,8 @@ const Header = () => {
       <nav className="bg-secondary border-t border-border">
         <div className="container mx-auto px-4">
           {/* Desktop navigation */}
-          <div className="hidden md:flex items-center justify-between py-3">
-            <div className="flex items-center space-x-8">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
-                    isActive(item.href)
-                      ? "text-primary border-b-2 border-primary pb-3"
-                      : "text-foreground"
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary">
-                  Shop by Brands
-                  <ChevronDown className="h-4 w-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {brands.map((brand) => (
-                    <Link to={`/shop?make=${brand.name}`} key={brand.name}>
-                      <DropdownMenuItem className="cursor-pointer">
-                        {brand.name}
-                      </DropdownMenuItem>
-                    </Link>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <Link to="/shop">
-                    <DropdownMenuItem className="cursor-pointer">
-                      View All Brands
-                    </DropdownMenuItem>
-                  </Link>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-              <span>Deals</span>
-            </div>
+          <div className="hidden md:flex items-center justify-center py-3">
+            <Navbar />
           </div>
 
           {/* Mobile navigation */}
