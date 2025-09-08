@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, Heart, Menu, X, ChevronDown, LogOut, LayoutDashboard, TrendingUp } from "lucide-react";
+import { ShoppingCart, User, Heart, Search, Grid3x3, Calendar, Clock, LogOut, LayoutDashboard, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,10 +10,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { SimpleThemeToggle } from "./SimpleThemeToggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
-import CarWrenchLogo from "@/assets/car-wrench-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 
 const Header = () => {
@@ -140,110 +139,89 @@ const Header = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header className="bg-background border-b border-border sticky top-0 z-50">
-      {/* Main header container */}
-      <div className="container mx-auto px-4 py-4">
-        {/* Top row for mobile: Logo, mobile menu, and cart/wishlist icons */}
-        <div className="flex items-center justify-between md:hidden">
+    <header className="bg-background border-b border-border/20 sticky top-0 z-50 backdrop-blur-sm">
+      <div className="container mx-auto px-6 py-4">
+        <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-10 w-auto" />
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-foreground truncate">AutoParts Pro</h1>
-              <p className="text-xs text-muted-foreground truncate">Premium Auto Parts</p>
+          <div className="flex items-center">
+            <div className="bg-emerald-600 rounded-xl p-2 mr-4">
+              <div className="text-white font-bold text-xl">P</div>
             </div>
-          </Link>
+          </div>
 
-          {/* Action buttons (mobile) */}
-          <div className="flex items-center space-x-2">
-            {/* Wishlist */}
-            <Button variant="ghost" size="sm" asChild className="relative h-8 w-8 p-0">
-              <Link to="/wishlist">
-                <Heart className="h-4 w-4" />
-                {wishlistCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
-                    {wishlistCount}
-                  </Badge>
-                )}
-              </Link>
+          {/* Left Icons */}
+          <div className="flex items-center space-x-6">
+            <Button variant="ghost" size="sm" className="h-10 w-10 p-0 text-muted-foreground hover:text-foreground">
+              <Search className="h-5 w-5" />
             </Button>
-            {/* Cart */}
-            <Button variant="ghost" size="sm" asChild className="relative h-8 w-8 p-0">
-              <Link to="/cart">
-                <ShoppingCart className="h-4 w-4" />
-                {cartItemCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
-                    {cartItemCount}
-                  </Badge>
-                )}
-              </Link>
-            </Button>
-            {/* Mobile menu button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            <Button variant="ghost" size="sm" className="h-10 w-10 p-0 text-muted-foreground hover:text-foreground">
+              <Grid3x3 className="h-5 w-5" />
             </Button>
           </div>
-        </div>
 
-        {/* Desktop Layout */}
-        <div className="hidden md:flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-14 w-auto" />
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">AutoParts Pro</h1>
-              <p className="text-sm text-muted-foreground">Premium Auto Parts</p>
-            </div>
-          </Link>
+          {/* Center Dashboard Text */}
+          <div className="flex-1 flex justify-center">
+            <h1 className="text-lg font-medium text-foreground">Dashboard</h1>
+          </div>
 
-          {/* Action buttons - Desktop */}
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" asChild className="relative">
-              <Link to="/wishlist">
-                <Heart className="h-5 w-5" />
-                {wishlistCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                    {wishlistCount}
-                  </Badge>
-                )}
-              </Link>
+          {/* Right Icons */}
+          <div className="flex items-center space-x-6">
+            <Button variant="ghost" size="sm" className="h-10 w-10 p-0 text-muted-foreground hover:text-foreground">
+              <Calendar className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="sm" asChild className="relative">
+            <Button variant="ghost" size="sm" className="h-10 w-10 p-0 text-muted-foreground hover:text-foreground">
+              <Clock className="h-5 w-5" />
+            </Button>
+            
+            {/* Cart with badge */}
+            <Button variant="ghost" size="sm" asChild className="relative h-10 w-10 p-0 text-muted-foreground hover:text-foreground">
               <Link to="/cart">
                 <ShoppingCart className="h-5 w-5" />
                 {cartItemCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
                     {cartItemCount}
+                  </Badge>
+                )}
+              </Link>
+            </Button>
+
+            {/* Wishlist with badge */}
+            <Button variant="ghost" size="sm" asChild className="relative h-10 w-10 p-0 text-muted-foreground hover:text-foreground">
+              <Link to="/wishlist">
+                <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
+                    {wishlistCount}
                   </Badge>
                 )}
               </Link>
             </Button>
             
+            {/* User Avatar */}
             {userSession ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative">
-                    <User className="h-5 w-5" />
-                    <span className="sr-only">User Account Menu</span>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {userInfo.firstName ? userInfo.firstName[0] : userInfo.email ? userInfo.email[0].toUpperCase() : 'U'}
+                      </AvatarFallback>
+                    </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem asChild>
                     <Link to="/account">Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/account/addresses">Addresses</Link>
+                    <Link to="/shop">Shop</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/account/orders">Order History</Link>
                   </DropdownMenuItem>
                   
-                  {userInfo.is_admin && userInfo.is_seller && (
+                  {userInfo.is_admin && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
@@ -255,7 +233,7 @@ const Header = () => {
                       <DropdownMenuItem asChild>
                         <Link to="/account/analytics-dashboard">
                           <TrendingUp className="mr-2 h-4 w-4" />
-                          Analytics Dashboard
+                          Analytics
                         </Link>
                       </DropdownMenuItem>
                     </>
@@ -269,93 +247,15 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" size="sm" asChild className="relative">
+              <Button variant="ghost" size="sm" asChild className="h-10 w-10 p-0">
                 <Link to="/account">
                   <User className="h-5 w-5" />
                 </Link>
               </Button>
             )}
-
-            <SimpleThemeToggle />
           </div>
         </div>
       </div>
-
-      {/* Navigation and Mobile Menu */}
-      <nav className="bg-secondary border-t border-border">
-        <div className="container mx-auto px-4">
-          {/* Desktop navigation */}
-          <div className="hidden md:flex items-center justify-between py-3">
-            <div className="flex items-center space-x-8">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
-                    isActive(item.href)
-                      ? "text-primary border-b-2 border-primary pb-3"
-                      : "text-foreground"
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary">
-                  Shop by Brands
-                  <ChevronDown className="h-4 w-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {brands.map((brand) => (
-                    <Link to={`/shop?make=${brand.name}`} key={brand.name}>
-                      <DropdownMenuItem className="cursor-pointer">
-                        {brand.name}
-                      </DropdownMenuItem>
-                    </Link>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <Link to="/shop">
-                    <DropdownMenuItem className="cursor-pointer">
-                      View All Brands
-                    </DropdownMenuItem>
-                  </Link>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-              <span>Deals</span>
-            </div>
-          </div>
-
-          {/* Mobile navigation */}
-          {isMenuOpen && (
-            <div className="md:hidden py-4 border-t border-border">
-              <div className="flex flex-col space-y-4">
-                {navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`text-sm font-medium ${
-                      isActive(item.href) ? "text-primary" : "text-foreground"
-                    }`}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-                <div className="pt-4 border-t border-border">
-                  <div className="flex flex-col space-y-2 text-sm text-muted-foreground">
-                    <Link to="/shop" onClick={() => setIsMenuOpen(false)}>
-                      Shop by Brands
-                    </Link>
-                    <span>Deals</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </nav>
     </header>
   );
 };
