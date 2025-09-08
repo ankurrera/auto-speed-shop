@@ -489,55 +489,77 @@ const Account = () => {
 
   const handleSignup = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!email || !password || !firstName || !lastName) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+    
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters long.");
+      return;
+    }
+    
     if (loginMode === "admin" && adminExists) {
       alert("Admin already exists.");
       return;
     }
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { first_name: firstName, last_name: lastName, phone },
-      },
-    });
-    if (error) {
-      alert("Signup failed: " + error.message);
-      return;
-    }
-
-    // Create profile record in profiles table
-    if (data.user) {
-      const { error: profileError } = await supabase.from("profiles").upsert(
-        {
-          user_id: data.user.id,
-          first_name: firstName,
-          last_name: lastName,
-          email: email,
-          phone: phone,
-          is_admin: loginMode === "admin",
-          is_seller: false,
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { first_name: firstName, last_name: lastName, phone: phone || "" },
         },
-        { onConflict: "user_id" }
-      );
+      });
       
-      if (profileError) {
-        console.error("Profile creation failed:", profileError);
-        // Don't fail the signup entirely, but log the error
+      if (error) {
+        console.error("Signup error:", error);
+        alert("Signup failed: " + error.message);
+        return;
       }
-    }
 
-    if (loginMode === "admin") {
-      // Update the profile to set admin status (redundant but safe)
-      await supabase
-        .from("profiles")
-        .update({ is_admin: true })
-        .eq("user_id", data.user?.id);
-      setAdminExists(true);
-      alert("Admin account created. Please log in.");
-    } else {
-      alert("Check your email to confirm your account.");
+      // Create profile record in profiles table
+      if (data.user) {
+        const { error: profileError } = await supabase.from("profiles").upsert(
+          {
+            user_id: data.user.id,
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            phone: phone || "",
+            is_admin: loginMode === "admin",
+            is_seller: false,
+          },
+          { onConflict: "user_id" }
+        );
+        
+        if (profileError) {
+          console.error("Profile creation failed:", profileError);
+          // Don't fail the signup entirely, but log the error
+        }
+      }
+
+      if (loginMode === "admin") {
+        // Update the profile to set admin status (redundant but safe)
+        if (data.user) {
+          await supabase
+            .from("profiles")
+            .update({ is_admin: true })
+            .eq("user_id", data.user.id);
+        }
+        setAdminExists(true);
+        alert("Admin account created. Please log in.");
+      } else {
+        alert("Check your email to confirm your account.");
+      }
+      setView("login");
+    } catch (error) {
+      console.error("Unexpected signup error:", error);
+      alert("An unexpected error occurred during signup. Please try again.");
     }
-    setView("login");
   };
 
   // Seller creation
@@ -1225,6 +1247,15 @@ const Account = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Phone</Label>
+                      <Input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Enter your phone number"
                       />
                     </div>
                     <div className="space-y-2">
