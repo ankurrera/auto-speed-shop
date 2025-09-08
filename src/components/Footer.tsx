@@ -13,43 +13,43 @@ const Footer = () => {
   const [isSubscribing, setIsSubscribing] = useState(false);
 
   const handleSubscribe = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Form submitted with email:", email);
-    setIsSubscribing(true);
+  e.preventDefault();
+  console.log("Form submitted with email:", email);
+  setIsSubscribing(true);
 
-    if (!email || !email.includes("@")) {
-      toast.error("Please enter a valid email address.");
-      setIsSubscribing(false);
-      return;
-    }
+  if (!email || !email.includes("@")) {
+    toast.error("Please enter a valid email address.");
+    setIsSubscribing(false);
+    return;
+  }
 
-    try {
-      console.log("Attempting to insert email:", email);
-      const { data, error } = await supabase
-        .from("subscribers")
-        .insert([{ email: email.trim().toLowerCase() }]);
+  try {
+    console.log("Attempting to insert email:", email);
+    const { data, error } = await supabase
+      .from("subscribers")
+      .insert([{ email: email.trim().toLowerCase() }]);
 
-      console.log("Supabase response:", { data, error });
+    console.log("Supabase response:", { data, error });
 
-      if (error) {
-        console.error("Subscription error details:", error.message, error.code, error.details, error);
-        if (error.code === '23505') {
-          toast.info("You are already subscribed!");
-        } else {
-          toast.error(`Failed to subscribe: ${error.message || 'Unknown error'}`);
-        }
+    if (error) {
+      console.error("Subscription error details:", error.message, error.code, error.details, error);
+      if (error.code === '23505') {
+        toast.info("You are already subscribed!");
       } else {
-        console.log("Successfully subscribed:", data);
-        toast.success("You have been successfully subscribed!");
-        setEmail("");
+        toast.error(`Failed to subscribe: ${error.message || 'Unknown error'}`);
       }
-    } catch (err) {
-      console.error("An unexpected error occurred:", err);
-      toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsSubscribing(false);
+    } else {
+      console.log("Successfully subscribed:", data);
+      toast.success("You have been successfully subscribed!");
+      setEmail("");
     }
-  };
+  } catch (err) {
+    console.error("An unexpected error occurred:", err);
+    toast.error("An unexpected error occurred. Please try again.");
+  } finally {
+    setIsSubscribing(false);
+  }
+};
 
   return (
     <footer className="bg-background text-foreground">

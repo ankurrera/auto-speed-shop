@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,17 +10,17 @@ interface SupabaseWishlistItem {
   user_id: string;
   product_id: string | null;
   part_id: string | null;
-  // Corrected types to handle the array returned by Supabase
+
   products: {
     name: string;
     brand: string;
     image_urls: string[] | null;
-  }[];
+  } | null;
   parts: {
     name: string;
     brand: string;
     image_urls: string[] | null;
-  }[];
+  } | null;
 }
 
 // Define the type for a single item in the wishlist, as used by the UI
@@ -63,7 +64,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchWishlistItems = async (): Promise<WishlistItem[]> => {
     if (!userId) return [];
-    
+
     const { data, error } = await supabase
       .from('wishlist')
       .select(`
@@ -86,8 +87,8 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
     if (error) throw error;
     
-    return data.map((item: SupabaseWishlistItem) => {
-      const product = item.products?.[0];
+    return data.map((item: any) => {
+      const product = item.products;
       if (item.product_id && product) {
         return {
           id: item.id,
@@ -100,7 +101,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
         };
       }
       
-      const part = item.parts?.[0];
+      const part = item.parts;
       if (item.part_id && part) {
         return {
           id: item.id,
@@ -204,6 +205,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useWishlist = () => {
   const context = useContext(WishlistContext);
   if (context === undefined) {

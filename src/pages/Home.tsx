@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Search, Wrench, Truck, Shield, Star, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -285,17 +286,19 @@ const Home = () => {
                   <p className="text-muted-foreground text-sm">Get professional advice from our experienced team.</p>
                 </CardContent>
               </Card>
-              <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-300">
-                <CardHeader className="p-0">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Sparkles className="h-8 w-8 text-primary-foreground" />
-                  </div>
-                  <CardTitle className="font-semibold text-lg">New Arrivals</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 pt-2">
-                  <p className="text-muted-foreground text-sm">Always the latest and greatest products in stock.</p>
-                </CardContent>
-              </Card>
+              <Link to="/new-arrivals">
+                <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-300">
+                  <CardHeader className="p-0">
+                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Sparkles className="h-8 w-8 text-primary-foreground" />
+                    </div>
+                    <CardTitle className="font-semibold text-lg">New Arrivals</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0 pt-2">
+                    <p className="text-muted-foreground text-sm">Always the latest and greatest products in stock.</p>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
           </div>
         </section>
