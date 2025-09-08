@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -57,7 +58,7 @@ const formatCardData = (item: Product | Part) => {
   if (isProduct(item)) {
     return {
       ...commonData,
-      brand: item.brand || "Generic", // Use actual brand from database
+      brand: "Generic", // Placeholder for products without a brand column
       category: item.category || "General",
       is_part: false,
     };
@@ -87,7 +88,6 @@ const Shop = () => {
   const [selectedYear, setSelectedYear] = useState(searchParams.get("year") || "all");
   const [selectedMake, setSelectedMake] = useState(searchParams.get("make") || "all");
   const [selectedModel, setSelectedModel] = useState(searchParams.get("model") || "");
-  const [selectedBrand, setSelectedBrand] = useState(searchParams.get("brand") || "all");
   
   const yearSelectRef = useRef<HTMLDivElement>(null);
   const makeSelectRef = useRef<HTMLDivElement>(null);
@@ -97,7 +97,6 @@ const Shop = () => {
     setSelectedYear(searchParams.get("year") || "all");
     setSelectedMake(searchParams.get("make") || "all");
     setSelectedModel(searchParams.get("model") || (searchParams.get("make") ? "all" : ""));
-    setSelectedBrand(searchParams.get("brand") || "all");
     setFilterMode((searchParams.get("filterMode") as "all" | "parts" | "products") || "all");
     setSortOrder(searchParams.get("sortOrder") || "newest");
     setPriceRange(searchParams.get("priceRange") || "all");
@@ -154,12 +153,6 @@ const Shop = () => {
     },
     enabled: !!selectedMake && selectedMake !== 'all',
   });
-
-  // Automotive brands for brand filtering
-  const automotiveBrands = [
-    "Audi", "BMW", "Chevrolet", "Ford", "Honda", "Mazda", 
-    "Mercedes", "Nissan", "Subaru", "Toyota"
-  ];
 
 
   const fetchParts = async () => {
@@ -223,18 +216,6 @@ const Shop = () => {
       });
     }
 
-    // Apply brand filtering (separate from vehicle make filtering)
-    if (selectedBrand && selectedBrand !== 'all') {
-      items = items.filter(item => {
-        if (isPart(item)) {
-          return item.brand === selectedBrand;
-        } else if (isProduct(item)) {
-          return item.brand === selectedBrand;
-        }
-        return false; // Don't keep items that are neither parts nor products
-      });
-    }
-
     // Apply general filters
     if (filterMode === "parts") {
       items = items.filter(item => item.type === "part");
@@ -259,7 +240,7 @@ const Shop = () => {
     }
     
     return items;
-  }, [allItems, filterMode, priceRange, sortOrder, selectedMake, selectedModel, selectedYear, selectedBrand, searchQuery]);
+  }, [allItems, filterMode, priceRange, sortOrder, selectedMake, selectedModel, selectedYear, searchQuery]);
 
   const priceRanges = [
     { value: "all", label: "All Prices" },
@@ -329,18 +310,6 @@ const Shop = () => {
       } else {
         prev.set("make", value);
         prev.set("model", "all");
-      }
-      return prev;
-    });
-  };
-
-  const handleBrandChange = (value: string) => {
-    setSelectedBrand(value);
-    setSearchParams(prev => {
-      if (value === 'all') {
-        prev.delete("brand");
-      } else {
-        prev.set("brand", value);
       }
       return prev;
     });
@@ -465,23 +434,6 @@ const Shop = () => {
               <SelectItem value="newest">Newest</SelectItem>
               <SelectItem value="price-asc">Price: Low to High</SelectItem>
               <SelectItem value="price-desc">Price: High to Low</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Label>Brand:</Label>
-          <Select value={selectedBrand} onValueChange={handleBrandChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All Brands" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Brands</SelectItem>
-              {automotiveBrands.map((brand) => (
-                <SelectItem key={brand} value={brand}>
-                  {brand}
-                </SelectItem>
-              ))}
             </SelectContent>
           </Select>
         </div>
