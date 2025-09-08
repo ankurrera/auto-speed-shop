@@ -54,6 +54,7 @@ const Header = () => {
                 user_id: user.id,
                 first_name: user.user_metadata?.first_name || "",
                 last_name: user.user_metadata?.last_name || "",
+                name: `${user.user_metadata?.first_name || ""} ${user.user_metadata?.last_name || ""}`.trim(),
                 email: user.email || "",
                 phone: user.user_metadata?.phone || "",
                 is_admin: false,

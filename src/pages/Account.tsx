@@ -330,6 +330,7 @@ const Account = () => {
                 user_id: user.id,
                 first_name: user.user_metadata?.first_name || "",
                 last_name: user.user_metadata?.last_name || "",
+                name: `${user.user_metadata?.first_name || ""} ${user.user_metadata?.last_name || ""}`.trim(),
                 email: user.email || "",
                 phone: user.user_metadata?.phone || "",
                 is_admin: false,
@@ -528,6 +529,7 @@ const Account = () => {
             user_id: data.user.id,
             first_name: firstName,
             last_name: lastName,
+            name: `${firstName} ${lastName}`.trim(),
             email: email,
             phone: phone || "",
             is_admin: loginMode === "admin",
@@ -617,6 +619,7 @@ const Account = () => {
         is_seller: true,
         email: newSellerEmail,
         first_name: newSellerName,
+        name: newSellerName,
       },
       { onConflict: "user_id" }
     );
