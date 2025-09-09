@@ -1,5 +1,3 @@
-// ankurrera/auto-speed-shop/auto-speed-shop-dc8d047f644a887aa7568eb0a88e87e2ca711b4f/src/App.tsx
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,12 +22,15 @@ import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
 import ScrollToTop from "./components/ScrollToTop";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { DevCartHelper } from "./components/DevCartHelper";
 
 const queryClient = new QueryClient();
 
-// PayPal configuration using actual client ID from environment
+// PayPal configuration - use environment variable or fallback to hardcoded client ID
+const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PiV8e1GWU6liB2CUXlkA59kJXE7M6R";
+
 const paypalOptions = {
-  "clientId": "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PiV8e1GWU6liB2CUXlkA59kJXE7M6R",
+  "clientId": paypalClientId,
   "currency": "USD",
 };
 
@@ -45,6 +46,7 @@ const App = () => {
             <WishlistProvider>
               <div className="min-h-screen flex flex-col">
                 <Header />
+                <DevCartHelper />
                 <main className="flex-1">
                   <Routes>
                     <Route path="/reset-password" element={<ResetPassword />} />
