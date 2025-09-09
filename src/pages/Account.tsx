@@ -21,7 +21,8 @@ import {
   Users,
   X,
   Plus,
-  RefreshCcw
+  RefreshCcw,
+  Car
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -488,148 +489,288 @@ const Account = () => {
 
   const handleSignup = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!email || !password || !firstName || !lastName) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+    
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters long.");
+      return;
+    }
+    
     if (loginMode === "admin" && adminExists) {
       alert("Admin already exists.");
       return;
     }
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { first_name: firstName, last_name: lastName, phone },
-      },
-    });
-    if (error) {
-      alert("Signup failed: " + error.message);
-      return;
-    }
-
-    // Create profile record in profiles table
-    if (data.user) {
-      const { error: profileError } = await supabase.from("profiles").upsert(
-        {
-          user_id: data.user.id,
-          first_name: firstName,
-          last_name: lastName,
-          email: email,
-          phone: phone,
-          is_admin: loginMode === "admin",
-          is_seller: false,
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: { first_name: firstName, last_name: lastName, phone: phone || "" },
         },
-        { onConflict: "user_id" }
-      );
+      });
       
-      if (profileError) {
-        console.error("Profile creation failed:", profileError);
-        // Don't fail the signup entirely, but log the error
+      if (error) {
+        console.error("Signup error:", error);
+        
+        // Handle specific error cases
+        if (error.message && error.message.includes("User already registered")) {
+          alert("An account with this email already exists. Please try logging in instead, or use a different email address.");
+          setView("login");
+          return;
+        } else if (error.message && error.message.includes("Email rate limit exceeded")) {
+          alert("Too many signup attempts. Please wait a moment before trying again.");
+          return;
+        } else if (error.message && error.message.includes("Invalid email")) {
+          alert("Please enter a valid email address.");
+          return;
+        } else {
+          alert("Signup failed: " + error.message);
+          return;
+        }
+      }
+
+      // Create profile record in profiles table with retry logic
+      if (data.user) {
+        let profileCreated = false;
+        let retryCount = 0;
+        const maxRetries = 3;
+
+        while (!profileCreated && retryCount < maxRetries) {
+          try {
+            const { error: profileError } = await supabase.from("profiles").upsert(
+              {
+                user_id: data.user.id,
+                first_name: firstName,
+                last_name: lastName,
+                email: email,
+                phone: phone || "",
+                is_admin: loginMode === "admin",
+                is_seller: false,
+              },
+              { onConflict: "user_id" }
+            );
+            
+            if (profileError) {
+              console.error(`Profile creation attempt ${retryCount + 1} failed:`, profileError);
+              
+              // Handle specific profile creation errors
+              if (profileError.code === "23505") { // Unique constraint violation
+                console.log("Profile already exists, continuing...");
+                profileCreated = true;
+              } else if (profileError.code === "42501") { // RLS policy violation
+                console.error("Profile creation denied by RLS policy:", profileError);
+                throw new Error("Profile creation failed due to permissions. Please contact support.");
+              } else if (retryCount === maxRetries - 1) {
+                throw new Error(`Profile creation failed after ${maxRetries} attempts: ${profileError.message}`);
+              }
+            } else {
+              profileCreated = true;
+              console.log("Profile created successfully");
+            }
+          } catch (profileErr: any) {
+            console.error(`Profile creation error on attempt ${retryCount + 1}:`, profileErr);
+            if (retryCount === maxRetries - 1) {
+              // Log the error but don't prevent signup completion
+              console.error("Profile creation failed completely, but user account was created");
+            }
+          }
+          
+          retryCount++;
+          if (!profileCreated && retryCount < maxRetries) {
+            // Wait a bit before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+
+      if (loginMode === "admin") {
+        // Update the profile to set admin status (redundant but safe)
+        if (data.user) {
+          try {
+            await supabase
+              .from("profiles")
+              .update({ is_admin: true })
+              .eq("user_id", data.user.id);
+          } catch (adminUpdateError) {
+            console.error("Failed to set admin status:", adminUpdateError);
+            // Continue anyway since the user was created
+          }
+        }
+        setAdminExists(true);
+        alert("Admin account created successfully. Please log in.");
+      } else {
+        alert("Account created successfully! Please check your email to confirm your account before logging in.");
+      }
+      
+      // Clear form and switch to login
+      setEmail("");
+      setPassword("");
+      setFirstName("");
+      setLastName("");
+      setPhone("");
+      setView("login");
+    } catch (error: any) {
+      console.error("Unexpected signup error:", error);
+      
+      // Handle network/connection errors
+      if (error.message && error.message.includes("Failed to fetch")) {
+        alert("Network error: Please check your internet connection and try again.");
+      } else {
+        alert("An unexpected error occurred during signup: " + (error.message || "Unknown error"));
       }
     }
-
-    if (loginMode === "admin") {
-      // Update the profile to set admin status (redundant but safe)
-      await supabase
-        .from("profiles")
-        .update({ is_admin: true })
-        .eq("user_id", data.user?.id);
-      setAdminExists(true);
-      alert("Admin account created. Please log in.");
-    } else {
-      alert("Check your email to confirm your account.");
-    }
-    setView("login");
   };
 
   // Seller creation
   const handleCreateSellerAccount = async (e: FormEvent) => {
     e.preventDefault();
-    let userId: string | null = null;
+    
+    // Basic validation
+    if (!newSellerName || !newSellerEmail || !newSellerPassword) {
+      alert("Please fill in all required fields (Name, Email, Password).");
+      return;
+    }
+    
+    if (newSellerPassword.length < 6) {
+      alert("Password must be at least 6 characters long.");
+      return;
+    }
+    
+    try {
+      let userId: string | null = null;
 
-    const { data: newUserData, error: signUpError } = await supabase.auth.signUp(
-      {
-        email: newSellerEmail,
-        password: newSellerPassword,
-        options: {
-          data: { first_name: newSellerName, is_seller: true },
-        },
-      }
-    );
+      const { data: newUserData, error: signUpError } = await supabase.auth.signUp(
+        {
+          email: newSellerEmail,
+          password: newSellerPassword,
+          options: {
+            data: { first_name: newSellerName, is_seller: true },
+          },
+        }
+      );
 
-    if (signUpError) {
-      if (signUpError.message.includes("User already registered")) {
-        const { data: existingProfile } = await supabase
-          .from("profiles")
-          .select("user_id")
-          .eq("email", newSellerEmail)
-          .maybeSingle();
-        if (existingProfile) {
-          userId = existingProfile.user_id;
-        } else {
-          const { data: signInData, error: signInError } =
-            await supabase.auth.signInWithPassword({
-              email: newSellerEmail,
-              password: newSellerPassword,
-            });
-          if (signInError) {
-            alert("User exists; sign in failed.");
-            return;
+      if (signUpError) {
+        console.error("Seller signup error:", signUpError);
+        
+        if (signUpError.message.includes("User already registered")) {
+          // Check if user exists in profiles table
+          const { data: existingProfile } = await supabase
+            .from("profiles")
+            .select("user_id, is_seller")
+            .eq("email", newSellerEmail)
+            .maybeSingle();
+            
+          if (existingProfile) {
+            if (existingProfile.is_seller) {
+              alert("This email is already associated with a seller account.");
+              return;
+            }
+            userId = existingProfile.user_id;
+            console.log("Found existing user profile, will update to seller status");
+          } else {
+            // Try to authenticate to get user ID
+            const { data: signInData, error: signInError } =
+              await supabase.auth.signInWithPassword({
+                email: newSellerEmail,
+                password: newSellerPassword,
+              });
+            if (signInError) {
+              alert("User exists but authentication failed. Please check the password or use a different email.");
+              return;
+            }
+            userId = signInData.user.id;
+            // Sign out immediately since we were just testing the credentials
+            await supabase.auth.signOut();
           }
-          userId = signInData.user.id;
+        } else {
+          alert("Seller account creation failed: " + signUpError.message);
+          return;
         }
       } else {
-        alert("Seller creation failed: " + signUpError.message);
+        userId = newUserData?.user?.id || null;
+      }
+
+      if (!userId) {
+        alert("Could not resolve user ID. Please try again.");
         return;
       }
-    } else {
-      userId = newUserData?.user?.id || null;
-    }
 
-    if (!userId) {
-      alert("Could not resolve user ID.");
-      return;
-    }
+      // Update or create profile with seller status
+      const { error: upsertError } = await supabase.from("profiles").upsert(
+        {
+          user_id: userId,
+          is_seller: true,
+          email: newSellerEmail,
+          first_name: newSellerName,
+        },
+        { onConflict: "user_id" }
+      );
+      
+      if (upsertError) {
+        console.error("Profile upsert error:", upsertError);
+        alert("Failed to update user profile: " + upsertError.message);
+        return;
+      }
 
-    const { error: upsertError } = await supabase.from("profiles").upsert(
-      {
+      // Create seller record
+      const { error: sellerInsertError } = await supabase.from("sellers").insert({
         user_id: userId,
-        is_seller: true,
+        name: newSellerName,
+        address: newSellerAddress || "",
         email: newSellerEmail,
-        first_name: newSellerName,
-      },
-      { onConflict: "user_id" }
-    );
-    if (upsertError) {
-      alert("Profile update failed.");
-      return;
+        phone: newSellerPhoneNumber || "",
+      });
+      
+      if (sellerInsertError) {
+        console.error("Seller insert error:", sellerInsertError);
+        
+        // Handle specific seller creation errors
+        if (sellerInsertError.code === "23505") { // Unique constraint violation
+          alert("A seller account with this information already exists.");
+        } else {
+          alert("Failed to create seller record: " + sellerInsertError.message);
+        }
+        return;
+      }
+
+      // Ensure profile is marked as seller (redundant but safe)
+      await supabase
+        .from("profiles")
+        .update({ is_seller: true })
+        .eq("user_id", userId);
+
+      alert("Seller account created successfully!");
+      
+      // Clear form
+      setNewSellerName("");
+      setNewSellerAddress("");
+      setNewSellerEmail("");
+      setNewSellerPassword("");
+      setNewSellerPhoneNumber("");
+
+      // Refresh user data if admin is logged in
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) fetchAndSetUserData(session.user.id);
+      
+    } catch (error: any) {
+      console.error("Unexpected seller creation error:", error);
+      
+      // Handle network/connection errors
+      if (error.message && error.message.includes("Failed to fetch")) {
+        alert("Network error: Please check your internet connection and try again.");
+      } else {
+        alert("An unexpected error occurred while creating seller account: " + (error.message || "Unknown error"));
+      }
     }
-
-    const { error: sellerInsertError } = await supabase.from("sellers").insert({
-      user_id: userId,
-      name: newSellerName,
-      address: newSellerAddress,
-      email: newSellerEmail,
-      phone: newSellerPhoneNumber,
-    });
-    if (sellerInsertError) {
-      alert("Seller creation failed.");
-      return;
-    }
-
-    await supabase
-      .from("profiles")
-      .update({ is_seller: true })
-      .eq("user_id", userId);
-
-    alert("Seller created successfully.");
-    setNewSellerName("");
-    setNewSellerAddress("");
-    setNewSellerEmail("");
-    setNewSellerPassword("");
-    setNewSellerPhoneNumber("");
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session) fetchAndSetUserData(session.user.id);
   };
 
   // Product/Part submission
@@ -1224,6 +1365,15 @@ const Account = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Phone</Label>
+                      <Input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Enter your phone number"
                       />
                     </div>
                     <div className="space-y-2">
@@ -1881,10 +2031,20 @@ const Account = () => {
               Manage your account information and orders
             </p>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-2"
+            >
+              <Car className="h-4 w-4" />
+              Dashboard
+            </Button>
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-8">{renderContent()}</div>
