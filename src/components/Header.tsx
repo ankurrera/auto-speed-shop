@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, Heart, Menu, X, ChevronDown, LogOut, LayoutDashboard, TrendingUp } from "lucide-react";
+import { ShoppingCart, User, Heart, Menu, X, ChevronDown, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -204,18 +204,6 @@ const Header = () => {
                   {userInfo.is_admin && userInfo.is_seller && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/account/admin-dashboard">
-                          <LayoutDashboard className="mr-2 h-4 w-4" />
-                          Admin Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/account/analytics-dashboard">
-                          <TrendingUp className="mr-2 h-4 w-4" />
-                          Analytics Dashboard
-                        </Link>
-                      </DropdownMenuItem>
                     </>
                   )}
 
@@ -328,24 +316,6 @@ const Header = () => {
                     <Link to="/account/orders">Order History</Link>
                   </DropdownMenuItem>
                   
-                  {userInfo.is_admin && userInfo.is_seller && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/account/admin-dashboard">
-                          <LayoutDashboard className="mr-2 h-4 w-4" />
-                          Admin Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/account/analytics-dashboard">
-                          <TrendingUp className="mr-2 h-4 w-4" />
-                          Analytics Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                    </>
-                  )}
-
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />

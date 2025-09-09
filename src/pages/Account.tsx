@@ -98,7 +98,9 @@ const Account = () => {
   const [newSellerPhoneNumber, setNewSellerPhoneNumber] = useState("");
   const [newSellerEmail, setNewSellerEmail] = useState("");
   const [newSellerPassword, setNewSellerPassword] = useState("");
-  const [sellerExistsForAdmin, setSellerExistsForAdmin] = useState(false);
+  const [sellerId, setSellerId] = useState<string | null>(null);
+  const [showManageProducts, setShowManageProducts] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // User info
   const [userInfo, setUserInfo] = useState({
@@ -149,9 +151,6 @@ const Account = () => {
     vin: "",
   });
   const [productFiles, setProductFiles] = useState<File[]>([]);
-  const [sellerId, setSellerId] = useState<string | null>(null);
-  const [showManageProducts, setShowManageProducts] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Routing / utilities
   const navigate = useNavigate();
@@ -316,7 +315,6 @@ const Account = () => {
         is_admin: data.is_admin || false,
         is_seller: data.is_seller || false,
       });
-      setSellerExistsForAdmin(data.is_seller || false);
     } else {
       console.error("Account: Error fetching profile or no data:", error, "User ID:", userId);
       
@@ -352,34 +350,15 @@ const Account = () => {
     }
   }, []);
 
-  const checkSellerExists = useCallback(async (userId: string) => {
-    const { count, error } = await supabase
-      .from("profiles")
-      .select("is_seller", { count: "exact" })
-      .eq("is_seller", true);
-    if (!error) {
-      setSellerExistsForAdmin((count || 0) > 0);
-      if ((count || 0) > 0) {
-        const { data: sellerInfoData } = await supabase
-          .from("sellers")
-          .select("id")
-          .eq("user_id", userId)
-          .single();
-        if (sellerInfoData) setSellerId(sellerInfoData.id);
-      }
-    }
-  }, []);
-
   const fetchAndSetUserData = useCallback(
     async (userId: string) => {
       setIsLoading(true);
       await fetchUserProfile(userId);
       await fetchUserAddresses(userId);
       await fetchUserOrders(userId);
-      await checkSellerExists(userId);
       setIsLoading(false);
     },
-    [fetchUserProfile, fetchUserAddresses, fetchUserOrders, checkSellerExists]
+    [fetchUserProfile, fetchUserAddresses, fetchUserOrders]
   );
 
   // Save profile
@@ -2032,14 +2011,6 @@ const Account = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate("/dashboard")}
-              className="flex items-center gap-2"
-            >
-              <Car className="h-4 w-4" />
-              Dashboard
-            </Button>
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
