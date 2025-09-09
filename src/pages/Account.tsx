@@ -516,24 +516,6 @@ const Account = () => {
         },
       });
       
-      if (error) {
-        console.error("Signup error:", error);
-        
-        // Handle specific error cases
-        if (error.message && error.message.includes("User already registered")) {
-          alert("An account with this email already exists. Please try logging in instead, or use a different email address.");
-          setView("login");
-          return;
-        } else if (error.message && error.message.includes("Email rate limit exceeded")) {
-          alert("Too many signup attempts. Please wait a moment before trying again.");
-          return;
-        } else if (error.message && error.message.includes("Invalid email")) {
-          alert("Please enter a valid email address.");
-          return;
-        } else {
-          alert("Signup failed: " + error.message);
-          return;
-        }
       }
 
       // Create profile record in profiles table with retry logic
