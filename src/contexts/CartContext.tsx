@@ -147,12 +147,30 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [userId, fetchCartItems]);
 
   const addToCart = async (item: Omit<CartItem, "quantity">, quantity: number = 1) => {
-    if (!userId) {
+    // In development mode, allow adding items without authentication
+    if (!userId && !import.meta.env.DEV) {
       toast({
         title: "Error",
         description: "You must be logged in to add to cart.",
         variant: "destructive",
       });
+      return;
+    }
+
+    // Development mode: add items to local state without database
+    if (import.meta.env.DEV && !userId) {
+      const existingItemIndex = cartItems.findIndex((cartItem) => cartItem.id === item.id && cartItem.is_part === item.is_part);
+      
+      if (existingItemIndex >= 0) {
+        const updatedItems = [...cartItems];
+        updatedItems[existingItemIndex].quantity += quantity;
+        setCartItems(updatedItems);
+      } else {
+        const newItem: CartItem = { ...item, quantity };
+        setCartItems([...cartItems, newItem]);
+      }
+      
+      toast({ title: "Success", description: `${item.name} added to cart (dev mode).` });
       return;
     }
 
@@ -269,6 +287,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const clearCart = async () => {
+    // In development mode, clear local state
+    if (import.meta.env.DEV && !userId) {
+      setCartItems([]);
+      toast({ title: "Success", description: "Your cart has been cleared (dev mode)." });
+      return;
+    }
+
     if (!userId) return;
 
     try {
