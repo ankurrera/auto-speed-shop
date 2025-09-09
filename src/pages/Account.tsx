@@ -461,7 +461,11 @@ const Account = () => {
       password,
     });
     if (error) {
-      alert("Login failed: " + error.message);
+      toast({
+        title: "Login Failed",
+        description: error.message,
+        variant: "destructive",
+      });
       return;
     }
     const { data: profileData, error: profileError } = await supabase
@@ -471,7 +475,11 @@ const Account = () => {
       .single();
 
     if (profileError) {
-      alert("Could not retrieve profile info");
+      toast({
+        title: "Profile Error",
+        description: "Could not retrieve profile information",
+        variant: "destructive",
+      });
       await supabase.auth.signOut();
       return;
     }
@@ -482,7 +490,11 @@ const Account = () => {
       setIsLoggedIn(true);
       fetchAndSetUserData(data.user.id);
     } else {
-      alert("Invalid login mode for this account.");
+      toast({
+        title: "Invalid Login",
+        description: "Invalid login mode for this account.",
+        variant: "destructive",
+      });
       await supabase.auth.signOut();
     }
   };
@@ -492,17 +504,29 @@ const Account = () => {
     
     // Basic validation
     if (!email || !password || !firstName || !lastName) {
-      alert("Please fill in all required fields.");
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
       return;
     }
     
     if (password.length < 6) {
-      alert("Password must be at least 6 characters long.");
+      toast({
+        title: "Validation Error",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
       return;
     }
     
     if (loginMode === "admin" && adminExists) {
-      alert("Admin already exists.");
+      toast({
+        title: "Admin Exists",
+        description: "Admin already exists.",
+        variant: "destructive",
+      });
       return;
     }
     
@@ -521,17 +545,33 @@ const Account = () => {
         
         // Handle specific error cases
         if (error.message && error.message.includes("User already registered")) {
-          alert("An account with this email already exists. Please try logging in instead, or use a different email address.");
+          toast({
+            title: "User Already Exists",
+            description: "An account with this email already exists. Please try logging in instead, or use a different email address.",
+            variant: "destructive",
+          });
           setView("login");
           return;
         } else if (error.message && error.message.includes("Email rate limit exceeded")) {
-          alert("Too many signup attempts. Please wait a moment before trying again.");
+          toast({
+            title: "Rate Limit Exceeded",
+            description: "Too many signup attempts. Please wait a moment before trying again.",
+            variant: "destructive",
+          });
           return;
         } else if (error.message && error.message.includes("Invalid email")) {
-          alert("Please enter a valid email address.");
+          toast({
+            title: "Invalid Email",
+            description: "Please enter a valid email address.",
+            variant: "destructive",
+          });
           return;
         } else {
-          alert("Signup failed: " + error.message);
+          toast({
+            title: "Signup Failed",
+            description: error.message,
+            variant: "destructive",
+          });
           return;
         }
       }
@@ -604,9 +644,15 @@ const Account = () => {
           }
         }
         setAdminExists(true);
-        alert("Admin account created successfully. Please log in.");
+        toast({
+          title: "Admin Account Created",
+          description: "Admin account created successfully. Please log in.",
+        });
       } else {
-        alert("Account created successfully! Please check your email to confirm your account before logging in.");
+        toast({
+          title: "Account Created",
+          description: "Account created successfully! Please check your email to confirm your account before logging in.",
+        });
       }
       
       // Clear form and switch to login
@@ -621,132 +667,205 @@ const Account = () => {
       
       // Handle network/connection errors
       if (error.message && error.message.includes("Failed to fetch")) {
-        alert("Network error: Please check your internet connection and try again.");
+        toast({
+          title: "Network Error",
+          description: "Please check your internet connection and try again.",
+          variant: "destructive",
+        });
       } else {
-        alert("An unexpected error occurred during signup: " + (error.message || "Unknown error"));
+        toast({
+          title: "Signup Error",
+          description: "An unexpected error occurred during signup: " + (error.message || "Unknown error"),
+          variant: "destructive",
+        });
       }
     }
   };
 
-  // Seller creation
+  // Seller creation (Admin function)
   const handleCreateSellerAccount = async (e: FormEvent) => {
     e.preventDefault();
     
     // Basic validation
     if (!newSellerName || !newSellerEmail || !newSellerPassword) {
-      alert("Please fill in all required fields (Name, Email, Password).");
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields (Name, Email, Password).",
+        variant: "destructive",
+      });
       return;
     }
     
     if (newSellerPassword.length < 6) {
-      alert("Password must be at least 6 characters long.");
+      toast({
+        title: "Validation Error", 
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
       return;
     }
     
     try {
-      let userId: string | null = null;
-
-      const { data: newUserData, error: signUpError } = await supabase.auth.signUp(
-        {
-          email: newSellerEmail,
-          password: newSellerPassword,
-          options: {
-            data: { first_name: newSellerName, is_seller: true },
-          },
-        }
-      );
-
-      if (signUpError) {
-        console.error("Seller signup error:", signUpError);
+      // First check if user already exists in profiles
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("user_id, is_seller, email")
+        .eq("email", newSellerEmail)
+        .maybeSingle();
         
-        if (signUpError.message.includes("User already registered")) {
-          // Check if user exists in profiles table
-          const { data: existingProfile } = await supabase
-            .from("profiles")
-            .select("user_id, is_seller")
-            .eq("email", newSellerEmail)
-            .maybeSingle();
-            
-          if (existingProfile) {
-            if (existingProfile.is_seller) {
-              alert("This email is already associated with a seller account.");
-              return;
-            }
-            userId = existingProfile.user_id;
-            console.log("Found existing user profile, will update to seller status");
-          } else {
-            // Try to authenticate to get user ID
-            const { data: signInData, error: signInError } =
-              await supabase.auth.signInWithPassword({
-                email: newSellerEmail,
-                password: newSellerPassword,
-              });
-            if (signInError) {
-              alert("User exists but authentication failed. Please check the password or use a different email.");
-              return;
-            }
-            userId = signInData.user.id;
-            // Sign out immediately since we were just testing the credentials
-            await supabase.auth.signOut();
-          }
-        } else {
-          alert("Seller account creation failed: " + signUpError.message);
+      let userId: string | null = null;
+      
+      if (existingProfile) {
+        // User exists - check if already a seller
+        if (existingProfile.is_seller) {
+          toast({
+            title: "User Already Exists",
+            description: "This email is already associated with a seller account.",
+            variant: "destructive",
+          });
           return;
         }
+        
+        // User exists but not a seller - we'll upgrade them
+        userId = existingProfile.user_id;
+        console.log("Found existing user profile, will upgrade to seller status");
       } else {
-        userId = newUserData?.user?.id || null;
+        // User doesn't exist - create new user account
+        // We'll handle this by creating a seller invitation that they can accept
+        // or create the account directly via the auth admin API if available
+        
+        // For now, we'll create the user account normally
+        // Note: This approach temporarily switches auth state, but we'll restore it
+        const currentSession = await supabase.auth.getSession();
+        
+        try {
+          const { data: newUserData, error: signUpError } = await supabase.auth.signUp({
+            email: newSellerEmail,
+            password: newSellerPassword,
+            options: {
+              data: { 
+                first_name: newSellerName, 
+                is_seller: true 
+              },
+            },
+          });
+
+          if (signUpError) {
+            if (signUpError.message.includes("User already registered")) {
+              // Fallback: try to find the user in auth
+              toast({
+                title: "User Exists",
+                description: "A user with this email already exists. Please use a different email or contact the user to become a seller.",
+                variant: "destructive",
+              });
+              return;
+            } else {
+              throw signUpError;
+            }
+          }
+
+          userId = newUserData?.user?.id || null;
+          
+          // Restore the admin session immediately
+          if (currentSession.data.session) {
+            await supabase.auth.setSession(currentSession.data.session);
+          }
+        } catch (authError) {
+          // Restore admin session if auth operations failed
+          if (currentSession.data.session) {
+            await supabase.auth.setSession(currentSession.data.session);
+          }
+          throw authError;
+        }
       }
 
       if (!userId) {
-        alert("Could not resolve user ID. Please try again.");
+        toast({
+          title: "Error",
+          description: "Could not resolve user ID. Please try again.",
+          variant: "destructive",
+        });
         return;
       }
 
       // Update or create profile with seller status
-      const { error: upsertError } = await supabase.from("profiles").upsert(
-        {
-          user_id: userId,
-          is_seller: true,
-          email: newSellerEmail,
-          first_name: newSellerName,
-        },
-        { onConflict: "user_id" }
-      );
+      const { error: upsertError } = await supabase
+        .from("profiles")
+        .upsert(
+          {
+            user_id: userId,
+            is_seller: true,
+            email: newSellerEmail,
+            first_name: newSellerName,
+            // Preserve existing fields if updating
+            ...(existingProfile && {
+              last_name: existingProfile.last_name,
+              phone: existingProfile.phone,
+            }),
+          },
+          { onConflict: "user_id" }
+        );
       
       if (upsertError) {
         console.error("Profile upsert error:", upsertError);
-        alert("Failed to update user profile: " + upsertError.message);
+        toast({
+          title: "Profile Update Failed",
+          description: `Failed to update user profile: ${upsertError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if seller record already exists
+      const { data: existingSeller } = await supabase
+        .from("sellers")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (existingSeller) {
+        toast({
+          title: "Seller Exists",
+          description: "A seller record already exists for this user.",
+          variant: "destructive",
+        });
         return;
       }
 
       // Create seller record
-      const { error: sellerInsertError } = await supabase.from("sellers").insert({
-        user_id: userId,
-        name: newSellerName,
-        address: newSellerAddress || "",
-        email: newSellerEmail,
-        phone: newSellerPhoneNumber || "",
-      });
+      const { error: sellerInsertError } = await supabase
+        .from("sellers")
+        .insert({
+          user_id: userId,
+          name: newSellerName,
+          address: newSellerAddress || "",
+          email: newSellerEmail,
+          phone: newSellerPhoneNumber || "",
+        });
       
       if (sellerInsertError) {
         console.error("Seller insert error:", sellerInsertError);
         
-        // Handle specific seller creation errors
-        if (sellerInsertError.code === "23505") { // Unique constraint violation
-          alert("A seller account with this information already exists.");
+        if (sellerInsertError.code === "23505") {
+          toast({
+            title: "Duplicate Seller",
+            description: "A seller account with this information already exists.",
+            variant: "destructive",
+          });
         } else {
-          alert("Failed to create seller record: " + sellerInsertError.message);
+          toast({
+            title: "Seller Creation Failed",
+            description: `Failed to create seller record: ${sellerInsertError.message}`,
+            variant: "destructive",
+          });
         }
         return;
       }
 
-      // Ensure profile is marked as seller (redundant but safe)
-      await supabase
-        .from("profiles")
-        .update({ is_seller: true })
-        .eq("user_id", userId);
-
-      alert("Seller account created successfully!");
+      toast({
+        title: "Success",
+        description: `Seller account created successfully for ${newSellerName}!`,
+      });
       
       // Clear form
       setNewSellerName("");
@@ -755,20 +874,28 @@ const Account = () => {
       setNewSellerPassword("");
       setNewSellerPhoneNumber("");
 
-      // Refresh user data if admin is logged in
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) fetchAndSetUserData(session.user.id);
+      // Refresh admin data 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await fetchAndSetUserData(session.user.id);
+      }
       
     } catch (error: any) {
       console.error("Unexpected seller creation error:", error);
       
       // Handle network/connection errors
       if (error.message && error.message.includes("Failed to fetch")) {
-        alert("Network error: Please check your internet connection and try again.");
+        toast({
+          title: "Network Error",
+          description: "Please check your internet connection and try again.",
+          variant: "destructive",
+        });
       } else {
-        alert("An unexpected error occurred while creating seller account: " + (error.message || "Unknown error"));
+        toast({
+          title: "Unexpected Error",
+          description: `An unexpected error occurred: ${error.message || "Unknown error"}`,
+          variant: "destructive",
+        });
       }
     }
   };
@@ -1314,12 +1441,18 @@ const Account = () => {
                                 redirectTo: `${window.location.origin}/reset-password`,
                               })
                               .then(({ error }) => {
-                                if (error)
-                                  alert("Failed: " + error.message);
-                                else
-                                  alert(
-                                    "Password reset email sent. Check inbox."
-                                  );
+                                if (error) {
+                                  toast({
+                                    title: "Password Reset Failed",
+                                    description: error.message,
+                                    variant: "destructive",
+                                  });
+                                } else {
+                                  toast({
+                                    title: "Password Reset Email Sent",
+                                    description: "Password reset email sent. Check your inbox.",
+                                  });
+                                }
                               });
                           }
                         }}
