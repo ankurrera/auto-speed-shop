@@ -29,9 +29,9 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 const queryClient = new QueryClient();
 
-const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+// PayPal configuration will be handled server-side
 const paypalOptions = {
-  "clientId": paypalClientId || "test",
+  "clientId": "test", // Placeholder since server handles the actual PayPal integration
   "currency": "USD",
 };
 
@@ -77,13 +77,9 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {paypalClientId ? (
-        <PayPalScriptProvider options={paypalOptions}>
-          <AppContent />
-        </PayPalScriptProvider>
-      ) : (
+      <PayPalScriptProvider options={paypalOptions}>
         <AppContent />
-      )}
+      </PayPalScriptProvider>
     </QueryClientProvider>
   );
 };
