@@ -29,9 +29,9 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 const queryClient = new QueryClient();
 
-// PayPal configuration will be handled server-side
+// PayPal configuration using actual client ID from environment
 const paypalOptions = {
-  "clientId": "test", // Placeholder since server handles the actual PayPal integration
+  "clientId": "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PiV8e1GWU6liB2CUXlkA59kJXE7M6R",
   "currency": "USD",
 };
 
