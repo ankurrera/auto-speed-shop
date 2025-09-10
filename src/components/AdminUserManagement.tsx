@@ -61,7 +61,7 @@ const AdminUserManagement = () => {
       }
       
       // Add rank based on order count
-      return (data || []).map((user: any, index: number) => ({
+      return (data || []).map((user: UserWithOrderCount, index: number) => ({
         ...user,
         rank: index + 1
       })) as UserWithOrderCount[];
@@ -95,23 +95,24 @@ const AdminUserManagement = () => {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase.from('profiles').delete().eq('user_id', userId);
+      const { data, error } = await supabase.rpc('admin_delete_user_profile', {
+        target_user_id: userId
+      });
       if (error) throw error;
-      // In a real-world scenario, you would also delete the user from Supabase auth.
-      // `await supabase.auth.admin.deleteUser(userId);`
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast({
         title: "Success",
-        description: "User deleted successfully.",
+        description: data?.message || "User profile deleted successfully. The user can now create a new account with the same email.",
       });
     },
-    onError: (err) => {
+    onError: (err: Error) => {
       console.error(err);
       toast({
         title: "Error",
-        description: "Failed to delete user.",
+        description: err.message || "Failed to delete user.",
         variant: "destructive",
       });
     },
@@ -171,10 +172,9 @@ const AdminUserManagement = () => {
   };
 
   const handleDeleteUser = (userId: string) => {
-    // Replaced window.confirm with a toast-based message as per instructions
     toast({
-      title: "Confirm Deletion",
-      description: "Are you sure you want to delete this user? This action cannot be undone.",
+      title: "Confirm Profile Deletion",
+      description: "Are you sure you want to delete this user's profile? This will remove their profile and related data. The user will be able to create a new account with the same email afterward. This action cannot be undone.",
       action: (
         <Button
           variant="destructive"

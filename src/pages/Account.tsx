@@ -32,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -590,19 +590,28 @@ const Account = () => {
         }
       }
 
-      if (loginMode === "admin") {
-        // Update the profile to set admin status (redundant but safe)
-        if (data.user) {
-          try {
-            await supabase
-              .from("profiles")
-              .update({ is_admin: true })
-              .eq("user_id", data.user.id);
-          } catch (adminUpdateError) {
-            console.error("Failed to set admin status:", adminUpdateError);
-            // Continue anyway since the user was created
-          }
+      // Explicit update to ensure all fields are set correctly (fixes race condition with auth trigger)
+      if (data.user) {
+        try {
+          await supabase
+            .from("profiles")
+            .update({
+              first_name: firstName,
+              last_name: lastName,
+              email: email,
+              phone: phone || "",
+              is_admin: loginMode === "admin",
+              is_seller: false,
+            })
+            .eq("user_id", data.user.id);
+          console.log("Profile updated successfully with all fields");
+        } catch (updateError) {
+          console.error("Failed to update profile after signup:", updateError);
+          // Continue anyway since the user was created
         }
+      }
+
+      if (loginMode === "admin") {
         setAdminExists(true);
         alert("Admin account created successfully. Please log in.");
       } else {
@@ -1340,6 +1349,24 @@ const Account = () => {
                   </form>
                 ) : (
                   <form onSubmit={handleSignup} className="space-y-4">
+                    <div className="flex justify-center space-x-2 mb-4">
+                      <Button
+                        type="button"
+                        variant={loginMode === "user" ? "default" : "outline"}
+                        onClick={() => setLoginMode("user")}
+                      >
+                        User Signup
+                      </Button>
+                      {!adminExists && (
+                        <Button
+                          type="button"
+                          variant={loginMode === "admin" ? "default" : "outline"}
+                          onClick={() => setLoginMode("admin")}
+                        >
+                          Admin Signup
+                        </Button>
+                      )}
+                    </div>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>First Name</Label>
@@ -1574,11 +1601,14 @@ const Account = () => {
               </div>
             </div>
 
-            {/* Seller Creation (if admin, optional) */}
-            {userInfo.is_admin && !userInfo.is_seller && (
+            {/* Seller Creation (if admin, always show) */}
+            {userInfo.is_admin && (
               <Card>
                 <CardHeader>
                   <CardTitle>Create Seller Account (Admin)</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Create a new seller account or upgrade existing user to seller
+                  </p>
                 </CardHeader>
                 <CardContent>
                   <form
@@ -1984,8 +2014,10 @@ const Account = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">${order.total.toFixed(2)}</p>
-                  <Button variant="outline" size="sm" className="mt-2">
-                    View Details
+                  <Button variant="outline" size="sm" className="mt-2" asChild>
+                    <Link to={`/orders/${order.id}/tracking`}>
+                      Track Order
+                    </Link>
                   </Button>
                 </div>
               </div>

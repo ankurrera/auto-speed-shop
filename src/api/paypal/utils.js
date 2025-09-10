@@ -20,9 +20,9 @@ export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KE
 });
 
 export function getPayPalBaseUrl() {
-  return PAYPAL_MODE === "live"
-    ? "https://api.paypal.com"
-    : "https://api.sandbox.paypal.com";
+  return PAYPAL_MODE === "sandbox"
+    ? "https://api.sandbox.paypal.com" // Corrected sandbox URL
+    : "https://api.paypal.com"; // Corrected live URL
 }
 
 export async function getPayPalAccessToken() {
