@@ -239,31 +239,20 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
   const fetchOrders = useCallback(async () => {
     try {
       try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+
+        // Use the admin function to get orders requiring invoice management
         const { data: ordersData, error } = await supabase
-          .from("orders")
-          .select(`
-            *,
-            order_items (
-              id,
-              product_id,
-              part_id,
-              product_name,
-              quantity,
-              unit_price,
-              total_price,
-              is_part
-            )
-          `)
-          .in("status", [
-            ORDER_STATUS.PENDING_ADMIN_REVIEW,
-            ORDER_STATUS.INVOICE_SENT,
-            ORDER_STATUS.INVOICE_ACCEPTED,
-            ORDER_STATUS.PAYMENT_SUBMITTED
-          ])
-          .order("created_at", { ascending: false });
+          .rpc('get_invoice_orders_for_admin', {
+            requesting_user_id: user.id
+          });
 
         if (error) {
-          console.warn('AdminInvoiceManagement Supabase error:', error);
+          console.warn('AdminInvoiceManagement Supabase RPC error:', error);
           // In development mode, return sample orders if database query fails
           const isDevelopment = import.meta.env.DEV;
           if (isDevelopment) {
@@ -274,43 +263,71 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
           throw error;
         }
 
-        // Fetch user profiles separately since there's no foreign key relationship
-        const userIds = [...new Set(ordersData?.map(order => order.user_id).filter(Boolean))];
-        let profilesData = [];
-        
-        if (userIds.length > 0) {
-          const { data: profiles, error: profilesError } = await supabase
-            .from("profiles")
-            .select("id, email, first_name, last_name")
-            .in("id", userIds); // Use 'id' field, not 'user_id'
-          
-          if (profilesError) {
-            console.warn("Failed to fetch profiles:", profilesError);
-          } else {
-            profilesData = profiles || [];
-          }
-        }
+        // Transform and get order items for each order
+        const ordersWithItems = await Promise.all(
+          (ordersData || []).map(async (order: {
+            id: string;
+            order_number: string;
+            user_id: string;
+            status: string;
+            payment_status: string;
+            payment_method: string;
+            subtotal: number;
+            shipping_amount: number;
+            tax_amount: number;
+            total_amount: number;
+            convenience_fee: number;
+            delivery_charge: number;
+            currency: string;
+            notes: string;
+            shipping_address: unknown;
+            billing_address: unknown;
+            created_at: string;
+            updated_at: string;
+            shipped_at: string;
+            delivered_at: string;
+            customer_first_name: string;
+            customer_last_name: string;
+            customer_email: string;
+          }) => {
+            // Get order items for this specific order
+            const { data: orderItems, error: itemsError } = await supabase
+              .rpc('get_order_items_for_admin', {
+                requesting_user_id: user.id,
+                target_order_id: order.id
+              });
 
-        // Merge orders with profile data
-        const ordersWithProfiles = ordersData?.map(order => ({
-          ...order,
-          profiles: profilesData.find(profile => profile.id === order.user_id) || null
-        })) || [];
+            if (itemsError) {
+              console.warn(`Failed to fetch order items for order ${order.id}:`, itemsError);
+            }
+
+            return {
+              ...order,
+              order_items: orderItems || [],
+              profiles: order.customer_first_name || order.customer_last_name || order.customer_email ? {
+                first_name: order.customer_first_name,
+                last_name: order.customer_last_name,
+                email: order.customer_email
+              } : null
+            };
+          })
+        );
 
         // Debug logging to understand what orders are being fetched
-        console.log('AdminInvoiceManagement fetched orders:', ordersWithProfiles);
-        console.log('Invoice orders count:', ordersWithProfiles.length);
-        console.log('Invoice order statuses:', ordersWithProfiles.map(order => order.status));
+        console.log('AdminInvoiceManagement fetched orders:', ordersWithItems);
+        console.log('Invoice orders count:', ordersWithItems?.length || 0);
+        console.log('Invoice order statuses:', ordersWithItems?.map(order => order.status) || []);
+        console.log('Invoice order user_ids:', ordersWithItems?.map(order => order.user_id) || []);
 
         // If no orders found in development, return sample orders
         const isDevelopment = import.meta.env.DEV;
-        if (isDevelopment && (!ordersWithProfiles || ordersWithProfiles.length === 0)) {
+        if (isDevelopment && (!ordersWithItems || ordersWithItems.length === 0)) {
           console.log('AdminInvoiceManagement: No orders found, using sample orders in development mode');
           setOrders(getSampleInvoiceOrders());
           return;
         }
 
-        setOrders(ordersWithProfiles);
+        setOrders(ordersWithItems || []);
       } catch (dbError) {
         console.error("Database error in AdminInvoiceManagement:", dbError);
         // In development mode, return sample orders if any error occurs
