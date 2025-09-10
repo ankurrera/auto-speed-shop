@@ -22,7 +22,8 @@ import {
   X,
   Plus,
   RefreshCcw,
-  Car
+  Car,
+  FileText
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
+import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 import { EmailNotificationService } from "@/services/emailNotificationService";
 
@@ -84,6 +86,7 @@ const Account = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
+  const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -1835,6 +1838,9 @@ const Account = () => {
     if (showOrderManagement) {
       return <AdminOrderManagement onBack={() => setShowOrderManagement(false)} />;
     }
+    if (showInvoiceManagement) {
+      return <AdminInvoiceManagement onBack={() => setShowInvoiceManagement(false)} />;
+    }
     switch (currentPath) {
       case "addresses":
         return renderAddressesContent();
@@ -1978,6 +1984,12 @@ const Account = () => {
                     description="Monitor and process orders"
                     icon={<Package className="h-5 w-5" />}
                     onClick={() => setShowOrderManagement(true)}
+                  />
+                  <ActionCard
+                    title="Invoice Management"
+                    description="Create invoices and verify payments"
+                    icon={<FileText className="h-5 w-5" />}
+                    onClick={() => setShowInvoiceManagement(true)}
                   />
                 </div>
                 
