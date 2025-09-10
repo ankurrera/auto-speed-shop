@@ -2,19 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Package, X } from "lucide-react";
+import { Package, X, RefreshCw } from "lucide-react";
 import { Database } from "@/database.types";
 
 type Order = Database['public']['Tables']['orders']['Row'];
 
 const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const queryClient = useQueryClient();
 
-  const { data: fetchedOrders, isLoading, error } = useQuery<Order[]>({
+  const { data: fetchedOrders, isLoading, error, refetch } = useQuery<Order[]>({
     queryKey: ['admin-orders'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -25,6 +26,12 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
       if (error) {
         throw error;
       }
+      
+      // Debug logging to understand what orders are being fetched
+      console.log('AdminOrderManagement fetched orders:', data);
+      console.log('Orders count:', data?.length || 0);
+      console.log('Order statuses:', data?.map(order => order.status) || []);
+      
       return data;
     },
   });
@@ -34,6 +41,10 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
       setOrders(fetchedOrders);
     }
   }, [fetchedOrders]);
+
+  const handleRefresh = async () => {
+    await refetch();
+  };
 
   if (isLoading) {
     return <p>Loading orders...</p>;
@@ -50,10 +61,16 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
           <Package className="h-5 w-5" />
           All Orders
         </CardTitle>
-        <Button variant="outline" onClick={onBack}>
-          <X className="h-4 w-4 mr-2" />
-          Close
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button variant="outline" onClick={onBack}>
+            <X className="h-4 w-4 mr-2" />
+            Close
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {orders.length > 0 ? (

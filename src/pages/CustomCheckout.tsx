@@ -10,6 +10,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ const CustomCheckout = () => {
   const { cartItems, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -108,6 +110,9 @@ const CustomCheckout = () => {
 
       // Clear cart and show success message
       clearCart();
+      
+      // Invalidate admin orders cache so AdminOrderManagement shows the new order
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       
       toast({
         title: "Order Request Submitted!",

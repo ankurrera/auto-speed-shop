@@ -129,6 +129,11 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
         profiles: profilesData.find(profile => profile.user_id === order.user_id) || null
       })) || [];
 
+      // Debug logging to understand what orders are being fetched
+      console.log('AdminInvoiceManagement fetched orders:', ordersWithProfiles);
+      console.log('Invoice orders count:', ordersWithProfiles.length);
+      console.log('Invoice order statuses:', ordersWithProfiles.map(order => order.status));
+
       setOrders(ordersWithProfiles);
     } catch (error: unknown) {
       console.error("Error fetching orders:", error);
