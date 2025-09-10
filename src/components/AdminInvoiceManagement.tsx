@@ -82,10 +82,6 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
   const fetchOrders = useCallback(async () => {
     try {
       const { data: ordersData, error } = await supabase
@@ -145,6 +141,10 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
       setLoading(false);
     }
   }, [toast]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const handleCreateInvoice = async () => {
     if (!selectedOrder) return;
