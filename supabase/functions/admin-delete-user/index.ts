@@ -56,11 +56,70 @@ Deno.serve(async (req) => {
     )
 
     // Step 1: Delete profile and related data using the RPC function (includes admin validation)
-    const { data: profileResult, error: profileError } = await supabaseClient.rpc('admin_delete_user_profile', {
+    const { data: initialProfileResult, error: profileError } = await supabaseClient.rpc('admin_delete_user_profile', {
       target_user_id: userId
     })
+    
+    let profileResult = initialProfileResult
 
-    if (profileError) {
+    // Fallback: If RPC function is not available in schema cache, use direct database operations
+    if (profileError && profileError.message.includes('schema cache')) {
+      console.log('RPC function not found in schema cache, using fallback approach')
+      
+      // First verify the current user is an admin
+      const { data: currentUser } = await supabaseClient.auth.getUser()
+      if (!currentUser?.user) {
+        throw new Error('Authentication required')
+      }
+
+      const { data: currentProfile, error: profileCheckError } = await supabaseClient
+        .from('profiles')
+        .select('is_admin')
+        .eq('user_id', currentUser.user.id)
+        .single()
+
+      if (profileCheckError || !currentProfile?.is_admin) {
+        throw new Error('Only administrators can delete users')
+      }
+
+      // Prevent admins from deleting themselves
+      if (currentUser.user.id === userId) {
+        throw new Error('Administrators cannot delete their own account')
+      }
+
+      // Check if target user exists
+      const { data: targetUser, error: targetCheckError } = await supabaseClient
+        .from('profiles')
+        .select('email')
+        .eq('user_id', userId)
+        .single()
+
+      if (targetCheckError || !targetUser) {
+        throw new Error(`User with ID ${userId} not found`)
+      }
+
+      // Delete related data first using admin client
+      await supabaseAdmin.from('addresses').delete().eq('user_id', userId)
+      await supabaseAdmin.from('orders').delete().eq('user_id', userId) 
+      await supabaseAdmin.from('sellers').delete().eq('user_id', userId)
+
+      // Delete the profile
+      const { error: deleteError } = await supabaseAdmin
+        .from('profiles')
+        .delete()
+        .eq('user_id', userId)
+
+      if (deleteError) {
+        throw new Error(`Failed to delete profile: ${deleteError.message}`)
+      }
+
+      profileResult = {
+        success: true,
+        deleted_user_id: userId,
+        user_email: targetUser.email,
+        message: 'Profile deleted successfully using fallback method'
+      }
+    } else if (profileError) {
       throw new Error(`Profile deletion failed: ${profileError.message}`)
     }
 
