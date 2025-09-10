@@ -24,19 +24,10 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
 import ScrollToTop from "./components/ScrollToTop";
-import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { DevCartHelper } from "./components/DevCartHelper";
 import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient();
-
-const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID ;
-
-
-const paypalOptions = {
-  "clientId": paypalClientId,
-  "currency": "USD",
-};
 
 const App = () => {
   const [showDevTools, setShowDevTools] = useState(false);
@@ -82,9 +73,7 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <PayPalScriptProvider options={paypalOptions}>
-        <AppContent />
-      </PayPalScriptProvider>
+      <AppContent />
     </QueryClientProvider>
   );
 };
