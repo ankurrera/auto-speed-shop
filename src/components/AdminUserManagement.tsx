@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trophy, Crown, Medal, Trash2, ShieldCheck, User, Send } from "lucide-react";
+import { Trophy, Crown, Medal, ShieldCheck, User, Send } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Database } from "@/database.types";
 
@@ -93,47 +93,6 @@ const AdminUserManagement = () => {
     },
   });
 
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      // First delete the profile and get confirmation
-      const { data, error } = await supabase.rpc('admin_delete_user_profile', {
-        target_user_id: userId
-      });
-      if (error) throw error;
-      
-      // Then delete the auth user
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      if (authError) {
-        console.warn('Profile deleted but failed to delete auth user:', authError.message);
-        // Don't throw error here as profile is already deleted
-        return {
-          ...data,
-          message: `${data?.message || 'Profile deleted successfully.'} Note: Auth user deletion failed - ${authError.message}`
-        };
-      }
-      
-      return {
-        ...data,
-        message: 'User completely deleted successfully. The user can now create a new account with the same email.'
-      };
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({
-        title: "Success",
-        description: data?.message || "User completely deleted successfully. The user can now create a new account with the same email.",
-      });
-    },
-    onError: (err: Error) => {
-      console.error(err);
-      toast({
-        title: "Error",
-        description: err.message || "Failed to delete user.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const getRankBadge = (rank: number) => {
     if (rank === 1) {
       return (
@@ -187,21 +146,6 @@ const AdminUserManagement = () => {
     });
   };
 
-  const handleDeleteUser = (userId: string) => {
-    toast({
-      title: "Confirm Profile Deletion",
-      description: "Are you sure you want to delete this user's profile? This will remove their profile and related data. The user will be able to create a new account with the same email afterward. This action cannot be undone.",
-      action: (
-        <Button
-          variant="destructive"
-          onClick={() => deleteUserMutation.mutate(userId)}
-        >
-          Confirm
-        </Button>
-      ),
-    });
-  };
-
   if (isLoading) {
     return <p>Loading users...</p>;
   }
@@ -227,7 +171,6 @@ const AdminUserManagement = () => {
               <TableHead>Email</TableHead>
               <TableHead className="text-center">Orders</TableHead>
               <TableHead className="text-center">Send Coupons</TableHead>
-              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -267,16 +210,6 @@ const AdminUserManagement = () => {
                   >
                     <Send className="h-3 w-3" />
                     Send Coupon
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteUser(user.user_id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete User</span>
                   </Button>
                 </TableCell>
               </TableRow>
