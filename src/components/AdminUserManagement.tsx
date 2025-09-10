@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trophy, Crown, Medal, Trash2, ShieldCheck, User, Send } from "lucide-react";
+import { Trophy, Crown, Medal, ShieldCheck, User, Send } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Database } from "@/database.types";
 
@@ -93,53 +93,6 @@ const AdminUserManagement = () => {
     },
   });
 
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      // Get the current session for authentication
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Not authenticated');
-      }
-
-      // Use the Edge Function for proper user deletion
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://dkopohqiihhxmbjhzark.supabase.co";
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrb3BvaHFpaWhoeG1iamh6YXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2NzE2NDMsImV4cCI6MjA3MTI0NzY0M30.6EF5ivhFPmK5B7Y_zLY-FkbN3LHAglvRHW7U0U5LoXA";
-      
-      const response = await fetch(`${supabaseUrl}/functions/v1/admin-delete-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify({ userId })
-      });
-
-      const result = await response.json();
-      
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || result.message || 'Failed to delete user');
-      }
-      
-      return result;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({
-        title: "Success",
-        description: data?.message || "User deleted successfully.",
-      });
-    },
-    onError: (err: Error) => {
-      console.error('User deletion error:', err);
-      toast({
-        title: "Error",
-        description: err.message || "Failed to delete user.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const getRankBadge = (rank: number) => {
     if (rank === 1) {
       return (
@@ -193,21 +146,6 @@ const AdminUserManagement = () => {
     });
   };
 
-  const handleDeleteUser = (userId: string) => {
-    toast({
-      title: "Confirm Profile Deletion",
-      description: "Are you sure you want to delete this user's profile? This will remove their profile and related data. The user will be able to create a new account with the same email afterward. This action cannot be undone.",
-      action: (
-        <Button
-          variant="destructive"
-          onClick={() => deleteUserMutation.mutate(userId)}
-        >
-          Confirm
-        </Button>
-      ),
-    });
-  };
-
   if (isLoading) {
     return <p>Loading users...</p>;
   }
@@ -233,7 +171,6 @@ const AdminUserManagement = () => {
               <TableHead>Email</TableHead>
               <TableHead className="text-center">Orders</TableHead>
               <TableHead className="text-center">Send Coupons</TableHead>
-              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -273,16 +210,6 @@ const AdminUserManagement = () => {
                   >
                     <Send className="h-3 w-3" />
                     Send Coupon
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteUser(user.user_id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete User</span>
                   </Button>
                 </TableCell>
               </TableRow>
