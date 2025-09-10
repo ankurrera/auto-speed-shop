@@ -95,37 +95,43 @@ const AdminUserManagement = () => {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // First delete the profile and get confirmation
-      const { data, error } = await supabase.rpc('admin_delete_user_profile', {
-        target_user_id: userId
-      });
-      if (error) throw error;
+      // Get the current session for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      // Use the Edge Function for proper user deletion
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://dkopohqiihhxmbjhzark.supabase.co";
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrb3BvaHFpaWhoeG1iamh6YXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2NzE2NDMsImV4cCI6MjA3MTI0NzY0M30.6EF5ivhFPmK5B7Y_zLY-FkbN3LHAglvRHW7U0U5LoXA";
       
-      // Then delete the auth user
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      if (authError) {
-        console.warn('Profile deleted but failed to delete auth user:', authError.message);
-        // Don't throw error here as profile is already deleted
-        return {
-          ...data,
-          message: `${data?.message || 'Profile deleted successfully.'} Note: Auth user deletion failed - ${authError.message}`
-        };
+      const response = await fetch(`${supabaseUrl}/functions/v1/admin-delete-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || result.message || 'Failed to delete user');
       }
       
-      return {
-        ...data,
-        message: 'User completely deleted successfully. The user can now create a new account with the same email.'
-      };
+      return result;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast({
         title: "Success",
-        description: data?.message || "User completely deleted successfully. The user can now create a new account with the same email.",
+        description: data?.message || "User deleted successfully.",
       });
     },
     onError: (err: Error) => {
-      console.error(err);
+      console.error('User deletion error:', err);
       toast({
         title: "Error",
         description: err.message || "Failed to delete user.",
