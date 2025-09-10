@@ -109,6 +109,7 @@ const Account = () => {
     phone: "",
     is_admin: false,
     is_seller: false,
+    email_notifications: false,
   });
 
   // Addresses
@@ -304,7 +305,7 @@ const Account = () => {
   const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("first_name, last_name, email, phone, is_admin, is_seller")
+      .select("first_name, last_name, email, phone, is_admin, is_seller, email_notifications")
       .eq("user_id", userId)
       .single();
     
@@ -316,6 +317,7 @@ const Account = () => {
         phone: data.phone || "",
         is_admin: data.is_admin || false,
         is_seller: data.is_seller || false,
+        email_notifications: data.email_notifications || false,
       });
       setSellerExistsForAdmin(data.is_seller || false);
     } else {
@@ -395,9 +397,22 @@ const Account = () => {
         first_name: userInfo.firstName,
         last_name: userInfo.lastName,
         phone: userInfo.phone,
+        email_notifications: userInfo.email_notifications,
       })
       .eq("user_id", session.user.id);
-    if (!error) setIsEditing(false);
+    if (!error) {
+      setIsEditing(false);
+      toast({
+        title: "Profile Updated",
+        description: "Your profile and notification preferences have been saved successfully.",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Auth listener
@@ -420,6 +435,7 @@ const Account = () => {
             phone: "",
             is_admin: false,
             is_seller: false,
+            email_notifications: false,
           });
           setAddresses([]);
           setOrders([]);
@@ -988,11 +1004,45 @@ const Account = () => {
       await supabase.from(fitmentTable).upsert([fitmentPayload]);
     }
 
+    // Send email notifications for new products/parts (not for updates)
+    if (savedItem && !editingProductId) {
+      try {
+        const notificationPayload = {
+          type: isPart ? 'new_part' : 'new_product',
+          item: {
+            id: savedItem.id,
+            name: savedItem.name,
+            description: savedItem.description,
+            price: savedItem.price,
+            image_urls: savedItem.image_urls,
+            category: savedItem.category || productInfo.category,
+            brand: isPart ? savedItem.brand : productInfo.make,
+          }
+        };
+
+        // Call the notification service asynchronously
+        fetch(`${supabase.supabaseUrl}/functions/v1/send-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabase.supabaseKey}`,
+          },
+          body: JSON.stringify(notificationPayload),
+        }).catch(error => {
+          // Log error but don't fail the product creation
+          console.error('Error sending notifications:', error);
+        });
+      } catch (notificationError) {
+        // Log error but don't fail the product creation
+        console.error('Error preparing notifications:', notificationError);
+      }
+    }
+
     toast({
       title: "Success",
       description: `${isPart ? "Part" : "Product"} ${
         editingProductId ? "updated" : "listed"
-      }.`,
+      }.${!editingProductId ? " Email notifications are being sent to subscribers." : ""}`,
     });
     cleanupAndRefetch();
   };
@@ -1843,6 +1893,31 @@ const Account = () => {
             />
           </div>
         </div>
+        
+        {/* Email Notification Preferences */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Notification Preferences</h3>
+          <div className="flex items-center space-x-3 p-4 border rounded-lg bg-muted/50">
+            <Checkbox
+              id="email_notifications"
+              checked={userInfo.email_notifications}
+              disabled={!isEditing}
+              onCheckedChange={(checked) =>
+                setUserInfo({ ...userInfo, email_notifications: !!checked })
+              }
+            />
+            <div className="space-y-1">
+              <Label htmlFor="email_notifications" className="text-sm font-medium cursor-pointer">
+                Notify me about new products and parts
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Receive beautiful HTML emails when new products and auto parts become available in our inventory.
+                You can easily unsubscribe at any time by unchecking this preference.
+              </p>
+            </div>
+          </div>
+        </div>
+        
         {isEditing && (
           <div className="flex space-x-4">
             <Button onClick={handleSaveProfile}>Save Changes</Button>
