@@ -103,41 +103,6 @@ export type Database = {
           },
         ]
       }
-      email_subscriptions: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-          subscribed_to_new_products: boolean | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: string
-          subscribed_to_new_products?: boolean | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          subscribed_to_new_products?: boolean | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "email_subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       categories: {
         Row: {
           created_at: string
