@@ -15,6 +15,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import CarWrenchLogo from "@/assets/car-wrench-logo.png";
 import { supabase } from "@/integrations/supabase/client";
+import Order from "@/pages/Order";
 
 const Header = () => {
   const [userSession, setUserSession] = useState(null);
@@ -119,6 +120,7 @@ const Header = () => {
   const navigation = [
     { name: "Home", href: "/" },
     { name: "Shop", href: "/shop" },
+    { name: "Order", href: "/order" },
     { name: "About", href: "/about" },
     { name: "Contact", href: "/contact" },
   ];

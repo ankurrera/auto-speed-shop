@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { Lock } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
-import { PayPalButtons } from "@paypal/react-paypal-js";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -18,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createServerOrder, captureServerOrder } from "@/services/orderService";
+import { createServerOrder } from "@/services/orderService";
 
 const TAX_RATE = 0.0825; // still used for local pre-display only (server is authoritative)
 
@@ -33,14 +32,14 @@ const Checkout = () => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
-      
+
       // In development mode, bypass authentication for testing
       if (import.meta.env.DEV) {
         console.warn("Development mode: Bypassing authentication for checkout testing");
         setIsAuthenticated(true);
         return;
       }
-      
+
       if (!session) {
         toast({
           title: "Authentication Required",
@@ -51,9 +50,9 @@ const Checkout = () => {
         return;
       }
     };
-    
+
     checkAuth();
-    
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!import.meta.env.DEV) {
         setIsAuthenticated(!!session);
@@ -79,9 +78,8 @@ const Checkout = () => {
   });
 
   const [isFormValid, setIsFormValid] = useState(false);
-  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [localOrderId, setLocalOrderId] = useState<string | null>(null);
-  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
 
   const fetchUserAddresses = useCallback(async () => {
     const {
@@ -151,13 +149,12 @@ const Checkout = () => {
 
   const resetAfterSuccess = (orderData?: any) => {
     clearCart();
-    setPaypalOrderId(null);
     setLocalOrderId(null);
     toast({
       title: "Order Placed!",
       description: "Thank you for your purchase. Your order has been successfully placed.",
     });
-    
+
     // Redirect to order confirmation page with order ID
     if (orderData?.localOrder?.id) {
       navigate(`/order-confirmation?order_id=${orderData.localOrder.id}`);
@@ -168,19 +165,20 @@ const Checkout = () => {
     }
   };
 
-  // PayPal Buttons integration (Server-Driven)
-  const createOrder = async () => {
+  // New function for handling the "Order Request" button click
+  const handleOrderRequest = async () => {
     if (cartItems.length === 0) {
       toast({ title: "Cart empty", variant: "destructive" });
-      throw new Error("Empty cart");
+      return;
     }
-    setIsPaymentProcessing(true);
+    setIsProcessingOrder(true);
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const userId = session?.user?.id;
 
+      // Call the server to create an order with a 'pending' status
       const serverResp = await createServerOrder(
         cartItems.map(ci => ({ id: ci.id, quantity: ci.quantity })),
         {
@@ -194,62 +192,21 @@ const Checkout = () => {
         },
         userId
       );
-
+      
+      // Assume the server response contains the local order ID
       setLocalOrderId(serverResp.localOrderId);
-      setPaypalOrderId(serverResp.paypalOrderId);
-      return serverResp.paypalOrderId; // PayPal Buttons expects this string
+      
+      if (serverResp?.localOrderId) {
+        resetAfterSuccess({ localOrder: { id: serverResp.localOrderId }});
+      } else {
+         toast({ title: "Order Error", description: "Could not retrieve order ID.", variant: "destructive" });
+      }
     } catch (err: any) {
       console.error(err);
       toast({ title: "Order Error", description: err.message, variant: "destructive" });
-      setIsPaymentProcessing(false);
-      throw err;
-    }
-  };
-
-  const onApprove = async (data: any, actions: any) => {
-    // With server-based capture we do NOT call actions.order.capture()
-    // Instead we call our capture endpoint
-    setIsPaymentProcessing(true);
-    try {
-      if (!paypalOrderId || !localOrderId) {
-        throw new Error("Order IDs missing");
-      }
-      const captureResult = await captureServerOrder(paypalOrderId, localOrderId);
-      if (captureResult?.localOrder?.payment_status === "completed") {
-        resetAfterSuccess(captureResult);
-      } else {
-        toast({
-          title: "Capture Warning",
-          description: "Order captured but payment status not completed.",
-        });
-        // Still redirect to confirmation even if status is not completed
-        resetAfterSuccess(captureResult);
-      }
-    } catch (err: any) {
-      console.error("Capture error:", err);
-      toast({
-        title: "Payment Failed",
-        description: err.message,
-        variant: "destructive",
-      });
     } finally {
-      setIsPaymentProcessing(false);
+      setIsProcessingOrder(false);
     }
-  };
-
-  const onCancel = () => {
-    setIsPaymentProcessing(false);
-    toast({ title: "Payment Cancelled", description: "You cancelled the PayPal approval." });
-  };
-
-  const onError = (err: any) => {
-    console.error("PayPal button error:", err);
-    setIsPaymentProcessing(false);
-    toast({
-      title: "Payment Error",
-      description: "Something went wrong initializing PayPal.",
-      variant: "destructive",
-    });
   };
 
   // Show loading state while checking authentication
@@ -358,34 +315,32 @@ const Checkout = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Payment Information</CardTitle>
+                <CardTitle>Order Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {isFormValid ? (
                   <div className="space-y-2">
                     <p className="text-muted-foreground text-sm">
-                      Click below to pay using PayPal or a linked card.
+                      Click below to request an order.
                     </p>
-                    <PayPalButtons
-                      style={{ layout: "vertical" }}
-                      createOrder={createOrder}
-                      onApprove={onApprove}
-                      onCancel={onCancel}
-                      onError={onError}
-                      disabled={isPaymentProcessing}
-                      forceReRender={[JSON.stringify(shippingInfo), cartItems.length]}
-                    />
-                    {isPaymentProcessing && (
-                      <p className="text-sm text-muted-foreground">Processing payment...</p>
+                    <Button
+                      className="w-full"
+                      onClick={handleOrderRequest}
+                      disabled={isProcessingOrder}
+                    >
+                      {isProcessingOrder ? "Processing..." : "Order Request"}
+                    </Button>
+                    {isProcessingOrder && (
+                      <p className="text-sm text-muted-foreground">Processing order request...</p>
                     )}
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-muted-foreground text-sm">
-                      Please complete all shipping details to enable payment.
+                      Please complete all shipping details to enable order requests.
                     </p>
                     <Button className="w-full" disabled>
-                      Pay with PayPal
+                      Order Request
                     </Button>
                   </div>
                 )}
