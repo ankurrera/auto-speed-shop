@@ -8,6 +8,7 @@ interface CartItem {
   price: number;
   quantity: number;
   sku?: string;
+  is_part: boolean;
 }
 
 interface ShippingAddress {
@@ -22,8 +23,15 @@ interface ShippingAddress {
 
 export async function createCustomOrder(cartItems: CartItem[], shippingAddress: ShippingAddress, userId?: string) {
   try {
-    // Calculate basic pricing (before admin adds fees)
-    const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Filter to only include products - the current schema doesn't support parts in orders
+    const productItems = cartItems.filter(item => !item.is_part);
+    
+    if (productItems.length === 0) {
+      throw new Error("No products found in cart. Only products can be ordered through this flow.");
+    }
+
+    // Calculate basic pricing (before admin adds fees) - only include products
+    const subtotal = productItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const shipping = subtotal > 75 ? 0 : 9.99;
     const tax = +(subtotal * 0.0825).toFixed(2);
     
@@ -54,7 +62,7 @@ export async function createCustomOrder(cartItems: CartItem[], shippingAddress: 
     }
 
     // Create order items
-    const orderItems = cartItems.map(item => ({
+    const orderItems = productItems.map(item => ({
       order_id: order.id,
       product_id: item.id,
       product_name: item.name,
