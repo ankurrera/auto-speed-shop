@@ -1187,6 +1187,26 @@ const Account = () => {
   // Deletion / archive mutations
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the product belongs to this seller
+      const { data: productCheck, error: checkError } = await supabase
+        .from("products")
+        .select("seller_id")
+        .eq("id", productId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Product not found: ${checkError.message}`);
+      }
+      
+      if (productCheck.seller_id !== sellerId) {
+        throw new Error("You can only delete your own products.");
+      }
+      
       const { error } = await supabase
         .from("products")
         .delete()
@@ -1197,10 +1217,37 @@ const Account = () => {
       toast({ title: "Deleted", description: "Product removed." });
       queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete product: ${error.message}`,
+        variant: "destructive",
+      });
+    },
   });
 
   const deletePartMutation = useMutation({
     mutationFn: async (partId: string) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the part belongs to this seller
+      const { data: partCheck, error: checkError } = await supabase
+        .from("parts")
+        .select("seller_id")
+        .eq("id", partId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Part not found: ${checkError.message}`);
+      }
+      
+      if (partCheck.seller_id !== sellerId) {
+        throw new Error("You can only delete your own parts.");
+      }
+      
       const { error } = await supabase
         .from("parts")
         .delete()
@@ -1210,6 +1257,13 @@ const Account = () => {
     onSuccess: () => {
       toast({ title: "Deleted", description: "Part removed." });
       queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete part: ${error.message}`,
+        variant: "destructive",
+      });
     },
   });
 
@@ -1221,6 +1275,26 @@ const Account = () => {
       productId: string;
       is_active: boolean;
     }) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the product belongs to this seller
+      const { data: productCheck, error: checkError } = await supabase
+        .from("products")
+        .select("seller_id")
+        .eq("id", productId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Product not found: ${checkError.message}`);
+      }
+      
+      if (productCheck.seller_id !== sellerId) {
+        throw new Error("You can only modify your own products.");
+      }
+      
       const { error } = await supabase
         .from("products")
         .update({ is_active: !is_active })
@@ -1236,6 +1310,13 @@ const Account = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to archive/unarchive product: ${error.message}`,
+        variant: "destructive",
+      });
+    },
   });
 
   const archivePartMutation = useMutation({
@@ -1246,6 +1327,26 @@ const Account = () => {
       partId: string;
       is_active: boolean;
     }) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the part belongs to this seller
+      const { data: partCheck, error: checkError } = await supabase
+        .from("parts")
+        .select("seller_id")
+        .eq("id", partId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Part not found: ${checkError.message}`);
+      }
+      
+      if (partCheck.seller_id !== sellerId) {
+        throw new Error("You can only modify your own parts.");
+      }
+      
       const { error } = await supabase
         .from("parts")
         .update({ is_active: !is_active })
@@ -1260,6 +1361,13 @@ const Account = () => {
         }.`,
       });
       queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to archive/unarchive part: ${error.message}`,
+        variant: "destructive",
+      });
     },
   });
 
@@ -1806,7 +1914,25 @@ const Account = () => {
                     title="Manage Products"
                     description="Add, edit, or remove products"
                     icon={<Boxes className="h-5 w-5" />}
-                    onClick={() => setShowManageProducts(true)}
+                    onClick={() => {
+                      if (!userInfo.is_seller) {
+                        toast({
+                          title: "Access Denied",
+                          description: "You need to be a seller to manage products.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      if (!sellerId) {
+                        toast({
+                          title: "Error",
+                          description: "Seller ID not found. Please contact support.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      setShowManageProducts(true);
+                    }}
                   />
                   <ActionCard
                     title="View Orders"
@@ -2391,8 +2517,21 @@ const Account = () => {
             </div>
 
             <div className="p-6 space-y-10">
-              {/* Listing Form */}
-              <Card className="bg-card border-border">
+              {!sellerId ? (
+                <Card className="bg-card border-border">
+                  <CardContent className="p-6 text-center">
+                    <p className="text-muted-foreground">
+                      Loading seller information...
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      If this persists, please contact support.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {/* Listing Form */}
+                  <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     {editingProductId ? "Edit Listing" : "Create New Listing"}
@@ -2704,6 +2843,7 @@ const Account = () => {
                         metaRight={`$${part.price}`}
                         quantity={part.stock_quantity}
                         active={part.is_active}
+                        disabled={!sellerId || deletePartMutation.isPending || archivePartMutation.isPending}
                         onEdit={() => handleEditPart(part)}
                         onArchive={() =>
                           handleArchivePart(part.id, part.is_active)
@@ -2719,6 +2859,7 @@ const Account = () => {
                         metaRight={`$${product.price}`}
                         quantity={product.stock_quantity}
                         active={product.is_active}
+                        disabled={!sellerId || deleteProductMutation.isPending || archiveProductMutation.isPending}
                         onEdit={() => handleEditProduct(product)}
                         onArchive={() =>
                           handleArchiveProduct(product.id, product.is_active)
@@ -2729,6 +2870,8 @@ const Account = () => {
                   </div>
                 )}
               </div>
+            </>
+          )}
             </div>
           </div>
         </div>
@@ -2803,6 +2946,7 @@ const ListingRow = ({
   onEdit,
   onArchive,
   onDelete,
+  disabled = false,
 }: {
   title: string;
   metaLeft?: string;
@@ -2812,6 +2956,7 @@ const ListingRow = ({
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  disabled?: boolean;
 }) => (
   <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 border border-border rounded-lg bg-card/40">
     <div className="flex-1 space-y-1">
@@ -2830,15 +2975,15 @@ const ListingRow = ({
       </div>
     </div>
     <div className="flex flex-wrap gap-2">
-      <Button variant="outline" size="sm" onClick={onEdit}>
+      <Button variant="outline" size="sm" onClick={onEdit} disabled={disabled}>
         <Edit className="h-4 w-4 mr-1" />
         Edit
       </Button>
-      <Button variant="ghost" size="sm" onClick={onArchive}>
+      <Button variant="ghost" size="sm" onClick={onArchive} disabled={disabled}>
         <Archive className="h-4 w-4 mr-1" />
         {active ? "Archive" : "Unarchive"}
       </Button>
-      <Button variant="destructive" size="sm" onClick={onDelete}>
+      <Button variant="destructive" size="sm" onClick={onDelete} disabled={disabled}>
         <Trash2 className="h-4 w-4 mr-1" />
         Delete
       </Button>
