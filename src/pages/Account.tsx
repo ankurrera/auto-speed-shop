@@ -401,6 +401,7 @@ const Account = () => {
   };
 
   // Auth listener
+  // Auth listener
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -2177,7 +2178,7 @@ const Account = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {userInfo.is_admin && (
+            {userInfo.is_admin && currentPath !== "admin-dashboard" && (
               <Button 
                 variant="outline" 
                 onClick={() => navigate("/account/admin-dashboard")}
