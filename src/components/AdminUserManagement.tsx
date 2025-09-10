@@ -61,7 +61,7 @@ const AdminUserManagement = () => {
       }
       
       // Add rank based on order count
-      return (data || []).map((user: any, index: number) => ({
+      return (data || []).map((user: UserWithOrderCount, index: number) => ({
         ...user,
         rank: index + 1
       })) as UserWithOrderCount[];
@@ -95,23 +95,46 @@ const AdminUserManagement = () => {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase.from('profiles').delete().eq('user_id', userId);
-      if (error) throw error;
-      // In a real-world scenario, you would also delete the user from Supabase auth.
-      // `await supabase.auth.admin.deleteUser(userId);`
+      // Get the current session for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      // Use the Edge Function for proper user deletion
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://dkopohqiihhxmbjhzark.supabase.co";
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrb3BvaHFpaWhoeG1iamh6YXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2NzE2NDMsImV4cCI6MjA3MTI0NzY0M30.6EF5ivhFPmK5B7Y_zLY-FkbN3LHAglvRHW7U0U5LoXA";
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/admin-delete-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || result.message || 'Failed to delete user');
+      }
+      
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast({
         title: "Success",
-        description: "User deleted successfully.",
+        description: data?.message || "User deleted successfully.",
       });
     },
-    onError: (err) => {
-      console.error(err);
+    onError: (err: Error) => {
+      console.error('User deletion error:', err);
       toast({
         title: "Error",
-        description: "Failed to delete user.",
+        description: err.message || "Failed to delete user.",
         variant: "destructive",
       });
     },
@@ -171,10 +194,9 @@ const AdminUserManagement = () => {
   };
 
   const handleDeleteUser = (userId: string) => {
-    // Replaced window.confirm with a toast-based message as per instructions
     toast({
-      title: "Confirm Deletion",
-      description: "Are you sure you want to delete this user? This action cannot be undone.",
+      title: "Confirm Profile Deletion",
+      description: "Are you sure you want to delete this user's profile? This will remove their profile and related data. The user will be able to create a new account with the same email afterward. This action cannot be undone.",
       action: (
         <Button
           variant="destructive"
