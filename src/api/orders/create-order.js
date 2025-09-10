@@ -14,8 +14,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "cartItems array required" });
     }
 
+    // Filter cart items to only include products - current schema doesn't support parts in orders
+    const productCartItems = cartItems.filter(ci => !ci.is_part);
+    
+    if (productCartItems.length === 0) {
+      return res.status(400).json({ message: "No products found in cart. Only products can be ordered through this flow." });
+    }
+
     // Fetch product details for cart items to ensure we have current pricing
-    const productIds = cartItems.map(ci => ci.id);
+    const productIds = productCartItems.map(ci => ci.id);
     const { data: products, error: productsError } = await supabaseAdmin
       .from("products")
       .select("*")
@@ -27,7 +34,7 @@ export default async function handler(req, res) {
     }
 
     // Enrich cart items with current product data
-    const enriched = cartItems.map(ci => {
+    const enriched = productCartItems.map(ci => {
       const product = products.find(p => p.id === ci.id);
       if (!product) {
         throw new Error(`Product ${ci.id} not found`);
