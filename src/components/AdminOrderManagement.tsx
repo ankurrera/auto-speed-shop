@@ -11,6 +11,103 @@ import { Database } from "@/database.types";
 
 type Order = Database['public']['Tables']['orders']['Row'];
 
+// Sample orders for development mode when database is not available
+const getSampleOrders = (): Order[] => {
+  const sampleOrders: Order[] = [
+    {
+      id: 'sample-order-1',
+      order_number: 'ORD-DEV-001',
+      user_id: 'sample-user-1',
+      status: 'pending_admin_review',
+      payment_status: 'pending',
+      payment_method: 'custom_external',
+      subtotal: 299.99,
+      shipping_amount: 9.99,
+      tax_amount: 24.75,
+      total_amount: 334.73,
+      convenience_fee: null,
+      delivery_charge: null,
+      currency: 'USD',
+      notes: null,
+      shipping_address: {
+        first_name: 'John',
+        last_name: 'Doe',
+        line1: '123 Main St',
+        city: 'Austin',
+        state: 'TX',
+        postal_code: '78701',
+        country: 'US'
+      },
+      billing_address: null,
+      created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      updated_at: new Date(Date.now() - 86400000).toISOString(),
+      shipped_at: null,
+      delivered_at: null
+    },
+    {
+      id: 'sample-order-2',
+      order_number: 'ORD-DEV-002',
+      user_id: 'sample-user-2',
+      status: 'pending_admin_review',
+      payment_status: 'pending',
+      payment_method: 'custom_external',
+      subtotal: 159.99,
+      shipping_amount: 0,
+      tax_amount: 13.20,
+      total_amount: 173.19,
+      convenience_fee: null,
+      delivery_charge: null,
+      currency: 'USD',
+      notes: null,
+      shipping_address: {
+        first_name: 'Jane',
+        last_name: 'Smith',
+        line1: '456 Oak Ave',
+        city: 'Dallas',
+        state: 'TX',
+        postal_code: '75201',
+        country: 'US'
+      },
+      billing_address: null,
+      created_at: new Date(Date.now() - 43200000).toISOString(), // 12 hours ago
+      updated_at: new Date(Date.now() - 43200000).toISOString(),
+      shipped_at: null,
+      delivered_at: null
+    },
+    {
+      id: 'sample-order-3',
+      order_number: 'ORD-DEV-003',
+      user_id: 'sample-user-3',
+      status: 'shipped',
+      payment_status: 'verified',
+      payment_method: 'custom_external',
+      subtotal: 89.99,
+      shipping_amount: 9.99,
+      tax_amount: 7.43,
+      total_amount: 107.41,
+      convenience_fee: 5.00,
+      delivery_charge: 15.00,
+      currency: 'USD',
+      notes: null,
+      shipping_address: {
+        first_name: 'Mike',
+        last_name: 'Johnson',
+        line1: '789 Pine Rd',
+        city: 'Houston',
+        state: 'TX',
+        postal_code: '77001',
+        country: 'US'
+      },
+      billing_address: null,
+      created_at: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+      updated_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+      shipped_at: new Date(Date.now() - 172800000).toISOString(),
+      delivered_at: null
+    }
+  ];
+  return sampleOrders;
+};
+
 const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const queryClient = useQueryClient();
@@ -18,21 +115,46 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
   const { data: fetchedOrders, isLoading, error, refetch } = useQuery<Order[]>({
     queryKey: ['admin-orders'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (error) {
-        throw error;
+        if (error) {
+          console.warn('AdminOrderManagement Supabase error:', error);
+          // In development mode, return sample orders if database query fails
+          const isDevelopment = import.meta.env.DEV;
+          if (isDevelopment) {
+            console.log('AdminOrderManagement: Using sample orders in development mode');
+            return getSampleOrders();
+          }
+          throw error;
+        }
+        
+        // Debug logging to understand what orders are being fetched
+        console.log('AdminOrderManagement fetched orders:', data);
+        console.log('Orders count:', data?.length || 0);
+        console.log('Order statuses:', data?.map(order => order.status) || []);
+        
+        // If no orders found in development, return sample orders
+        const isDevelopment = import.meta.env.DEV;
+        if (isDevelopment && (!data || data.length === 0)) {
+          console.log('AdminOrderManagement: No orders found, using sample orders in development mode');
+          return getSampleOrders();
+        }
+        
+        return data || [];
+      } catch (err) {
+        console.error('AdminOrderManagement query error:', err);
+        // In development mode, return sample orders if any error occurs
+        const isDevelopment = import.meta.env.DEV;
+        if (isDevelopment) {
+          console.log('AdminOrderManagement: Using sample orders due to error in development mode');
+          return getSampleOrders();
+        }
+        throw err;
       }
-      
-      // Debug logging to understand what orders are being fetched
-      console.log('AdminOrderManagement fetched orders:', data);
-      console.log('Orders count:', data?.length || 0);
-      console.log('Order statuses:', data?.map(order => order.status) || []);
-      
-      return data;
     },
   });
 
