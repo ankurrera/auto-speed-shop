@@ -23,15 +23,13 @@ interface ShippingAddress {
 
 export async function createCustomOrder(cartItems: CartItem[], shippingAddress: ShippingAddress, userId?: string) {
   try {
-    // Filter to only include products - the current schema doesn't support parts in orders
-    const productItems = cartItems.filter(item => !item.is_part);
-    
-    if (productItems.length === 0) {
-      throw new Error("No products found in cart. Only products can be ordered through this flow.");
+    // Include both products and parts in the order
+    if (cartItems.length === 0) {
+      throw new Error("No items found in cart.");
     }
 
-    // Calculate basic pricing (before admin adds fees) - only include products
-    const subtotal = productItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Calculate basic pricing (before admin adds fees) - include all items
+    const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const shipping = subtotal > 75 ? 0 : 9.99;
     const tax = +(subtotal * 0.0825).toFixed(2);
     
@@ -61,15 +59,17 @@ export async function createCustomOrder(cartItems: CartItem[], shippingAddress: 
       throw new Error(`Failed to create order: ${orderError.message}`);
     }
 
-    // Create order items
-    const orderItems = productItems.map(item => ({
+    // Create order items - handle both products and parts
+    const orderItems = cartItems.map(item => ({
       order_id: order.id,
-      product_id: item.id,
+      product_id: item.is_part ? null : item.id, // Only set product_id for products
+      part_id: item.is_part ? item.id : null, // Add part_id field for parts
       product_name: item.name,
       product_sku: item.sku || null,
       quantity: item.quantity,
       unit_price: item.price,
-      total_price: item.price * item.quantity
+      total_price: item.price * item.quantity,
+      is_part: item.is_part // Track if this is a part or product
     }));
 
     const { error: itemsError } = await supabase
@@ -93,6 +93,22 @@ export async function createCustomOrder(cartItems: CartItem[], shippingAddress: 
 
 export async function createInvoice(orderId: string, invoice: OrderInvoice) {
   try {
+    // First check if the order exists
+    const { data: existingOrder, error: checkError } = await supabase
+      .from("orders")
+      .select("id, status")
+      .eq("id", orderId)
+      .maybeSingle();
+
+    if (checkError) {
+      throw new Error(`Failed to check order existence: ${checkError.message}`);
+    }
+
+    if (!existingOrder) {
+      throw new Error(`Order with ID ${orderId} not found`);
+    }
+
+    // Update the order with invoice details
     const { data: order, error } = await supabase
       .from("orders")
       .update({
@@ -110,6 +126,10 @@ export async function createInvoice(orderId: string, invoice: OrderInvoice) {
 
     if (error) {
       throw new Error(`Failed to create invoice: ${error.message}`);
+    }
+
+    if (!order) {
+      throw new Error(`Failed to update order ${orderId} - no order returned`);
     }
 
     return order;
@@ -211,10 +231,13 @@ export async function getOrderDetails(orderId: string) {
         *,
         order_items (
           id,
+          product_id,
+          part_id,
           product_name,
           quantity,
           unit_price,
-          total_price
+          total_price,
+          is_part
         )
       `)
       .eq("id", orderId)

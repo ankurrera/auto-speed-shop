@@ -90,10 +90,13 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
           *,
           order_items (
             id,
+            product_id,
+            part_id,
             product_name,
             quantity,
             unit_price,
-            total_price
+            total_price,
+            is_part
           )
         `)
         .in("status", [
