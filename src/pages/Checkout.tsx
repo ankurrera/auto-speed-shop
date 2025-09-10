@@ -34,6 +34,13 @@ const Checkout = () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
       
+      // In development mode, bypass authentication for testing
+      if (import.meta.env.DEV) {
+        console.warn("Development mode: Bypassing authentication for checkout testing");
+        setIsAuthenticated(true);
+        return;
+      }
+      
       if (!session) {
         toast({
           title: "Authentication Required",
@@ -48,9 +55,11 @@ const Checkout = () => {
     checkAuth();
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-      if (!session && event !== 'INITIAL_SESSION') {
-        navigate("/account");
+      if (!import.meta.env.DEV) {
+        setIsAuthenticated(!!session);
+        if (!session && event !== 'INITIAL_SESSION') {
+          navigate("/account");
+        }
       }
     });
 
