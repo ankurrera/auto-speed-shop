@@ -12,13 +12,6 @@ A modern e-commerce platform for automotive parts and accessories, built with Re
 - **Order Tracking**: Track order status and shipping information
 - **User Accounts**: Registration, login, profile management
 
-### 🚗 Vehicle Dashboard
-- **Real-time Telemetry**: Vehicle monitoring with interactive gauges
-- **Quick Controls**: Vehicle lock/unlock, lights, and climate control
-- **Battery Status**: Electric vehicle battery monitoring
-- **Media Player**: In-vehicle entertainment control
-- **Maintenance Tasks**: Service reminders and task management
-
 ### 👨‍💼 Admin Features
 - **User Management**: Admin panel for user administration
 - **Order Management**: Track and manage customer orders
