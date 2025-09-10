@@ -315,7 +315,7 @@ const Checkout = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Payment Information</CardTitle>
+                <CardTitle>Order Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {isFormValid ? (
