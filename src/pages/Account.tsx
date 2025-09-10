@@ -602,6 +602,7 @@ const Account = () => {
               phone: phone || "",
               is_admin: loginMode === "admin",
               is_seller: false,
+              role: loginMode === "admin" ? "admin" : "user",
             })
             .eq("user_id", data.user.id);
           console.log("Profile updated successfully with all fields");
