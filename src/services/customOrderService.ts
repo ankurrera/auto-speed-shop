@@ -40,6 +40,7 @@ export async function createCustomOrder(cartItems: any[], shippingAddress: any, 
       order_id: order.id,
       product_id: item.id,
       product_name: item.name,
+      product_sku: item.sku || null,
       quantity: item.quantity,
       unit_price: item.price,
       total_price: item.price * item.quantity

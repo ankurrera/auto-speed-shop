@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     const productIds = cartItems.map(ci => ci.id);
     const { data: products, error } = await supabaseAdmin
       .from("products")
-      .select("id, price, name")
+      .select("id, price, name, sku")
       .in("id", productIds);
 
     if (error) {
@@ -39,6 +39,7 @@ export default async function handler(req, res) {
         quantity: ci.quantity,
         name: prod.name,
         price: prod.price,
+        sku: prod.sku,
       };
     });
 
@@ -68,6 +69,26 @@ export default async function handler(req, res) {
     if (insertError) {
       console.error("Order insert error:", insertError);
       return res.status(500).json({ message: "Failed to create local order record" });
+    }
+
+    // Create order items
+    const orderItems = enriched.map(item => ({
+      order_id: orderInsert.id,
+      product_id: item.id,
+      product_name: item.name,
+      product_sku: item.sku,
+      quantity: item.quantity,
+      unit_price: item.price,
+      total_price: item.price * item.quantity
+    }));
+
+    const { error: itemsError } = await supabaseAdmin
+      .from("order_items")
+      .insert(orderItems);
+
+    if (itemsError) {
+      console.error("Order items insert error:", itemsError);
+      return res.status(500).json({ message: "Failed to create order items: " + itemsError.message });
     }
 
     // Build PayPal purchase unit
