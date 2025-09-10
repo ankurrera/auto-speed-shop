@@ -100,7 +100,7 @@ const Account = () => {
   } | null>(null);
 
   // Fetch email subscription data
-  const fetchEmailSubscription = useCallback(async (userId: string) => {
+  const fetchEmailSubscription = useCallback(async (userId: string, userEmail: string) => {
     const { data, error } = await supabase
       .from("email_subscriptions")
       .select("subscribed_to_new_products, email")
@@ -113,10 +113,10 @@ const Account = () => {
       // No subscription record exists, set default
       setEmailSubscription({
         subscribed_to_new_products: false,
-        email: userInfo.email,
+        email: userEmail,
       });
     }
-  }, [userInfo.email]);
+  }, []);
 
   // Save email subscription preferences
   const handleSaveEmailSubscription = async () => {
@@ -141,7 +141,7 @@ const Account = () => {
         .upsert(
           {
             user_id: session.user.id,
-            email: userInfo.email,
+            email: session.user.email || "",
             subscribed_to_new_products: emailSubscription.subscribed_to_new_products,
           },
           { onConflict: "user_id" }
@@ -389,7 +389,7 @@ const Account = () => {
       setSellerExistsForAdmin(data.is_seller || false);
       
       // Also fetch email subscription preferences
-      fetchEmailSubscription(userId);
+      fetchEmailSubscription(userId, data.email || "");
     } else {
       console.error("Account: Error fetching profile or no data:", error, "User ID:", userId);
       
@@ -1972,7 +1972,7 @@ const Account = () => {
                 ...prev,
                 subscribed_to_new_products: Boolean(checked)
               } : {
-                email: userInfo.email,
+                email: "",
                 subscribed_to_new_products: Boolean(checked)
               })
             }
