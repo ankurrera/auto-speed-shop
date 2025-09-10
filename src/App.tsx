@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 const queryClient = new QueryClient();
 
 // PayPal configuration - use environment variable or fallback to hardcoded client ID
-const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PiV8e1GWU6liB2CUXlkA59kJXE7M6R";
+const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID ;
 
 const paypalOptions = {
   "clientId": paypalClientId,
