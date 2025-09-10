@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trophy, Crown, Medal, Trash2, ShieldCheck, User, Send } from "lucide-react";
+import { Trophy, Crown, Medal, ShieldCheck, User, Send } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Database } from "@/database.types";
 
@@ -61,7 +61,7 @@ const AdminUserManagement = () => {
       }
       
       // Add rank based on order count
-      return (data || []).map((user: any, index: number) => ({
+      return (data || []).map((user: UserWithOrderCount, index: number) => ({
         ...user,
         rank: index + 1
       })) as UserWithOrderCount[];
@@ -88,30 +88,6 @@ const AdminUserManagement = () => {
       toast({
         title: "Error",
         description: "Failed to update user role.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const { error } = await supabase.from('profiles').delete().eq('user_id', userId);
-      if (error) throw error;
-      // In a real-world scenario, you would also delete the user from Supabase auth.
-      // `await supabase.auth.admin.deleteUser(userId);`
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({
-        title: "Success",
-        description: "User deleted successfully.",
-      });
-    },
-    onError: (err) => {
-      console.error(err);
-      toast({
-        title: "Error",
-        description: "Failed to delete user.",
         variant: "destructive",
       });
     },
@@ -170,22 +146,6 @@ const AdminUserManagement = () => {
     });
   };
 
-  const handleDeleteUser = (userId: string) => {
-    // Replaced window.confirm with a toast-based message as per instructions
-    toast({
-      title: "Confirm Deletion",
-      description: "Are you sure you want to delete this user? This action cannot be undone.",
-      action: (
-        <Button
-          variant="destructive"
-          onClick={() => deleteUserMutation.mutate(userId)}
-        >
-          Confirm
-        </Button>
-      ),
-    });
-  };
-
   if (isLoading) {
     return <p>Loading users...</p>;
   }
@@ -211,7 +171,6 @@ const AdminUserManagement = () => {
               <TableHead>Email</TableHead>
               <TableHead className="text-center">Orders</TableHead>
               <TableHead className="text-center">Send Coupons</TableHead>
-              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -251,16 +210,6 @@ const AdminUserManagement = () => {
                   >
                     <Send className="h-3 w-3" />
                     Send Coupon
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteUser(user.user_id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete User</span>
                   </Button>
                 </TableCell>
               </TableRow>

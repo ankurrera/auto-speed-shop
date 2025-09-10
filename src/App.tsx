@@ -20,6 +20,7 @@ import ProductDetails from "./pages/ProductDetails";
 import NewArrivals from "./pages/NewArrivals";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import OrderTracking from "./pages/OrderTracking";
+import SellerDashboard from "./pages/SellerDashboard";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
@@ -30,8 +31,8 @@ import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient();
 
-// PayPal configuration - use Supabase project URL for development
-const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PiV8e1GWU6liB2CUXlkA59kJXE7M6R";
+const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID ;
+
 
 const paypalOptions = {
   "clientId": paypalClientId,
@@ -63,6 +64,7 @@ const App = () => {
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/account/*" element={<Account />} />
+                    <Route path="/seller-dashboard" element={<SellerDashboard />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/products/:id" element={<ProductDetails />} />
                     <Route path="/new-arrivals" element={<NewArrivals />} />
