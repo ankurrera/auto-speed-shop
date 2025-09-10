@@ -590,19 +590,28 @@ const Account = () => {
         }
       }
 
-      if (loginMode === "admin") {
-        // Update the profile to set admin status (redundant but safe)
-        if (data.user) {
-          try {
-            await supabase
-              .from("profiles")
-              .update({ is_admin: true })
-              .eq("user_id", data.user.id);
-          } catch (adminUpdateError) {
-            console.error("Failed to set admin status:", adminUpdateError);
-            // Continue anyway since the user was created
-          }
+      // Explicit update to ensure all fields are set correctly (fixes race condition with auth trigger)
+      if (data.user) {
+        try {
+          await supabase
+            .from("profiles")
+            .update({
+              first_name: firstName,
+              last_name: lastName,
+              email: email,
+              phone: phone || "",
+              is_admin: loginMode === "admin",
+              is_seller: false,
+            })
+            .eq("user_id", data.user.id);
+          console.log("Profile updated successfully with all fields");
+        } catch (updateError) {
+          console.error("Failed to update profile after signup:", updateError);
+          // Continue anyway since the user was created
         }
+      }
+
+      if (loginMode === "admin") {
         setAdminExists(true);
         alert("Admin account created successfully. Please log in.");
       } else {
@@ -1340,6 +1349,24 @@ const Account = () => {
                   </form>
                 ) : (
                   <form onSubmit={handleSignup} className="space-y-4">
+                    <div className="flex justify-center space-x-2 mb-4">
+                      <Button
+                        type="button"
+                        variant={loginMode === "user" ? "default" : "outline"}
+                        onClick={() => setLoginMode("user")}
+                      >
+                        User Signup
+                      </Button>
+                      {!adminExists && (
+                        <Button
+                          type="button"
+                          variant={loginMode === "admin" ? "default" : "outline"}
+                          onClick={() => setLoginMode("admin")}
+                        >
+                          Admin Signup
+                        </Button>
+                      )}
+                    </div>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>First Name</Label>
