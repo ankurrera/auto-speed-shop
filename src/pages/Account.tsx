@@ -42,6 +42,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
+import AdminSellerManagement from "@/components/AdminSellerManagement";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -82,6 +83,7 @@ const Account = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
+  const [showSellerManagement, setShowSellerManagement] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -91,7 +93,6 @@ const Account = () => {
   const [phone, setPhone] = useState("");
   const [loginMode, setLoginMode] = useState<"user" | "admin">("user");
   const [adminExists, setAdminExists] = useState(true);
-  const [showSellerCreationAfterAdmin, setShowSellerCreationAfterAdmin] = useState(false);
 
   // Email subscription management state
   const [emailSubscription, setEmailSubscription] = useState<{
@@ -696,8 +697,29 @@ const Account = () => {
 
       if (loginMode === "admin") {
         setAdminExists(true);
-        alert("Admin account created successfully. Please log in to access your admin dashboard.");
-        setShowSellerCreationAfterAdmin(true); // Show seller creation form
+        alert("Admin account created successfully. You will now be logged in automatically.");
+        
+        // Auto-login the admin user and redirect to admin dashboard
+        try {
+          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+          });
+          
+          if (loginError) {
+            console.error("Auto-login error:", loginError);
+            alert("Admin account created but auto-login failed. Please log in manually.");
+            setView("login");
+          } else if (loginData.user) {
+            setIsLoggedIn(true);
+            await fetchAndSetUserData(loginData.user.id);
+            navigate("/account/admin-dashboard");
+            return; // Exit early to avoid clearing form and switching to login
+          }
+        } catch (autoLoginError) {
+          console.error("Auto-login error:", autoLoginError);
+          alert("Admin account created but auto-login failed. Please log in manually.");
+        }
       } else {
         alert("Account created successfully! Please check your email to confirm your account before logging in.");
       }
@@ -848,18 +870,12 @@ const Account = () => {
       setNewSellerPassword("");
       setNewSellerPhoneNumber("");
 
-      // If this was after admin creation, redirect to login
-      if (showSellerCreationAfterAdmin) {
-        setShowSellerCreationAfterAdmin(false);
-        setView("login");
-        alert("Seller account created! Please log in with your admin credentials to access the admin dashboard.");
-      } else {
-        // Refresh user data if admin is logged in
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (session) fetchAndSetUserData(session.user.id);
-      }
+      // If this was during admin creation, keep admin logged in
+      // Refresh user data if admin is logged in
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) fetchAndSetUserData(session.user.id);
       
     } catch (error: any) {
       console.error("Unexpected seller creation error:", error);
@@ -1172,29 +1188,71 @@ const Account = () => {
   // Deletion / archive mutations
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
+      // First check if product exists and belongs to current user's seller account
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data: sellerData } = await supabase
+        .from("sellers")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .single();
+
+      if (!sellerData) throw new Error("Seller account not found");
+
       const { error } = await supabase
         .from("products")
         .delete()
-        .eq("id", productId);
+        .eq("id", productId)
+        .eq("seller_id", sellerData.id);
       if (error) throw error;
     },
     onSuccess: () => {
       toast({ title: "Deleted", description: "Product removed." });
       queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     },
+    onError: (error: any) => {
+      console.error("Product deletion error:", error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete product: " + (error.message || "Unknown error"),
+        variant: "destructive"
+      });
+    },
   });
 
   const deletePartMutation = useMutation({
     mutationFn: async (partId: string) => {
+      // First check if part exists and belongs to current user's seller account
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data: sellerData } = await supabase
+        .from("sellers")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .single();
+
+      if (!sellerData) throw new Error("Seller account not found");
+
       const { error } = await supabase
         .from("parts")
         .delete()
-        .eq("id", partId);
+        .eq("id", partId)
+        .eq("seller_id", sellerData.id);
       if (error) throw error;
     },
     onSuccess: () => {
       toast({ title: "Deleted", description: "Part removed." });
       queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
+    },
+    onError: (error: any) => {
+      console.error("Part deletion error:", error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete part: " + (error.message || "Unknown error"),
+        variant: "destructive"
+      });
     },
   });
 
@@ -1360,94 +1418,6 @@ const Account = () => {
 
   // Unauthenticated screens
   if (!isLoggedIn) {
-    // Show seller creation form after admin signup
-    if (showSellerCreationAfterAdmin) {
-      return (
-        <div className="min-h-screen bg-background">
-          <div className="container mx-auto px-4 py-16">
-            <div className="max-w-md mx-auto">
-              <Card>
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl font-bold">
-                    Create Seller Account
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Now that you've created an admin account, create a seller account to manage products and inventory.
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCreateSellerAccount} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Name</Label>
-                      <Input
-                        value={newSellerName}
-                        onChange={(e) => setNewSellerName(e.target.value)}
-                        placeholder="Enter seller name"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email</Label>
-                      <Input
-                        type="email"
-                        value={newSellerEmail}
-                        onChange={(e) => setNewSellerEmail(e.target.value)}
-                        placeholder="Enter seller email"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Password</Label>
-                      <Input
-                        type="password"
-                        value={newSellerPassword}
-                        onChange={(e) => setNewSellerPassword(e.target.value)}
-                        placeholder="Enter seller password"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Address (Optional)</Label>
-                      <Input
-                        value={newSellerAddress}
-                        onChange={(e) => setNewSellerAddress(e.target.value)}
-                        placeholder="Enter seller address"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Phone (Optional)</Label>
-                      <Input
-                        type="tel"
-                        value={newSellerPhoneNumber}
-                        onChange={(e) => setNewSellerPhoneNumber(e.target.value)}
-                        placeholder="Enter phone number"
-                      />
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button type="submit" className="flex-1">
-                        Create Seller
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => {
-                          setShowSellerCreationAfterAdmin(false);
-                          setView("login");
-                        }}
-                        className="flex-1"
-                      >
-                        Skip for Now
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-16">
@@ -1699,6 +1669,14 @@ const Account = () => {
             </Button>
             <AdminUserManagement />
           </div>
+        ) : showSellerManagement ? (
+          <div className="space-y-4">
+            <Button variant="outline" onClick={() => setShowSellerManagement(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <AdminSellerManagement />
+          </div>
         ) : (
           <>
             {/* Main Admin Card */}
@@ -1780,12 +1758,18 @@ const Account = () => {
               {/* Quick Actions */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <ActionCard
                     title="Manage Users"
                     description="View and edit user accounts"
                     icon={<Users className="h-5 w-5" />}
                     onClick={() => setShowUserManagement(true)}
+                  />
+                  <ActionCard
+                    title="Manage Sellers"
+                    description="View and edit seller accounts"
+                    icon={<Car className="h-5 w-5" />}
+                    onClick={() => setShowSellerManagement(true)}
                   />
                   <ActionCard
                     title="Manage Products"
