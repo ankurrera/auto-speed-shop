@@ -1,94 +1,174 @@
-Ankur's Team
+# AutoParts Pro
 
-## Dashboard Scaffold
+A modern e-commerce platform for automotive parts and accessories, built with React, TypeScript, and Supabase.
 
-This project includes an initial automotive dashboard implementation that provides a foundation for vehicle monitoring and control features.
+## Features
 
-### Features
+### 🛒 E-Commerce Core
+- **Product Catalog**: Browse automotive parts by category, brand, and vehicle compatibility
+- **Shopping Cart**: Add/remove items, quantity management, and persistent cart state
+- **Wishlist**: Save favorite products for later purchase
+- **Checkout Process**: Secure checkout with PayPal integration
+- **Order Tracking**: Track order status and shipping information
+- **User Accounts**: Registration, login, profile management
 
-The dashboard includes the following components:
+### 🚗 Vehicle Dashboard
+- **Real-time Telemetry**: Vehicle monitoring with interactive gauges
+- **Quick Controls**: Vehicle lock/unlock, lights, and climate control
+- **Battery Status**: Electric vehicle battery monitoring
+- **Media Player**: In-vehicle entertainment control
+- **Maintenance Tasks**: Service reminders and task management
 
-- **12-Column Responsive Grid Layout**: CSS grid system that adapts to different screen sizes
-- **Real-time Telemetry Display**: Mock streaming data that updates every 2 seconds
-- **Interactive Gauges**: Circular gauges for speed, RPM, battery level, and fuel
-- **Vehicle Controls**: Quick controls for lock/unlock, lights, and climate with live state
-- **Battery Status Card**: Shows battery percentage with visual indicators and charging status
-- **Car Details Card**: Static vehicle information including VIN, model, odometer reading
-- **Media Player**: Current track display with play/pause controls and progress tracking
-- **Assistant Tasks**: Maintenance reminders and task management
-- **Map Placeholder**: Reserved area for future navigation integration
+### 👨‍💼 Admin Features
+- **User Management**: Admin panel for user administration
+- **Order Management**: Track and manage customer orders
+- **Analytics Dashboard**: Sales and performance metrics
+- **Seller Dashboard**: Vendor management interface
 
-### Accessing the Dashboard
+### 🎨 Modern UI/UX
+- **Responsive Design**: Mobile-first design with Tailwind CSS
+- **Dark/Light Mode**: Theme switching with system preference detection
+- **Component Library**: Consistent UI with Shadcn/ui components
+- **Accessibility**: ARIA labels and keyboard navigation support
 
-The dashboard is accessible at `/dashboard` and can be reached:
+## Tech Stack
 
-1. Directly via URL: `http://localhost:8081/dashboard`
-2. From the Account area: Login to your account and click the "Dashboard" button in the header
+- **Frontend**: React 18 + TypeScript + Vite
+- **Routing**: React Router DOM
+- **Styling**: Tailwind CSS + Shadcn/ui
+- **Backend**: Supabase (Database, Auth, Storage)
+- **Payments**: PayPal integration
+- **State Management**: React Query + Context API
+- **Maps**: Leaflet/React-Leaflet
+- **Charts**: Recharts
 
-### Extension Guide
+## Getting Started
 
-The dashboard is designed to be easily extensible. Here are the recommended next steps:
+### Prerequisites
 
-#### 1. Map Integration
-- Replace `MapPlaceholderCard` with a real mapping service (Google Maps, Mapbox, etc.)
-- Add real-time vehicle location tracking
-- Implement route planning and navigation features
-- Add charging station locator for electric vehicles
+- Node.js 18+ and npm
+- Supabase account (for database and authentication)
+- PayPal Developer account (for payment processing)
 
-#### 2. Real Telemetry Integration
-- Replace `useDashboardTelemetry` hook with actual vehicle API connections
-- Implement WebSocket connections for real-time data streaming
-- Add data validation and error handling for sensor readings
-- Integrate with OBD-II port readers or vehicle telematics systems
+### Installation
 
-#### 3. Authentication Gating
-- Add route protection to require user authentication
-- Implement role-based access (user vs admin dashboards)
-- Add vehicle ownership validation
-- Create user-specific dashboard configurations
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/ankurrera/auto-speed-shop.git
+   cd auto-speed-shop
+   ```
 
-#### 4. Additional Features
-- Add more vehicle sensors (tire pressure, engine temperature, etc.)
-- Implement push notifications for critical alerts
-- Add historical data tracking and analytics
-- Create customizable dashboard layouts
-- Integrate with smart home systems
-- Add voice control capabilities
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-### Technical Implementation
+3. **Environment Configuration**
+   
+   Create a `.env.local` file in the root directory:
+   ```env
+   VITE_SUPABASE_URL=your-supabase-project-url
+   VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-anon-key
+   VITE_PAYPAL_CLIENT_ID=your-paypal-client-id
+   ```
 
-- **Framework**: React with TypeScript
-- **Styling**: Tailwind CSS with custom dashboard grid system
-- **Components**: Shadcn/ui component library for consistent design
-- **State Management**: React hooks for local state, custom hooks for telemetry
-- **Data**: Mock data constants with realistic vehicle information
-- **Accessibility**: ARIA labels on interactive controls for screen readers
+4. **Start the development server**
+   ```bash
+   npm run dev
+   ```
 
-### File Structure
+5. **Open your browser**
+   
+   Navigate to `http://localhost:8080` to view the application.
+
+## Project Structure
 
 ```
 src/
-├── pages/Dashboard.tsx                    # Main dashboard layout
-├── components/dashboard/
-│   ├── Gauge.tsx                         # Circular gauge component
-│   └── cards/
-│       ├── BatteryCard.tsx               # Battery status display
-│       ├── QuickControlsCard.tsx         # Vehicle controls
-│       ├── MapPlaceholderCard.tsx        # Future map integration
-│       ├── AssistantTasksCard.tsx        # Task management
-│       ├── CarDetailsCard.tsx            # Vehicle information
-│       └── MediaCard.tsx                 # Media player controls
-├── hooks/useDashboardTelemetry.ts        # Mock telemetry data hook
-├── data/dashboard.ts                     # Mock data constants
-└── styles/dashboard.css                  # Dashboard-specific styles
+├── components/                 # Reusable UI components
+│   ├── ui/                    # Shadcn/ui components
+│   ├── dashboard/             # Dashboard-specific components
+│   ├── Header.tsx             # Main navigation header
+│   ├── Footer.tsx             # Site footer
+│   └── ProductCard.tsx        # Product display component
+├── pages/                     # Route components
+│   ├── Home.tsx              # Landing page
+│   ├── Shop.tsx              # Product catalog
+│   ├── Dashboard.tsx         # Vehicle dashboard
+│   ├── Cart.tsx              # Shopping cart
+│   ├── Checkout.tsx          # Payment process
+│   └── Account.tsx           # User account management
+├── contexts/                  # React contexts
+│   ├── CartContext.tsx       # Shopping cart state
+│   └── WishlistContext.tsx   # Wishlist state
+├── hooks/                     # Custom React hooks
+├── integrations/              # External service integrations
+│   └── supabase/             # Supabase configuration
+├── data/                      # Static data and constants
+└── styles/                    # Custom CSS files
 ```
 
-### Development
+## Development
 
-To run the dashboard in development mode:
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run build:dev` - Build for development environment
+- `npm run lint` - Run ESLint
+- `npm run preview` - Preview production build
+
+### Database Setup
+
+This project uses Supabase for the backend. You'll need to:
+
+1. Create a new Supabase project
+2. Set up the database schema (see `supabase/migrations/`)
+3. Configure authentication providers
+4. Set up row-level security policies
+
+### Payment Integration
+
+PayPal integration is configured for payment processing:
+
+1. Create a PayPal Developer account
+2. Create a new application
+3. Add your client ID to environment variables
+4. Test with PayPal sandbox before going live
+
+## Deployment
+
+### Production Build
 
 ```bash
-npm run dev
+npm run build
 ```
 
-Navigate to `http://localhost:8081/dashboard` to view the dashboard.
+### Environment Variables for Production
+
+Ensure these environment variables are set in your production environment:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_PAYPAL_CLIENT_ID`
+
+### Deployment Platforms
+
+This project can be deployed to:
+
+- **Vercel** (recommended for React apps)
+- **Netlify**
+- **Railway**
+- **Heroku**
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
