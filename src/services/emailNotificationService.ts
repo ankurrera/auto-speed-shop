@@ -35,17 +35,28 @@ export class EmailNotificationService {
       const emailContent = this.generateEmailContent(notification);
       
       for (const user of subscribedUsers) {
-        // Simulate sending email
-        console.log(`📧 Email notification sent to: ${user.email}`);
-        console.log(`Subject: New ${notification.productType} available - ${notification.productName}`);
-        console.log(`Content: ${emailContent}`);
-        
-        // In a real implementation, you would call your email service here:
-        // await sendEmail({
-        //   to: user.email,
-        //   subject: `New ${notification.productType} available - ${notification.productName}`,
-        //   html: emailContent
-        // });
+        try {
+          // Send actual email via API endpoint
+          const response = await fetch('/api/sendNotification', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              to: user.email,
+              subject: `New ${notification.productType} available - ${notification.productName}`,
+              html: emailContent
+            }),
+          });
+
+          if (response.ok) {
+            console.log(`📧 Email notification sent to: ${user.email}`);
+          } else {
+            console.error(`Failed to send email to ${user.email}:`, await response.text());
+          }
+        } catch (error) {
+          console.error(`Error sending email to ${user.email}:`, error);
+        }
       }
 
       // Show success message to the seller
@@ -60,6 +71,9 @@ export class EmailNotificationService {
    * Generate HTML email content for new product notifications
    */
   private static generateEmailContent(notification: NewProductNotification): string {
+    // Use a fallback URL for server-side rendering
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8080';
+    
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">New ${notification.productType} Available!</h2>
@@ -77,7 +91,7 @@ export class EmailNotificationService {
             <p style="margin: 5px 0;"><strong>Type:</strong> ${notification.productType}</p>
           </div>
           
-          <a href="${window.location.origin}/shop" 
+          <a href="${baseUrl}/shop" 
              style="display: inline-block; background: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 10px 0;">
             View in Shop
           </a>
@@ -85,7 +99,7 @@ export class EmailNotificationService {
         
         <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; color: #666; font-size: 12px;">
           <p>You're receiving this email because you're subscribed to new product notifications.</p>
-          <p>To unsubscribe, visit your <a href="${window.location.origin}/account">account settings</a>.</p>
+          <p>To unsubscribe, visit your <a href="${baseUrl}/account">account settings</a>.</p>
         </div>
       </div>
     `;
