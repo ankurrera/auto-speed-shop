@@ -149,7 +149,7 @@ const Checkout = () => {
   const tax = subtotal * TAX_RATE;
   const total = subtotal + shipping + tax;
 
-  const resetAfterSuccess = () => {
+  const resetAfterSuccess = (orderData?: any) => {
     clearCart();
     setPaypalOrderId(null);
     setLocalOrderId(null);
@@ -157,7 +157,15 @@ const Checkout = () => {
       title: "Order Placed!",
       description: "Thank you for your purchase. Your order has been successfully placed.",
     });
-    navigate("/");
+    
+    // Redirect to order confirmation page with order ID
+    if (orderData?.localOrder?.id) {
+      navigate(`/order-confirmation?order_id=${orderData.localOrder.id}`);
+    } else if (localOrderId) {
+      navigate(`/order-confirmation?order_id=${localOrderId}`);
+    } else {
+      navigate("/");
+    }
   };
 
   // PayPal Buttons integration (Server-Driven)
@@ -208,12 +216,14 @@ const Checkout = () => {
       }
       const captureResult = await captureServerOrder(paypalOrderId, localOrderId);
       if (captureResult?.localOrder?.payment_status === "completed") {
-        resetAfterSuccess();
+        resetAfterSuccess(captureResult);
       } else {
         toast({
           title: "Capture Warning",
           description: "Order captured but payment status not completed.",
         });
+        // Still redirect to confirmation even if status is not completed
+        resetAfterSuccess(captureResult);
       }
     } catch (err: any) {
       console.error("Capture error:", err);
