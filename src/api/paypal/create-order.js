@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     const productIds = cartItems.map(ci => ci.id);
     const { data: products, error } = await supabaseAdmin
       .from("products")
-      .select("id, price, name")
+      .select("id, price, name, sku")
       .in("id", productIds);
 
     if (error) {
@@ -39,6 +39,7 @@ export default async function handler(req, res) {
         quantity: ci.quantity,
         name: prod.name,
         price: prod.price,
+        sku: prod.sku,
       };
     });
 
@@ -75,6 +76,7 @@ export default async function handler(req, res) {
       order_id: orderInsert.id,
       product_id: item.id,
       product_name: item.name,
+      product_sku: item.sku,
       quantity: item.quantity,
       unit_price: item.price,
       total_price: item.price * item.quantity
