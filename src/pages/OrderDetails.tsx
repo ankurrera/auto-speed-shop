@@ -73,16 +73,20 @@ const OrderDetails = () => {
           .from("admin_paypal_credentials")
           .select("paypal_email")
           .eq("is_active", true)
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
 
         if (error) {
-          console.error("Error fetching admin PayPal email:", error);
+          console.warn("Error fetching admin PayPal email:", error.message);
           setAdminPaypalEmail("admin@autospeedshop.com"); // fallback
-        } else {
+        } else if (data) {
           setAdminPaypalEmail(data.paypal_email);
+        } else {
+          // No active PayPal credentials found
+          console.warn("No active admin PayPal credentials found");
+          setAdminPaypalEmail("admin@autospeedshop.com"); // fallback
         }
       } catch (error) {
-        console.error("Error fetching admin PayPal email:", error);
+        console.warn("Unexpected error fetching admin PayPal email:", error);
         setAdminPaypalEmail("admin@autospeedshop.com"); // fallback
       }
     };

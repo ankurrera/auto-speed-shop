@@ -90,10 +90,13 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
           *,
           order_items (
             id,
+            product_id,
+            part_id,
             product_name,
             quantity,
             unit_price,
-            total_price
+            total_price,
+            is_part
           )
         `)
         .in("status", [
@@ -113,8 +116,8 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
       if (userIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("user_id, email, first_name, last_name")
-          .in("user_id", userIds);
+          .select("id, email, first_name, last_name")
+          .in("id", userIds); // Use 'id' field, not 'user_id'
         
         if (profilesError) {
           console.warn("Failed to fetch profiles:", profilesError);
@@ -126,7 +129,7 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
       // Merge orders with profile data
       const ordersWithProfiles = ordersData?.map(order => ({
         ...order,
-        profiles: profilesData.find(profile => profile.user_id === order.user_id) || null
+        profiles: profilesData.find(profile => profile.id === order.user_id) || null
       })) || [];
 
       // Debug logging to understand what orders are being fetched
