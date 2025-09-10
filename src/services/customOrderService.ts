@@ -43,7 +43,7 @@ export async function createCustomOrder(cartItems: CartItem[], shippingAddress: 
         currency: "USD",
         status: ORDER_STATUS.PENDING_ADMIN_REVIEW,
         payment_status: PAYMENT_STATUS.PENDING,
-        payment_method: "paypal_external",
+        payment_method: "custom_external",
         shipping_address: shippingAddress || null,
       }])
       .select()

@@ -117,11 +117,11 @@ const CustomCheckout = () => {
       // Navigate to order details page
       navigate(`/order/${result.orderId}`);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Order submission error:", error);
       toast({
         title: "Order Failed",
-        description: error.message || "Failed to submit order request. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to submit order request. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -327,7 +327,7 @@ const CustomCheckout = () => {
                     <li>1. Admin reviews your order request</li>
                     <li>2. You'll receive an invoice with final pricing</li>
                     <li>3. Accept the invoice to proceed with payment</li>
-                    <li>4. Complete payment via PayPal externally</li>
+                    <li>4. Complete payment via external payment method</li>
                     <li>5. Submit payment confirmation</li>
                   </ol>
                 </div>
