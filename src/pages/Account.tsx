@@ -101,16 +101,21 @@ const Account = () => {
 
   // Fetch email subscription data
   const fetchEmailSubscription = useCallback(async (userId: string, userEmail: string) => {
+    // Check if user's email exists in subscribers table
     const { data, error } = await supabase
-      .from("email_subscriptions")
-      .select("subscribed_to_new_products, email")
-      .eq("user_id", userId)
+      .from("subscribers")
+      .select("email")
+      .eq("email", userEmail.toLowerCase())
       .single();
     
     if (!error && data) {
-      setEmailSubscription(data);
+      // User is subscribed
+      setEmailSubscription({
+        subscribed_to_new_products: true,
+        email: userEmail,
+      });
     } else {
-      // No subscription record exists, set default
+      // User is not subscribed
       setEmailSubscription({
         subscribed_to_new_products: false,
         email: userEmail,
@@ -136,18 +141,24 @@ const Account = () => {
     if (!emailSubscription) return;
 
     try {
-      const { error } = await supabase
-        .from("email_subscriptions")
-        .upsert(
-          {
-            user_id: session.user.id,
-            email: session.user.email || "",
-            subscribed_to_new_products: emailSubscription.subscribed_to_new_products,
-          },
-          { onConflict: "user_id" }
-        );
+      if (emailSubscription.subscribed_to_new_products) {
+        // Subscribe: Add email to subscribers table
+        const { error } = await supabase
+          .from("subscribers")
+          .insert([{ email: (session.user.email || "").toLowerCase() }]);
 
-      if (error) throw error;
+        if (error && error.code !== '23505') { // Ignore duplicate key error
+          throw error;
+        }
+      } else {
+        // Unsubscribe: Remove email from subscribers table
+        const { error } = await supabase
+          .from("subscribers")
+          .delete()
+          .eq("email", (session.user.email || "").toLowerCase());
+
+        if (error) throw error;
+      }
 
       toast({
         title: "Success",
