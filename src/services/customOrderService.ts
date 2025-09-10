@@ -2,7 +2,25 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ORDER_STATUS, PAYMENT_STATUS, type OrderInvoice, type PaymentSubmission } from "@/types/order";
 
-export async function createCustomOrder(cartItems: any[], shippingAddress: any, userId?: string) {
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  sku?: string;
+}
+
+interface ShippingAddress {
+  first_name: string;
+  last_name: string;
+  line1: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+}
+
+export async function createCustomOrder(cartItems: CartItem[], shippingAddress: ShippingAddress, userId?: string) {
   try {
     // Calculate basic pricing (before admin adds fees)
     const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,15 @@ interface Order {
   created_at: string;
   updated_at: string;
   notes?: string;
-  shipping_address?: any;
+  shipping_address?: {
+    first_name?: string;
+    last_name?: string;
+    line1?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  };
   order_items?: Array<{
     id: string;
     product_name: string;
@@ -76,9 +84,9 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       const { data: ordersData, error } = await supabase
         .from("orders")
@@ -90,11 +98,6 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
             quantity,
             unit_price,
             total_price
-          ),
-          profiles (
-            email,
-            first_name,
-            last_name
           )
         `)
         .in("status", [
@@ -107,8 +110,31 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
 
       if (error) throw error;
 
-      setOrders(ordersData || []);
-    } catch (error: any) {
+      // Fetch user profiles separately since there's no foreign key relationship
+      const userIds = [...new Set(ordersData?.map(order => order.user_id).filter(Boolean))];
+      let profilesData = [];
+      
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("user_id, email, first_name, last_name")
+          .in("user_id", userIds);
+        
+        if (profilesError) {
+          console.warn("Failed to fetch profiles:", profilesError);
+        } else {
+          profilesData = profiles || [];
+        }
+      }
+
+      // Merge orders with profile data
+      const ordersWithProfiles = ordersData?.map(order => ({
+        ...order,
+        profiles: profilesData.find(profile => profile.user_id === order.user_id) || null
+      })) || [];
+
+      setOrders(ordersWithProfiles);
+    } catch (error: unknown) {
       console.error("Error fetching orders:", error);
       toast({
         title: "Error",
@@ -118,7 +144,7 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   const handleCreateInvoice = async () => {
     if (!selectedOrder) return;
@@ -161,10 +187,11 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
       setSelectedOrder(null);
       fetchOrders();
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create invoice";
       toast({
         title: "Error",
-        description: error.message || "Failed to create invoice",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -185,10 +212,11 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
       });
 
       fetchOrders();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to verify payment";
       toast({
         title: "Error",
-        description: error.message || "Failed to verify payment",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -352,7 +380,7 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
           </Dialog>
         );
 
-      case ORDER_STATUS.PAYMENT_SUBMITTED:
+      case ORDER_STATUS.PAYMENT_SUBMITTED: {
         const paymentData = order.notes ? JSON.parse(order.notes) : null;
         return (
           <div className="space-y-2">
@@ -394,6 +422,7 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
             </div>
           </div>
         );
+      }
 
       default:
         return <span className="text-muted-foreground text-sm">No action needed</span>;
