@@ -21,6 +21,7 @@ import NewArrivals from "./pages/NewArrivals";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import OrderTracking from "./pages/OrderTracking";
 import SellerDashboard from "./pages/SellerDashboard";
+import EmailSubscriptionDemo from "./components/EmailSubscriptionDemo";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
@@ -28,7 +29,6 @@ import ScrollToTop from "./components/ScrollToTop";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { DevCartHelper } from "./components/DevCartHelper";
 import { Button } from "@/components/ui/button";
-import Order from "./pages/Order";
 
 const queryClient = new QueryClient();
 
@@ -63,7 +63,6 @@ const App = () => {
                     <Route path="/about" element={<About />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/cart" element={<Cart />} />
-                    <Route path="/order" element={<Order />} />
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/account/*" element={<Account />} />
                     <Route path="/seller-dashboard" element={<SellerDashboard />} />
@@ -72,6 +71,7 @@ const App = () => {
                     <Route path="/new-arrivals" element={<NewArrivals />} />
                     <Route path="/order-confirmation" element={<OrderConfirmation />} />
                     <Route path="/orders/:orderId/tracking" element={<OrderTracking />} />
+                    <Route path="/email-demo" element={<EmailSubscriptionDemo />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
