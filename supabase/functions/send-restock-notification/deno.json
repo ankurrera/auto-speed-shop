@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "https://deno.land/x/dotenv@v3.2.2/load.ts": "https://deno.land/x/dotenv@v3.2.2/load.ts",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
+    "nodemailer": "https://esm.sh/nodemailer@6.9.14",
+    "@supabase/functions-js": "https://esm.sh/@supabase/functions-js@2"
+  }
+}
