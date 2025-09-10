@@ -93,6 +93,75 @@ const Account = () => {
   const [adminExists, setAdminExists] = useState(true);
   const [showSellerCreationAfterAdmin, setShowSellerCreationAfterAdmin] = useState(false);
 
+  // Email subscription management state
+  const [emailSubscription, setEmailSubscription] = useState<{
+    subscribed_to_new_products: boolean;
+    email: string;
+  } | null>(null);
+
+  // Fetch email subscription data
+  const fetchEmailSubscription = useCallback(async (userId: string, userEmail: string) => {
+    const { data, error } = await supabase
+      .from("email_subscriptions")
+      .select("subscribed_to_new_products, email")
+      .eq("user_id", userId)
+      .single();
+    
+    if (!error && data) {
+      setEmailSubscription(data);
+    } else {
+      // No subscription record exists, set default
+      setEmailSubscription({
+        subscribed_to_new_products: false,
+        email: userEmail,
+      });
+    }
+  }, []);
+
+  // Save email subscription preferences
+  const handleSaveEmailSubscription = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    
+    if (!session) {
+      toast({
+        title: "Error",
+        description: "You must be logged in.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!emailSubscription) return;
+
+    try {
+      const { error } = await supabase
+        .from("email_subscriptions")
+        .upsert(
+          {
+            user_id: session.user.id,
+            email: session.user.email || "",
+            subscribed_to_new_products: emailSubscription.subscribed_to_new_products,
+          },
+          { onConflict: "user_id" }
+        );
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Email preferences updated.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   // Seller creation (admin)
   const [newSellerName, setNewSellerName] = useState("");
   const [newSellerAddress, setNewSellerAddress] = useState("");
@@ -314,10 +383,13 @@ const Account = () => {
         lastName: data.last_name || "",
         email: data.email || "",
         phone: data.phone || "",
-        is_admin: data.is_admin || false,
-        is_seller: data.is_seller || false,
+        isAdmin: data.is_admin || false,
+        isSeller: data.is_seller || false,
       });
       setSellerExistsForAdmin(data.is_seller || false);
+      
+      // Also fetch email subscription preferences
+      fetchEmailSubscription(userId, data.email || "");
     } else {
       console.error("Account: Error fetching profile or no data:", error, "User ID:", userId);
       
@@ -351,7 +423,7 @@ const Account = () => {
         }
       }
     }
-  }, []);
+  }, [fetchEmailSubscription]);
 
   const checkSellerExists = useCallback(async (userId: string) => {
     const { count, error } = await supabase
@@ -994,6 +1066,29 @@ const Account = () => {
         editingProductId ? "updated" : "listed"
       }.`,
     });
+
+    // Send email notifications for new products/parts (not updates)
+    if (!editingProductId && savedItem) {
+      try {
+        const { sendNewProductNotifications, getSellerName } = await import('@/services/emailNotificationService');
+        const sellerName = await getSellerName(currentSellerId);
+        
+        await sendNewProductNotifications({
+          productName: savedItem.name,
+          productDescription: savedItem.description || undefined,
+          productPrice: savedItem.price,
+          productCategory: isPart ? specificationsPayload.category : savedItem.category,
+          productType: isPart ? 'part' : 'product',
+          sellerName,
+        });
+        
+        console.log('Email notifications sent successfully');
+      } catch (notificationError) {
+        console.error('Failed to send email notifications:', notificationError);
+        // Don't show error to user as the main action (product creation) was successful
+      }
+    }
+
     cleanupAndRefetch();
   };
 
@@ -1789,68 +1884,114 @@ const Account = () => {
 
   // Profile Content
   const renderProfileContent = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center">
+            <UserIcon className="h-5 w-5 mr-2" />
+            Profile Information
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditing((p) => !p)}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            {isEditing ? "Cancel" : "Edit"}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label>First Name</Label>
+              <Input
+                value={userInfo.firstName}
+                disabled={!isEditing}
+                onChange={(e) =>
+                  setUserInfo({ ...userInfo, firstName: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Last Name</Label>
+              <Input
+                value={userInfo.lastName}
+                disabled={!isEditing}
+                onChange={(e) =>
+                  setUserInfo({ ...userInfo, lastName: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={userInfo.email} disabled />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input
+                value={userInfo.phone}
+                disabled={!isEditing}
+                onChange={(e) =>
+                  setUserInfo({ ...userInfo, phone: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          {isEditing && (
+            <div className="flex space-x-4">
+              <Button onClick={handleSaveProfile}>Save Changes</Button>
+              <Button variant="outline" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {renderEmailSubscriptionContent()}
+    </div>
+  );
+
+  // Email Subscription Content
+  const renderEmailSubscriptionContent = () => (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader>
         <CardTitle className="flex items-center">
-          <UserIcon className="h-5 w-5 mr-2" />
-          Profile Information
+          📧 Email Notifications
         </CardTitle>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsEditing((p) => !p)}
-        >
-          <Edit className="h-4 w-4 mr-2" />
-          {isEditing ? "Cancel" : "Edit"}
-        </Button>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label>First Name</Label>
-            <Input
-              value={userInfo.firstName}
-              disabled={!isEditing}
-              onChange={(e) =>
-                setUserInfo({ ...userInfo, firstName: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Last Name</Label>
-            <Input
-              value={userInfo.lastName}
-              disabled={!isEditing}
-              onChange={(e) =>
-                setUserInfo({ ...userInfo, lastName: e.target.value })
-              }
-            />
-          </div>
-        </div>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <Input value={userInfo.email} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label>Phone</Label>
-            <Input
-              value={userInfo.phone}
-              disabled={!isEditing}
-              onChange={(e) =>
-                setUserInfo({ ...userInfo, phone: e.target.value })
-              }
-            />
+      <CardContent className="space-y-4">
+        <div className="flex items-center space-x-3">
+          <Checkbox
+            id="new-products"
+            checked={emailSubscription?.subscribed_to_new_products || false}
+            onCheckedChange={(checked) => 
+              setEmailSubscription(prev => prev ? {
+                ...prev,
+                subscribed_to_new_products: Boolean(checked)
+              } : {
+                email: "",
+                subscribed_to_new_products: Boolean(checked)
+              })
+            }
+          />
+          <div className="space-y-1">
+            <Label htmlFor="new-products" className="text-sm font-medium cursor-pointer">
+              Notify me about new products and parts
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Get email notifications when new auto parts and products are listed by sellers
+            </p>
           </div>
         </div>
-        {isEditing && (
-          <div className="flex space-x-4">
-            <Button onClick={handleSaveProfile}>Save Changes</Button>
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              Cancel
-            </Button>
-          </div>
-        )}
+        
+        <div className="flex space-x-4 pt-4">
+          <Button onClick={handleSaveEmailSubscription} size="sm">
+            Save Preferences
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
