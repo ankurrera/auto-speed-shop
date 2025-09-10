@@ -20,6 +20,7 @@ import ProductDetails from "./pages/ProductDetails";
 import NewArrivals from "./pages/NewArrivals";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import OrderTracking from "./pages/OrderTracking";
+import SellerDashboard from "./pages/SellerDashboard";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
@@ -65,6 +66,7 @@ const App = () => {
                     <Route path="/order" element={<Order />} />
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/account/*" element={<Account />} />
+                    <Route path="/seller-dashboard" element={<SellerDashboard />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/products/:id" element={<ProductDetails />} />
                     <Route path="/new-arrivals" element={<NewArrivals />} />
