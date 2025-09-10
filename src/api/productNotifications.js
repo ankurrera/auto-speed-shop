@@ -11,13 +11,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'Invalid request data' });
   }
 
-  const transporter = nodemailer.createTransporter({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASSWORD,
-    },
-  });
+  const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASSWORD,
+  },
+});
 
   const { productName, productDescription, productPrice, productCategory, productType, sellerName } = productData;
 
