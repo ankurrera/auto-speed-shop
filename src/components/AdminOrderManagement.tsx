@@ -9,7 +9,13 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Package, X, RefreshCw } from "lucide-react";
 import { Database } from "@/database.types";
 
-type Order = Database['public']['Tables']['orders']['Row'];
+type Order = Database['public']['Tables']['orders']['Row'] & {
+  profiles?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+};
 
 // Sample orders for development mode when database is not available
 const getSampleOrders = (): Order[] => {
@@ -116,13 +122,20 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
     queryKey: ['admin-orders'],
     queryFn: async () => {
       try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+
+        // Use the admin function to get all orders
         const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .order('created_at', { ascending: false });
+          .rpc('get_all_orders_for_admin', {
+            requesting_user_id: user.id
+          });
 
         if (error) {
-          console.warn('AdminOrderManagement Supabase error:', error);
+          console.warn('AdminOrderManagement Supabase RPC error:', error);
           // In development mode, return sample orders if database query fails
           const isDevelopment = import.meta.env.DEV;
           if (isDevelopment) {
@@ -132,19 +145,54 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
           throw error;
         }
         
+        // Transform the data to match our expected format
+        const transformedOrders = data?.map((order: {
+          id: string;
+          order_number: string;
+          user_id: string;
+          status: string;
+          payment_status: string;
+          payment_method: string;
+          subtotal: number;
+          shipping_amount: number;
+          tax_amount: number;
+          total_amount: number;
+          convenience_fee: number;
+          delivery_charge: number;
+          currency: string;
+          notes: string;
+          shipping_address: unknown;
+          billing_address: unknown;
+          created_at: string;
+          updated_at: string;
+          shipped_at: string;
+          delivered_at: string;
+          customer_first_name: string;
+          customer_last_name: string;
+          customer_email: string;
+        }) => ({
+          ...order,
+          profiles: order.customer_first_name || order.customer_last_name || order.customer_email ? {
+            first_name: order.customer_first_name,
+            last_name: order.customer_last_name,
+            email: order.customer_email
+          } : null
+        })) || [];
+        
         // Debug logging to understand what orders are being fetched
-        console.log('AdminOrderManagement fetched orders:', data);
-        console.log('Orders count:', data?.length || 0);
-        console.log('Order statuses:', data?.map(order => order.status) || []);
+        console.log('AdminOrderManagement fetched orders:', transformedOrders);
+        console.log('Orders count:', transformedOrders?.length || 0);
+        console.log('Order statuses:', transformedOrders?.map(order => order.status) || []);
+        console.log('Order user_ids:', transformedOrders?.map(order => order.user_id) || []);
         
         // If no orders found in development, return sample orders
         const isDevelopment = import.meta.env.DEV;
-        if (isDevelopment && (!data || data.length === 0)) {
+        if (isDevelopment && (!transformedOrders || transformedOrders.length === 0)) {
           console.log('AdminOrderManagement: No orders found, using sample orders in development mode');
           return getSampleOrders();
         }
         
-        return data || [];
+        return transformedOrders;
       } catch (err) {
         console.error('AdminOrderManagement query error:', err);
         // In development mode, return sample orders if any error occurs
@@ -200,6 +248,7 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
             <TableHeader>
               <TableRow>
                 <TableHead>Order Number</TableHead>
+                <TableHead>Customer</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
@@ -209,6 +258,16 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
               {orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">{order.order_number}</TableCell>
+                  <TableCell>
+                    {order.profiles ? (
+                      <div>
+                        <p className="font-medium">{order.profiles.first_name} {order.profiles.last_name}</p>
+                        <p className="text-xs text-muted-foreground">{order.profiles.email}</p>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Unknown Customer</span>
+                    )}
+                  </TableCell>
                   <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <span
