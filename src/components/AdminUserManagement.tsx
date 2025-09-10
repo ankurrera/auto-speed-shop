@@ -95,17 +95,33 @@ const AdminUserManagement = () => {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
+      // First delete the profile and get confirmation
       const { data, error } = await supabase.rpc('admin_delete_user_profile', {
         target_user_id: userId
       });
       if (error) throw error;
-      return data;
+      
+      // Then delete the auth user
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      if (authError) {
+        console.warn('Profile deleted but failed to delete auth user:', authError.message);
+        // Don't throw error here as profile is already deleted
+        return {
+          ...data,
+          message: `${data?.message || 'Profile deleted successfully.'} Note: Auth user deletion failed - ${authError.message}`
+        };
+      }
+      
+      return {
+        ...data,
+        message: 'User completely deleted successfully. The user can now create a new account with the same email.'
+      };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast({
         title: "Success",
-        description: data?.message || "User profile deleted successfully. The user can now create a new account with the same email.",
+        description: data?.message || "User completely deleted successfully. The user can now create a new account with the same email.",
       });
     },
     onError: (err: Error) => {
