@@ -60,5 +60,13 @@ export interface ExtendedOrder {
   created_at: string;
   updated_at: string;
   notes?: string;
-  shipping_address?: any;
+  shipping_address?: {
+    first_name?: string;
+    last_name?: string;
+    line1?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  };
 }
