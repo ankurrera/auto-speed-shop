@@ -2187,14 +2187,6 @@ const Account = () => {
                 Admin Dashboard
               </Button>
             )}
-            <Button 
-              variant="outline" 
-              onClick={() => navigate("/dashboard")}
-              className="flex items-center gap-2"
-            >
-              <Car className="h-4 w-4" />
-              Dashboard
-            </Button>
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
