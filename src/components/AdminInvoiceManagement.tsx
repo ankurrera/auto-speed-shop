@@ -82,10 +82,6 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
   const fetchOrders = useCallback(async () => {
     try {
       const { data: ordersData, error } = await supabase
@@ -133,6 +129,11 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
         profiles: profilesData.find(profile => profile.user_id === order.user_id) || null
       })) || [];
 
+      // Debug logging to understand what orders are being fetched
+      console.log('AdminInvoiceManagement fetched orders:', ordersWithProfiles);
+      console.log('Invoice orders count:', ordersWithProfiles.length);
+      console.log('Invoice order statuses:', ordersWithProfiles.map(order => order.status));
+
       setOrders(ordersWithProfiles);
     } catch (error: unknown) {
       console.error("Error fetching orders:", error);
@@ -145,6 +146,10 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
       setLoading(false);
     }
   }, [toast]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const handleCreateInvoice = async () => {
     if (!selectedOrder) return;
