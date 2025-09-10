@@ -491,7 +491,6 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           email: string | null
-          email_notifications: boolean | null
           first_name: string | null
           id: string
           is_admin: boolean | null
@@ -507,7 +506,6 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
-          email_notifications?: boolean | null
           first_name?: string | null
           id?: string
           is_admin?: boolean | null
@@ -523,7 +521,6 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
-          email_notifications?: boolean | null
           first_name?: string | null
           id?: string
           is_admin?: boolean | null
@@ -533,63 +530,6 @@ export type Database = {
           role?: string | null
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      product_notifications: {
-        Row: {
-          email_type: string | null
-          id: string
-          part_id: string | null
-          product_id: string | null
-          sent_at: string | null
-          user_id: string
-        }
-        Insert: {
-          email_type?: string | null
-          id?: string
-          part_id?: string | null
-          product_id?: string | null
-          sent_at?: string | null
-          user_id: string
-        }
-        Update: {
-          email_type?: string | null
-          id?: string
-          part_id?: string | null
-          product_id?: string | null
-          sent_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      product_notification_queue: {
-        Row: {
-          created_at: string | null
-          error_message: string | null
-          id: string
-          payload: Json
-          processed_at: string | null
-          retry_count: number | null
-          status: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          error_message?: string | null
-          id?: string
-          payload: Json
-          processed_at?: string | null
-          retry_count?: number | null
-          status?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          error_message?: string | null
-          id?: string
-          payload?: Json
-          processed_at?: string | null
-          retry_count?: number | null
-          status?: string | null
         }
         Relationships: []
       }
