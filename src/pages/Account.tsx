@@ -1207,6 +1207,22 @@ const Account = () => {
         throw new Error("You can only delete your own products.");
       }
       
+      // Delete related records first to avoid foreign key constraint errors
+      // Delete from cart_items where product_id references this product
+      const { error: cartError } = await supabase
+        .from("cart_items")
+        .delete()
+        .eq("product_id", productId);
+      if (cartError) throw cartError;
+      
+      // Delete from wishlist where product_id references this product
+      const { error: wishlistError } = await supabase
+        .from("wishlist")
+        .delete()
+        .eq("product_id", productId);
+      if (wishlistError) throw wishlistError;
+      
+      // Finally delete the product itself
       const { error } = await supabase
         .from("products")
         .delete()
@@ -1248,6 +1264,29 @@ const Account = () => {
         throw new Error("You can only delete your own parts.");
       }
       
+      // Delete related records first to avoid foreign key constraint errors
+      // Delete from cart_items where part_id references this part
+      const { error: cartError } = await supabase
+        .from("cart_items")
+        .delete()
+        .eq("part_id", partId);
+      if (cartError) throw cartError;
+      
+      // Delete from wishlist where part_id references this part
+      const { error: wishlistError } = await supabase
+        .from("wishlist")
+        .delete()
+        .eq("part_id", partId);
+      if (wishlistError) throw wishlistError;
+      
+      // Delete from part_fitments where part_id references this part
+      const { error: fitmentError } = await supabase
+        .from("part_fitments")
+        .delete()
+        .eq("part_id", partId);
+      if (fitmentError) throw fitmentError;
+      
+      // Finally delete the part itself
       const { error } = await supabase
         .from("parts")
         .delete()
