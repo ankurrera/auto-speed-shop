@@ -42,6 +42,8 @@ import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
+import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
+import { EmailNotificationService } from "@/services/emailNotificationService";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -109,6 +111,13 @@ const Account = () => {
     phone: "",
     is_admin: false,
     is_seller: false,
+  });
+
+  // Email subscription state
+  const [emailSubscription, setEmailSubscription] = useState({
+    subscribed: false,
+    loading: false,
+    exists: false,
   });
 
   // Addresses
@@ -318,6 +327,31 @@ const Account = () => {
         is_seller: data.is_seller || false,
       });
       setSellerExistsForAdmin(data.is_seller || false);
+
+      // Fetch email subscription preferences
+      try {
+        const subscription = await EmailSubscriptionService.getUserSubscription(userId);
+        if (subscription) {
+          setEmailSubscription({
+            subscribed: subscription.subscribed_to_new_products,
+            loading: false,
+            exists: true,
+          });
+        } else {
+          setEmailSubscription({
+            subscribed: false,
+            loading: false,
+            exists: false,
+          });
+        }
+      } catch (subscriptionError) {
+        console.error("Error fetching email subscription:", subscriptionError);
+        setEmailSubscription({
+          subscribed: false,
+          loading: false,
+          exists: false,
+        });
+      }
     } else {
       console.error("Account: Error fetching profile or no data:", error, "User ID:", userId);
       
@@ -398,6 +432,54 @@ const Account = () => {
       })
       .eq("user_id", session.user.id);
     if (!error) setIsEditing(false);
+  };
+
+  // Handle email subscription changes
+  const handleEmailSubscriptionChange = async (subscribed: boolean) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) return;
+
+    setEmailSubscription(prev => ({ ...prev, loading: true }));
+
+    try {
+      if (emailSubscription.exists) {
+        // Update existing subscription
+        await EmailSubscriptionService.updateSubscription(session.user.id, subscribed);
+      } else {
+        // Create new subscription
+        await EmailSubscriptionService.upsertSubscription(
+          session.user.id, 
+          userInfo.email, 
+          subscribed
+        );
+      }
+
+      setEmailSubscription({
+        subscribed,
+        loading: false,
+        exists: true,
+      });
+
+      // Show success message
+      toast({
+        title: "Preferences Updated",
+        description: subscribed 
+          ? "You will now receive email notifications about new products and parts!" 
+          : "You have been unsubscribed from email notifications.",
+      });
+
+    } catch (error) {
+      console.error("Error updating email subscription:", error);
+      setEmailSubscription(prev => ({ ...prev, loading: false }));
+      
+      toast({
+        title: "Error",
+        description: "Failed to update email preferences. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Auth listener
@@ -994,6 +1076,40 @@ const Account = () => {
         editingProductId ? "updated" : "listed"
       }.`,
     });
+
+    // Send email notifications for new listings (not updates)
+    if (!editingProductId && savedItem) {
+      try {
+        // Get seller name for the notification
+        const { data: sellerData } = await supabase
+          .from("sellers")
+          .select("name")
+          .eq("id", currentSellerId)
+          .single();
+
+        const sellerName = sellerData?.name || "Unknown Seller";
+
+        // Send email notifications to subscribed users
+        await EmailNotificationService.sendNewProductNotifications({
+          productName: productInfo.name,
+          productDescription: productInfo.description,
+          price: priceValue,
+          sellerName,
+          productType: isPart ? "part" : "product",
+          imageUrl: finalImageUrls[0], // Use first image if available
+        });
+
+        // Show additional success message for notifications
+        toast({
+          title: "Notifications Sent",
+          description: "Email notifications have been sent to subscribed users!",
+        });
+      } catch (notificationError) {
+        console.error("Error sending notifications:", notificationError);
+        // Don't show error to user as the main action (listing product) was successful
+      }
+    }
+
     cleanupAndRefetch();
   };
 
@@ -1843,6 +1959,32 @@ const Account = () => {
             />
           </div>
         </div>
+        
+        {/* Email Preferences Section */}
+        <Separator />
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Email Preferences</h3>
+          <div className="flex items-start space-x-3">
+            <Checkbox
+              id="email-notifications"
+              checked={emailSubscription.subscribed}
+              disabled={emailSubscription.loading}
+              onCheckedChange={(checked) => handleEmailSubscriptionChange(!!checked)}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="email-notifications" className="text-sm font-medium cursor-pointer">
+                Notify me about new products and parts
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Get email notifications when sellers list new products and auto parts that might interest you.
+              </p>
+            </div>
+          </div>
+          {emailSubscription.loading && (
+            <p className="text-xs text-muted-foreground">Updating preferences...</p>
+          )}
+        </div>
+
         {isEditing && (
           <div className="flex space-x-4">
             <Button onClick={handleSaveProfile}>Save Changes</Button>
