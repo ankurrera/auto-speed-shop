@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,6 +26,45 @@ const Checkout = () => {
   const { cartItems, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+      
+      // In development mode, bypass authentication for testing
+      if (import.meta.env.DEV) {
+        console.warn("Development mode: Bypassing authentication for checkout testing");
+        setIsAuthenticated(true);
+        return;
+      }
+      
+      if (!session) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to continue with checkout.",
+          variant: "destructive"
+        });
+        navigate("/account");
+        return;
+      }
+    };
+    
+    checkAuth();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!import.meta.env.DEV) {
+        setIsAuthenticated(!!session);
+        if (!session && event !== 'INITIAL_SESSION') {
+          navigate("/account");
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate, toast]);
 
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
@@ -111,7 +149,7 @@ const Checkout = () => {
   const tax = subtotal * TAX_RATE;
   const total = subtotal + shipping + tax;
 
-  const resetAfterSuccess = () => {
+  const resetAfterSuccess = (orderData?: any) => {
     clearCart();
     setPaypalOrderId(null);
     setLocalOrderId(null);
@@ -119,7 +157,15 @@ const Checkout = () => {
       title: "Order Placed!",
       description: "Thank you for your purchase. Your order has been successfully placed.",
     });
-    navigate("/");
+    
+    // Redirect to order confirmation page with order ID
+    if (orderData?.localOrder?.id) {
+      navigate(`/order-confirmation?order_id=${orderData.localOrder.id}`);
+    } else if (localOrderId) {
+      navigate(`/order-confirmation?order_id=${localOrderId}`);
+    } else {
+      navigate("/");
+    }
   };
 
   // PayPal Buttons integration (Server-Driven)
@@ -170,12 +216,14 @@ const Checkout = () => {
       }
       const captureResult = await captureServerOrder(paypalOrderId, localOrderId);
       if (captureResult?.localOrder?.payment_status === "completed") {
-        resetAfterSuccess();
+        resetAfterSuccess(captureResult);
       } else {
         toast({
           title: "Capture Warning",
           description: "Order captured but payment status not completed.",
         });
+        // Still redirect to confirmation even if status is not completed
+        resetAfterSuccess(captureResult);
       }
     } catch (err: any) {
       console.error("Capture error:", err);
@@ -203,6 +251,32 @@ const Checkout = () => {
       variant: "destructive",
     });
   };
+
+  // Show loading state while checking authentication
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect handled in useEffect, but show message just in case
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <h1 className="text-2xl font-bold mb-4">Authentication Required</h1>
+          <p className="text-muted-foreground mb-8">Please log in to continue with checkout.</p>
+          <Button asChild>
+            <Link to="/account">Log In</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
