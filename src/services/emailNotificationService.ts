@@ -13,10 +13,11 @@ interface ProductNotificationData {
 // Send notification to all subscribed users
 export const sendNewProductNotifications = async (productData: ProductNotificationData) => {
   try {
-    // Get all users subscribed to newsletter (assuming they want new product notifications)
+    // Get all users subscribed to new product notifications
     const { data: subscriptions, error } = await supabase
-      .from('subscribers')
-      .select('email');
+      .from('email_subscriptions')
+      .select('email')
+      .eq('subscribed_to_new_products', true);
 
     if (error) {
       console.error('Error fetching subscriptions:', error);
