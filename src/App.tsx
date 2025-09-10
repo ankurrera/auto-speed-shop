@@ -22,6 +22,7 @@ import OrderConfirmation from "./pages/OrderConfirmation";
 import OrderTracking from "./pages/OrderTracking";
 import OrderDetails from "./pages/OrderDetails";
 import CustomCheckout from "./pages/CustomCheckout";
+import CustomOrderFlowDemo from "./pages/CustomOrderFlowDemo";
 import SellerDashboard from "./pages/SellerDashboard";
 import EmailSubscriptionDemo from "./components/EmailSubscriptionDemo";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -70,6 +71,7 @@ const App = () => {
                     <Route path="/seller-dashboard" element={<SellerDashboard />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/custom-checkout" element={<CustomCheckout />} />
+                    <Route path="/custom-order-demo" element={<CustomOrderFlowDemo />} />
                     <Route path="/order/:orderId" element={<OrderDetails />} />
                     <Route path="/products/:id" element={<ProductDetails />} />
                     <Route path="/new-arrivals" element={<NewArrivals />} />
