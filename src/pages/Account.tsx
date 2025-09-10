@@ -32,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1574,11 +1574,14 @@ const Account = () => {
               </div>
             </div>
 
-            {/* Seller Creation (if admin, optional) */}
-            {userInfo.is_admin && !userInfo.is_seller && (
+            {/* Seller Creation (if admin, always show) */}
+            {userInfo.is_admin && (
               <Card>
                 <CardHeader>
                   <CardTitle>Create Seller Account (Admin)</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Create a new seller account or upgrade existing user to seller
+                  </p>
                 </CardHeader>
                 <CardContent>
                   <form
@@ -1984,8 +1987,10 @@ const Account = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">${order.total.toFixed(2)}</p>
-                  <Button variant="outline" size="sm" className="mt-2">
-                    View Details
+                  <Button variant="outline" size="sm" className="mt-2" asChild>
+                    <Link to={`/orders/${order.id}/tracking`}>
+                      Track Order
+                    </Link>
                   </Button>
                 </div>
               </div>
