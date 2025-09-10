@@ -91,6 +91,7 @@ const Account = () => {
   const [phone, setPhone] = useState("");
   const [loginMode, setLoginMode] = useState<"user" | "admin">("user");
   const [adminExists, setAdminExists] = useState(true);
+  const [showSellerCreationAfterAdmin, setShowSellerCreationAfterAdmin] = useState(false);
 
   // Seller creation (admin)
   const [newSellerName, setNewSellerName] = useState("");
@@ -478,6 +479,8 @@ const Account = () => {
     if (profileData?.is_admin && loginMode === "admin") {
       setIsLoggedIn(true);
       fetchAndSetUserData(data.user.id);
+      // Navigate to admin dashboard after successful admin login
+      navigate("/account/admin-dashboard");
     } else if (!profileData?.is_admin && loginMode === "user") {
       setIsLoggedIn(true);
       fetchAndSetUserData(data.user.id);
@@ -602,6 +605,7 @@ const Account = () => {
               phone: phone || "",
               is_admin: loginMode === "admin",
               is_seller: false,
+              role: loginMode === "admin" ? "admin" : "user",
             })
             .eq("user_id", data.user.id);
           console.log("Profile updated successfully with all fields");
@@ -613,7 +617,8 @@ const Account = () => {
 
       if (loginMode === "admin") {
         setAdminExists(true);
-        alert("Admin account created successfully. Please log in.");
+        alert("Admin account created successfully. Please log in to access your admin dashboard.");
+        setShowSellerCreationAfterAdmin(true); // Show seller creation form
       } else {
         alert("Account created successfully! Please check your email to confirm your account before logging in.");
       }
@@ -764,11 +769,18 @@ const Account = () => {
       setNewSellerPassword("");
       setNewSellerPhoneNumber("");
 
-      // Refresh user data if admin is logged in
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) fetchAndSetUserData(session.user.id);
+      // If this was after admin creation, redirect to login
+      if (showSellerCreationAfterAdmin) {
+        setShowSellerCreationAfterAdmin(false);
+        setView("login");
+        alert("Seller account created! Please log in with your admin credentials to access the admin dashboard.");
+      } else {
+        // Refresh user data if admin is logged in
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) fetchAndSetUserData(session.user.id);
+      }
       
     } catch (error: any) {
       console.error("Unexpected seller creation error:", error);
@@ -1246,6 +1258,94 @@ const Account = () => {
 
   // Unauthenticated screens
   if (!isLoggedIn) {
+    // Show seller creation form after admin signup
+    if (showSellerCreationAfterAdmin) {
+      return (
+        <div className="min-h-screen bg-background">
+          <div className="container mx-auto px-4 py-16">
+            <div className="max-w-md mx-auto">
+              <Card>
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl font-bold">
+                    Create Seller Account
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Now that you've created an admin account, create a seller account to manage products and inventory.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateSellerAccount} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Name</Label>
+                      <Input
+                        value={newSellerName}
+                        onChange={(e) => setNewSellerName(e.target.value)}
+                        placeholder="Enter seller name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={newSellerEmail}
+                        onChange={(e) => setNewSellerEmail(e.target.value)}
+                        placeholder="Enter seller email"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Password</Label>
+                      <Input
+                        type="password"
+                        value={newSellerPassword}
+                        onChange={(e) => setNewSellerPassword(e.target.value)}
+                        placeholder="Enter seller password"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Address (Optional)</Label>
+                      <Input
+                        value={newSellerAddress}
+                        onChange={(e) => setNewSellerAddress(e.target.value)}
+                        placeholder="Enter seller address"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Phone (Optional)</Label>
+                      <Input
+                        type="tel"
+                        value={newSellerPhoneNumber}
+                        onChange={(e) => setNewSellerPhoneNumber(e.target.value)}
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button type="submit" className="flex-1">
+                        Create Seller
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => {
+                          setShowSellerCreationAfterAdmin(false);
+                          setView("login");
+                        }}
+                        className="flex-1"
+                      >
+                        Skip for Now
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-16">
@@ -1598,16 +1698,29 @@ const Account = () => {
                     onClick={() => setShowOrderManagement(true)}
                   />
                 </div>
+                
+                {/* Seller Dashboard Link */}
+                {userInfo.is_seller && (
+                  <div className="mt-6">
+                    <h4 className="text-md font-medium mb-3">Seller Management</h4>
+                    <ActionCard
+                      title="Seller Dashboard"
+                      description="Manage your seller profile and information"
+                      icon={<Car className="h-5 w-5" />}
+                      onClick={() => navigate("/seller-dashboard")}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Seller Creation (if admin, always show) */}
-            {userInfo.is_admin && (
+            {/* Seller Creation (if admin and no seller exists yet) */}
+            {userInfo.is_admin && !sellerExistsForAdmin && (
               <Card>
                 <CardHeader>
                   <CardTitle>Create Seller Account (Admin)</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Create a new seller account or upgrade existing user to seller
+                    Create a new seller account to start managing products and inventory.
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -2064,6 +2177,16 @@ const Account = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {userInfo.is_admin && (
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/account/admin-dashboard")}
+                className="flex items-center gap-2"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Admin Dashboard
+              </Button>
+            )}
             <Button 
               variant="outline" 
               onClick={() => navigate("/dashboard")}
