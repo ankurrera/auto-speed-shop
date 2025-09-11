@@ -2567,7 +2567,14 @@ const Account = () => {
                 <div className="text-right">
                   <p className="font-semibold">${order.total.toFixed(2)}</p>
                   <div className="flex gap-2 mt-2">
-                    {order.status === ORDER_STATUS.INVOICE_SENT && (
+                    {(order.status === ORDER_STATUS.INVOICE_SENT || 
+                      order.status === ORDER_STATUS.INVOICE_ACCEPTED ||
+                      order.status === ORDER_STATUS.PAYMENT_PENDING ||
+                      order.status === ORDER_STATUS.PAYMENT_SUBMITTED ||
+                      order.status === ORDER_STATUS.PAYMENT_VERIFIED ||
+                      order.status === ORDER_STATUS.CONFIRMED ||
+                      order.status === ORDER_STATUS.SHIPPED ||
+                      order.status === ORDER_STATUS.DELIVERED) && (
                       <Button variant="default" size="sm" asChild>
                         <Link to={`/order/${order.id}`}>
                           <FileText className="h-3 w-3 mr-1" />
