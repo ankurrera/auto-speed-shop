@@ -27,6 +27,13 @@ WHERE is_seller = true
   AND is_admin = false
   AND (role IS NULL OR role = '');
 
+-- Fix any regular users with incorrect role values
+UPDATE public.profiles 
+SET role = 'user'
+WHERE is_admin = false 
+  AND is_seller = false
+  AND (role IS NULL OR role = '' OR role != 'user');
+
 -- Ensure all profiles have a role value (fallback to 'user')
 UPDATE public.profiles 
 SET role = 'user'
