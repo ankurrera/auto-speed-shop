@@ -225,7 +225,7 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
   }
 
   return (
-    <Card className="bg-neutral-900/60 border-neutral-800">
+    <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Package className="h-5 w-5" />
