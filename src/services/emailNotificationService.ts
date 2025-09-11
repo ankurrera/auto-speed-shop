@@ -70,8 +70,24 @@ export class EmailNotificationService {
             console.log(`📧 Email notification sent to: ${user.email}`);
           } else {
             failureCount++;
-            const errorData = await response.json();
-            const errorMsg = `Failed to send email to ${user.email}: ${errorData.message}`;
+            let errorMsg = `Failed to send email to ${user.email}`;
+            
+            try {
+              // Check if response is JSON before parsing
+              const contentType = response.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json();
+                errorMsg = `Failed to send email to ${user.email}: ${errorData.message || 'Unknown error'}`;
+              } else {
+                // For non-JSON responses (like HTML error pages), get the text
+                const errorText = await response.text();
+                errorMsg = `Failed to send email to ${user.email}: HTTP ${response.status} - ${errorText.substring(0, 100)}...`;
+              }
+            } catch (parseError) {
+              // If we can't parse the response at all, use a generic error message
+              errorMsg = `Failed to send email to ${user.email}: HTTP ${response.status} - Unable to parse error response`;
+            }
+            
             errors.push(errorMsg);
             console.error(errorMsg);
           }
