@@ -128,63 +128,142 @@ export class EmailNotificationService {
    * Create HTML email template for new product notifications
    */
   private static createEmailTemplate(notification: NewProductNotification): string {
-    const { productName, productDescription, price, sellerName, productType, imageUrl } = notification;
-    
+    const { productName, price, sellerName, productType, imageUrl } = notification;
     // Get base URL - fallback to a default if window is not available (server-side)
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://auto-speed-shop.vercel.app';
-    
+    const unsubscribeUrl = `${baseUrl}/account`; // Adjust if you have a dedicated unsubscribe link
+
     return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>New ${productType === 'part' ? 'Part' : 'Product'} Available</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0; font-size: 28px;">🚗 Auto Speed Shop</h1>
-            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">New ${productType === 'part' ? 'Part' : 'Product'} Alert!</p>
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
-            ${imageUrl ? `
-              <div style="text-align: center; margin-bottom: 20px;">
-                <img src="${imageUrl}" alt="${productName}" style="max-width: 300px; max-height: 200px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-              </div>
-            ` : ''}
-            
-            <h2 style="color: #667eea; margin-bottom: 15px; font-size: 24px;">${productName}</h2>
-            
-            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <p style="margin: 0 0 15px 0; font-size: 16px; color: #666;">${productDescription}</p>
-              
-              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div>
-                  <span style="font-size: 24px; font-weight: bold; color: #28a745;">$${price.toFixed(2)}</span>
-                </div>
-                <div style="text-align: right;">
-                  <p style="margin: 0; color: #666; font-size: 14px;">Listed by</p>
-                  <p style="margin: 0; font-weight: bold; color: #333;">${sellerName}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px;">
-              <a href="${baseUrl}" style="display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; transition: background 0.3s;">
-                View on Auto Speed Shop →
-              </a>
-            </div>
-            
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6; text-align: center;">
-              <p style="margin: 0; color: #666; font-size: 12px;">
-                You're receiving this because you're subscribed to new ${productType} notifications.
-                <br>
-                <a href="${baseUrl}/account" style="color: #667eea;">Manage your email preferences</a>
-              </p>
-            </div>
-          </div>
-        </body>
-      </html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>New Product Alert - Auto Speed Shop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #111;
+      color: #fff;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    img {
+      max-width: 100% !important;
+      height: auto !important;
+      display: block;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #111;
+      color: #fff;
+    }
+    .headline {
+      font-size: 28px;
+      font-weight: 800;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 40px 20px 10px;
+      line-height: 1.3;
+    }
+    .subline {
+      text-align: center;
+      font-size: 15px;
+      color: #ccc;
+      padding: 0 20px 30px;
+    }
+    .cta-button {
+      background: #e50914;
+      color: #fff !important;
+      text-decoration: none;
+      padding: 14px 32px;
+      font-size: 16px;
+      font-weight: 600;
+      display: inline-block;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+    .footer {
+      background: #f4f4f4;
+      color: #333;
+      text-align: center;
+      padding: 25px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .footer a {
+      color: #e50914;
+      text-decoration: none;
+    }
+    @media only screen and (max-width: 600px) {
+      .headline { font-size: 22px !important; }
+      .cta-button {
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box;
+        text-align: center !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <table class="container" width="100%" cellpadding="0" cellspacing="0">
+
+    <!-- Header -->
+    <tr>
+      <td align="center" style="padding: 20px; font-size:14px; letter-spacing:1px; text-transform:uppercase; color:#aaa;">
+        Auto Speed Shop • New Part Alert
+      </td>
+    </tr>
+
+    <!-- Headline -->
+    <tr>
+      <td class="headline">
+        New Auto Part<br> Just For You
+      </td>
+    </tr>
+    <tr>
+      <td class="subline">
+        Upgrade your ride with our latest arrival – precision built and performance ready.
+      </td>
+    </tr>
+
+    <!-- Product Image -->
+    <tr>
+      <td align="center">
+        <img src="${imageUrl || ''}" alt="${productName}">
+      </td>
+    </tr>
+
+    <!-- Product Info -->
+    <tr>
+      <td style="padding:30px 20px; text-align:center; color:#fff;">
+        <h2 style="margin:0; font-size:20px; font-weight:700;">${productName}</h2>
+        <p style="margin:6px 0; font-size:15px; color:#bbb;">Listed by <b>${sellerName}</b></p>
+        <p style="margin:10px 0 20px; font-size:22px; font-weight:800; color:#e50914;">$${price.toFixed(2)}</p>
+        <a href="${baseUrl}" class="cta-button">Shop Now</a>
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td class="footer">
+        Auto Speed Shop<br>
+        support@autospeedshop.com | +123-456-7890<br>
+        <a href="${unsubscribeUrl}">Unsubscribe</a>
+      </td>
+    </tr>
+
+  </table>
+
+</body>
+</html>
     `;
   }
 
