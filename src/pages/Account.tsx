@@ -81,6 +81,13 @@ const categories = [
 ];
 
 const Account = () => {
+  // Helper function to check if user has admin access (shared access)
+  const hasAdminAccess = (userInfo: any) => {
+    return userInfo.is_admin && 
+           (userInfo.role === "admin" || 
+            (userInfo.is_seller && userInfo.role === "admin"));
+  };
+
   // Auth / profile
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [view, setView] = useState<"login" | "signup">("login");
@@ -116,6 +123,7 @@ const Account = () => {
     phone: "",
     is_admin: false,
     is_seller: false,
+    role: "user",
   });
 
   // Email subscription state
@@ -254,7 +262,7 @@ const Account = () => {
   // Admin metrics (totals)
   const { data: adminMetrics } = useQuery({
     queryKey: ["admin-metrics"],
-    enabled: userInfo.is_admin,
+    enabled: hasAdminAccess(userInfo),
     queryFn: async () => {
       // Get current user for admin functions
       const { data: { user } } = await supabase.auth.getUser();
@@ -264,10 +272,11 @@ const Account = () => {
 
       const [userCountResult, { count: orderItemsCount }, productRes, partRes, allOrdersRes] =
         await Promise.all([
-          // Count only regular users (not admin AND not seller)
+          // Count only regular users (is_admin = FALSE, is_seller = FALSE, role = user)
           supabase.from("profiles").select("*", { count: "exact", head: true })
-            .neq("is_admin", true)
-            .neq("is_seller", true),
+            .eq("is_admin", false)
+            .eq("is_seller", false)
+            .eq("role", "user"),
           // Count from order_items table instead of orders table
           supabase.from("order_items").select("*", { count: "exact", head: true }),
           supabase.from("products").select("id, price, stock_quantity, is_active"),
@@ -337,7 +346,7 @@ const Account = () => {
   const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("first_name, last_name, email, phone, is_admin, is_seller")
+      .select("first_name, last_name, email, phone, is_admin, is_seller, role")
       .eq("user_id", userId)
       .single();
     
@@ -349,6 +358,7 @@ const Account = () => {
         phone: data.phone || "",
         is_admin: data.is_admin || false,
         is_seller: data.is_seller || false,
+        role: data.role || "user",
       });
       setSellerExistsForAdmin(data.is_seller || false);
 
@@ -525,6 +535,7 @@ const Account = () => {
             phone: "",
             is_admin: false,
             is_seller: false,
+            role: "user",
           });
           setAddresses([]);
           setOrders([]);
@@ -1541,7 +1552,7 @@ const Account = () => {
       is_featured: boolean;
     }) => {
       // Check if user is admin
-      if (!userInfo.is_admin) {
+      if (!hasAdminAccess(userInfo)) {
         throw new Error("Only administrators can feature/unfeature products.");
       }
       
@@ -1581,7 +1592,7 @@ const Account = () => {
       is_featured: boolean;
     }) => {
       // Check if user is admin
-      if (!userInfo.is_admin) {
+      if (!hasAdminAccess(userInfo)) {
         throw new Error("Only administrators can feature/unfeature parts.");
       }
       
@@ -2091,7 +2102,7 @@ const Account = () => {
                 <div>
                   <p className="font-medium">Administrator Status</p>
                   <p className="text-sm text-muted-foreground">
-                    User Role: {userInfo.is_admin ? "Administrator" : "User"}
+                    User Role: {hasAdminAccess(userInfo) ? "Administrator" : "User"}
                     {userInfo.is_seller ? " | Seller" : ""}
                   </p>
                 </div>
@@ -2725,7 +2736,7 @@ const Account = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {userInfo.is_admin && currentPath !== "admin-dashboard" && (
+            {hasAdminAccess(userInfo) && currentPath !== "admin-dashboard" && (
               <Button 
                 variant="outline" 
                 onClick={() => navigate("/account/admin-dashboard")}
@@ -3133,7 +3144,7 @@ const Account = () => {
                         active={part.is_active}
                         featured={part.is_featured}
                         disabled={!sellerId || deletePartMutation.isPending || archivePartMutation.isPending}
-                        isAdmin={userInfo.is_admin}
+                        isAdmin={hasAdminAccess(userInfo)}
                         onEdit={() => handleEditPart(part)}
                         onArchive={() =>
                           handleArchivePart(part.id, part.is_active)
@@ -3152,7 +3163,7 @@ const Account = () => {
                         active={product.is_active}
                         featured={product.is_featured}
                         disabled={!sellerId || deleteProductMutation.isPending || archiveProductMutation.isPending}
-                        isAdmin={userInfo.is_admin}
+                        isAdmin={hasAdminAccess(userInfo)}
                         onEdit={() => handleEditProduct(product)}
                         onArchive={() =>
                           handleArchiveProduct(product.id, product.is_active)
