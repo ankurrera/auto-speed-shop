@@ -2469,7 +2469,7 @@ const Account = () => {
                   <div className="flex gap-2 mt-2">
                     {order.status === ORDER_STATUS.INVOICE_SENT && (
                       <Button variant="default" size="sm" asChild>
-                        <Link to={`/orders/${order.id}`}>
+                        <Link to={`/order/${order.id}`}>
                           <FileText className="h-3 w-3 mr-1" />
                           Show Invoice
                         </Link>
