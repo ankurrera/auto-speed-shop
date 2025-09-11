@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getOrderDetails, respondToInvoice, submitPayment } from "@/services/customOrderService";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
+import InvoiceDisplay from "@/components/InvoiceDisplay";
 
 interface OrderDetails {
   id: string;
@@ -234,7 +235,7 @@ const OrderDetails = () => {
       case ORDER_STATUS.PENDING_ADMIN_REVIEW:
         return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending Review</Badge>;
       case ORDER_STATUS.INVOICE_SENT:
-        return <Badge variant="outline"><FileText className="h-3 w-3 mr-1" />Invoice Sent</Badge>;
+        return <Badge variant="outline"><FileText className="h-3 w-3 mr-1" />Invoice Received</Badge>;
       case ORDER_STATUS.INVOICE_ACCEPTED:
         return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Invoice Accepted</Badge>;
       case ORDER_STATUS.INVOICE_DECLINED:
@@ -382,8 +383,20 @@ const OrderDetails = () => {
             </Card>
           )}
 
-          {/* Invoice Section */}
-          {hasInvoice && (
+          {/* Invoice Section - New Formal Design */}
+          {hasInvoice && canRespondToInvoice && (
+            <div className="mb-8">
+              <InvoiceDisplay
+                orderDetails={orderDetails}
+                onAccept={() => handleInvoiceResponse(true)}
+                onDecline={() => handleInvoiceResponse(false)}
+                isResponding={responding}
+              />
+            </div>
+          )}
+
+          {/* Simple Invoice Summary for Non-Interactive Cases */}
+          {hasInvoice && !canRespondToInvoice && (
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -423,37 +436,6 @@ const OrderDetails = () => {
                     <span>${orderDetails.total_amount.toFixed(2)}</span>
                   </div>
                 </div>
-
-                {/* Invoice Response Actions */}
-                {canRespondToInvoice && (
-                  <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                    <div className="flex items-center gap-2 mb-3">
-                      <AlertCircle className="h-5 w-5 text-yellow-600" />
-                      <h4 className="font-semibold">Action Required</h4>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Please review the invoice above and choose to accept or decline.
-                    </p>
-                    <div className="flex gap-3">
-                      <Button 
-                        onClick={() => handleInvoiceResponse(true)}
-                        disabled={responding}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Accept Invoice
-                      </Button>
-                      <Button 
-                        onClick={() => handleInvoiceResponse(false)}
-                        disabled={responding}
-                        variant="destructive"
-                      >
-                        <XCircle className="h-4 w-4 mr-2" />
-                        Decline Invoice
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           )}
