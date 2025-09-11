@@ -136,7 +136,7 @@ const Cart = () => {
 
             {/* Checkout Button */}
             <Button size="lg" className="w-full" asChild>
-              <Link to="/checkout">Proceed to Checkout</Link>
+              <Link to="/custom-checkout">Proceed to Checkout</Link>
             </Button>
 
             {/* Shipping Info */}

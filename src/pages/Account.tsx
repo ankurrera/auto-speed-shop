@@ -22,7 +22,8 @@ import {
   X,
   Plus,
   RefreshCcw,
-  Car
+  Car,
+  FileText
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,10 @@ import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
+import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
+import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
+import { EmailNotificationService } from "@/services/emailNotificationService";
+import { ORDER_STATUS } from "@/types/order";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -82,6 +87,7 @@ const Account = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
+  const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -92,81 +98,6 @@ const Account = () => {
   const [loginMode, setLoginMode] = useState<"user" | "admin">("user");
   const [adminExists, setAdminExists] = useState(true);
   const [showSellerCreationAfterAdmin, setShowSellerCreationAfterAdmin] = useState(false);
-
-  // Email subscription management state
-  const [emailSubscription, setEmailSubscription] = useState<{
-    subscribed_to_new_products: boolean;
-    email: string;
-  } | null>(null);
-
-  // Fetch email subscription data
-  const fetchEmailSubscription = useCallback(async (userId: string, userEmail: string) => {
-    // Check if user has email subscription preferences
-    const { data, error } = await supabase
-      .from("email_subscriptions")
-      .select("subscribed_to_new_products, email")
-      .eq("user_id", userId)
-      .single();
-    
-    if (!error && data) {
-      // User has subscription preferences
-      setEmailSubscription({
-        subscribed_to_new_products: data.subscribed_to_new_products || false,
-        email: data.email,
-      });
-    } else {
-      // User doesn't have subscription preferences yet, default to false
-      setEmailSubscription({
-        subscribed_to_new_products: false,
-        email: userEmail,
-      });
-    }
-  }, []);
-
-  // Save email subscription preferences
-  const handleSaveEmailSubscription = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    
-    if (!session) {
-      toast({
-        title: "Error",
-        description: "You must be logged in.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!emailSubscription) return;
-
-    try {
-      // Upsert email subscription preferences
-      const { error } = await supabase
-        .from("email_subscriptions")
-        .upsert(
-          {
-            user_id: session.user.id,
-            email: session.user.email || "",
-            subscribed_to_new_products: emailSubscription.subscribed_to_new_products,
-          },
-          { onConflict: "user_id" }
-        );
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Email preferences updated.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   // Seller creation (admin)
   const [newSellerName, setNewSellerName] = useState("");
@@ -184,6 +115,13 @@ const Account = () => {
     phone: "",
     is_admin: false,
     is_seller: false,
+  });
+
+  // Email subscription state
+  const [emailSubscription, setEmailSubscription] = useState({
+    subscribed: false,
+    loading: false,
+    exists: false,
   });
 
   // Addresses
@@ -314,18 +252,28 @@ const Account = () => {
     queryKey: ["admin-metrics"],
     enabled: userInfo.is_admin,
     queryFn: async () => {
-      const [{ count: userCount }, { count: orderCount }, productRes, partRes, revenueRes] =
+      // Get current user for admin functions
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const [{ count: userCount }, { count: orderItemsCount }, productRes, partRes, allOrdersRes] =
         await Promise.all([
           supabase.from("profiles").select("*", { count: "exact", head: true }),
-            supabase.from("orders").select("*", { count: "exact", head: true }),
-            supabase.from("products").select("id, price, stock_quantity, is_active"),
-            supabase.from("parts").select("id, price, stock_quantity, is_active"),
-            supabase.from("orders").select("total_amount")
+          // Count from order_items table instead of orders table
+          supabase.from("order_items").select("*", { count: "exact", head: true }),
+          supabase.from("products").select("id, price, stock_quantity, is_active"),
+          supabase.from("parts").select("id, price, stock_quantity, is_active"),
+          // Use admin function to get all orders for revenue calculation
+          supabase.rpc('get_all_orders_for_admin', {
+            requesting_user_id: user.id
+          })
         ]);
 
       let revenue = 0;
-      if (revenueRes.data) {
-        revenue = revenueRes.data.reduce(
+      if (allOrdersRes.data) {
+        revenue = allOrdersRes.data.reduce(
           (sum: number, row: { total_amount: number }) => sum + (row.total_amount || 0),
           0
         );
@@ -333,7 +281,7 @@ const Account = () => {
 
       return {
         users: userCount ?? 0,
-        orders: orderCount ?? 0,
+        orders: orderItemsCount ?? 0, // Now showing count from order_items table
         productsActive: [
           ...(productRes.data || []),
           ...(partRes.data || []),
@@ -389,13 +337,35 @@ const Account = () => {
         lastName: data.last_name || "",
         email: data.email || "",
         phone: data.phone || "",
-        isAdmin: data.is_admin || false,
-        isSeller: data.is_seller || false,
+        is_admin: data.is_admin || false,
+        is_seller: data.is_seller || false,
       });
       setSellerExistsForAdmin(data.is_seller || false);
-      
-      // Also fetch email subscription preferences
-      fetchEmailSubscription(userId, data.email || "");
+
+      // Fetch email subscription preferences
+      try {
+        const subscription = await EmailSubscriptionService.getUserSubscription(userId);
+        if (subscription) {
+          setEmailSubscription({
+            subscribed: subscription.subscribed_to_new_products,
+            loading: false,
+            exists: true,
+          });
+        } else {
+          setEmailSubscription({
+            subscribed: false,
+            loading: false,
+            exists: false,
+          });
+        }
+      } catch (subscriptionError) {
+        console.error("Error fetching email subscription:", subscriptionError);
+        setEmailSubscription({
+          subscribed: false,
+          loading: false,
+          exists: false,
+        });
+      }
     } else {
       console.error("Account: Error fetching profile or no data:", error, "User ID:", userId);
       
@@ -429,7 +399,7 @@ const Account = () => {
         }
       }
     }
-  }, [fetchEmailSubscription]);
+  }, []);
 
   const checkSellerExists = useCallback(async (userId: string) => {
     const { count, error } = await supabase
@@ -476,6 +446,54 @@ const Account = () => {
       })
       .eq("user_id", session.user.id);
     if (!error) setIsEditing(false);
+  };
+
+  // Handle email subscription changes
+  const handleEmailSubscriptionChange = async (subscribed: boolean) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) return;
+
+    setEmailSubscription(prev => ({ ...prev, loading: true }));
+
+    try {
+      if (emailSubscription.exists) {
+        // Update existing subscription
+        await EmailSubscriptionService.updateSubscription(session.user.id, subscribed);
+      } else {
+        // Create new subscription
+        await EmailSubscriptionService.upsertSubscription(
+          session.user.id, 
+          userInfo.email, 
+          subscribed
+        );
+      }
+
+      setEmailSubscription({
+        subscribed,
+        loading: false,
+        exists: true,
+      });
+
+      // Show success message
+      toast({
+        title: "Preferences Updated",
+        description: subscribed 
+          ? "You will now receive email notifications about new products and parts!" 
+          : "You have been unsubscribed from email notifications.",
+      });
+
+    } catch (error) {
+      console.error("Error updating email subscription:", error);
+      setEmailSubscription(prev => ({ ...prev, loading: false }));
+      
+      toast({
+        title: "Error",
+        description: "Failed to update email preferences. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Auth listener
@@ -1073,25 +1091,36 @@ const Account = () => {
       }.`,
     });
 
-    // Send email notifications for new products/parts (not updates)
+    // Send email notifications for new listings (not updates)
     if (!editingProductId && savedItem) {
       try {
-        const { sendNewProductNotifications, getSellerName } = await import('@/services/emailNotificationService');
-        const sellerName = await getSellerName(currentSellerId);
-        
-        await sendNewProductNotifications({
-          productName: savedItem.name,
-          productDescription: savedItem.description || undefined,
-          productPrice: savedItem.price,
-          productCategory: isPart ? specificationsPayload.category : savedItem.category,
-          productType: isPart ? 'part' : 'product',
+        // Get seller name for the notification
+        const { data: sellerData } = await supabase
+          .from("sellers")
+          .select("name")
+          .eq("id", currentSellerId)
+          .single();
+
+        const sellerName = sellerData?.name || "Unknown Seller";
+
+        // Send email notifications to subscribed users
+        await EmailNotificationService.sendNewProductNotifications({
+          productName: productInfo.name,
+          productDescription: productInfo.description,
+          price: priceValue,
           sellerName,
+          productType: isPart ? "part" : "product",
+          imageUrl: finalImageUrls[0], // Use first image if available
         });
-        
-        console.log('Email notifications sent successfully');
+
+        // Show additional success message for notifications
+        toast({
+          title: "Notifications Sent",
+          description: "Email notifications have been sent to subscribed users!",
+        });
       } catch (notificationError) {
-        console.error('Failed to send email notifications:', notificationError);
-        // Don't show error to user as the main action (product creation) was successful
+        console.error("Error sending notifications:", notificationError);
+        // Don't show error to user as the main action (listing product) was successful
       }
     }
 
@@ -1172,6 +1201,42 @@ const Account = () => {
   // Deletion / archive mutations
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the product belongs to this seller
+      const { data: productCheck, error: checkError } = await supabase
+        .from("products")
+        .select("seller_id")
+        .eq("id", productId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Product not found: ${checkError.message}`);
+      }
+      
+      if (productCheck.seller_id !== sellerId) {
+        throw new Error("You can only delete your own products.");
+      }
+      
+      // Delete related records first to avoid foreign key constraint errors
+      // Delete from cart_items where product_id references this product
+      const { error: cartError } = await supabase
+        .from("cart_items")
+        .delete()
+        .eq("product_id", productId);
+      if (cartError) throw cartError;
+      
+      // Delete from wishlist where product_id references this product
+      const { error: wishlistError } = await supabase
+        .from("wishlist")
+        .delete()
+        .eq("product_id", productId);
+      if (wishlistError) throw wishlistError;
+      
+      // Finally delete the product itself
       const { error } = await supabase
         .from("products")
         .delete()
@@ -1182,10 +1247,60 @@ const Account = () => {
       toast({ title: "Deleted", description: "Product removed." });
       queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete product: ${error.message}`,
+        variant: "destructive",
+      });
+    },
   });
 
   const deletePartMutation = useMutation({
     mutationFn: async (partId: string) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the part belongs to this seller
+      const { data: partCheck, error: checkError } = await supabase
+        .from("parts")
+        .select("seller_id")
+        .eq("id", partId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Part not found: ${checkError.message}`);
+      }
+      
+      if (partCheck.seller_id !== sellerId) {
+        throw new Error("You can only delete your own parts.");
+      }
+      
+      // Delete related records first to avoid foreign key constraint errors
+      // Delete from cart_items where part_id references this part
+      const { error: cartError } = await supabase
+        .from("cart_items")
+        .delete()
+        .eq("part_id", partId);
+      if (cartError) throw cartError;
+      
+      // Delete from wishlist where part_id references this part
+      const { error: wishlistError } = await supabase
+        .from("wishlist")
+        .delete()
+        .eq("part_id", partId);
+      if (wishlistError) throw wishlistError;
+      
+      // Delete from part_fitments where part_id references this part
+      const { error: fitmentError } = await supabase
+        .from("part_fitments")
+        .delete()
+        .eq("part_id", partId);
+      if (fitmentError) throw fitmentError;
+      
+      // Finally delete the part itself
       const { error } = await supabase
         .from("parts")
         .delete()
@@ -1195,6 +1310,13 @@ const Account = () => {
     onSuccess: () => {
       toast({ title: "Deleted", description: "Part removed." });
       queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete part: ${error.message}`,
+        variant: "destructive",
+      });
     },
   });
 
@@ -1206,6 +1328,26 @@ const Account = () => {
       productId: string;
       is_active: boolean;
     }) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the product belongs to this seller
+      const { data: productCheck, error: checkError } = await supabase
+        .from("products")
+        .select("seller_id")
+        .eq("id", productId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Product not found: ${checkError.message}`);
+      }
+      
+      if (productCheck.seller_id !== sellerId) {
+        throw new Error("You can only modify your own products.");
+      }
+      
       const { error } = await supabase
         .from("products")
         .update({ is_active: !is_active })
@@ -1221,6 +1363,13 @@ const Account = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to archive/unarchive product: ${error.message}`,
+        variant: "destructive",
+      });
+    },
   });
 
   const archivePartMutation = useMutation({
@@ -1231,6 +1380,26 @@ const Account = () => {
       partId: string;
       is_active: boolean;
     }) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the part belongs to this seller
+      const { data: partCheck, error: checkError } = await supabase
+        .from("parts")
+        .select("seller_id")
+        .eq("id", partId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Part not found: ${checkError.message}`);
+      }
+      
+      if (partCheck.seller_id !== sellerId) {
+        throw new Error("You can only modify your own parts.");
+      }
+      
       const { error } = await supabase
         .from("parts")
         .update({ is_active: !is_active })
@@ -1245,6 +1414,13 @@ const Account = () => {
         }.`,
       });
       queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to archive/unarchive part: ${error.message}`,
+        variant: "destructive",
+      });
     },
   });
 
@@ -1673,6 +1849,9 @@ const Account = () => {
     if (showOrderManagement) {
       return <AdminOrderManagement onBack={() => setShowOrderManagement(false)} />;
     }
+    if (showInvoiceManagement) {
+      return <AdminInvoiceManagement onBack={() => setShowInvoiceManagement(false)} />;
+    }
     switch (currentPath) {
       case "addresses":
         return renderAddressesContent();
@@ -1791,13 +1970,37 @@ const Account = () => {
                     title="Manage Products"
                     description="Add, edit, or remove products"
                     icon={<Boxes className="h-5 w-5" />}
-                    onClick={() => setShowManageProducts(true)}
+                    onClick={() => {
+                      if (!userInfo.is_seller) {
+                        toast({
+                          title: "Access Denied",
+                          description: "You need to be a seller to manage products.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      if (!sellerId) {
+                        toast({
+                          title: "Error",
+                          description: "Seller ID not found. Please contact support.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      setShowManageProducts(true);
+                    }}
                   />
                   <ActionCard
                     title="View Orders"
                     description="Monitor and process orders"
                     icon={<Package className="h-5 w-5" />}
                     onClick={() => setShowOrderManagement(true)}
+                  />
+                  <ActionCard
+                    title="Invoice Management"
+                    description="Create invoices and verify payments"
+                    icon={<FileText className="h-5 w-5" />}
+                    onClick={() => setShowInvoiceManagement(true)}
                   />
                 </div>
                 
@@ -1890,114 +2093,94 @@ const Account = () => {
 
   // Profile Content
   const renderProfileContent = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center">
-            <UserIcon className="h-5 w-5 mr-2" />
-            Profile Information
-          </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEditing((p) => !p)}
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            {isEditing ? "Cancel" : "Edit"}
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>First Name</Label>
-              <Input
-                value={userInfo.firstName}
-                disabled={!isEditing}
-                onChange={(e) =>
-                  setUserInfo({ ...userInfo, firstName: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Last Name</Label>
-              <Input
-                value={userInfo.lastName}
-                disabled={!isEditing}
-                onChange={(e) =>
-                  setUserInfo({ ...userInfo, lastName: e.target.value })
-                }
-              />
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input value={userInfo.email} disabled />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input
-                value={userInfo.phone}
-                disabled={!isEditing}
-                onChange={(e) =>
-                  setUserInfo({ ...userInfo, phone: e.target.value })
-                }
-              />
-            </div>
-          </div>
-          {isEditing && (
-            <div className="flex space-x-4">
-              <Button onClick={handleSaveProfile}>Save Changes</Button>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
-                Cancel
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {renderEmailSubscriptionContent()}
-    </div>
-  );
-
-  // Email Subscription Content
-  const renderEmailSubscriptionContent = () => (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center">
-          📧 Email Notifications
+          <UserIcon className="h-5 w-5 mr-2" />
+          Profile Information
         </CardTitle>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsEditing((p) => !p)}
+        >
+          <Edit className="h-4 w-4 mr-2" />
+          {isEditing ? "Cancel" : "Edit"}
+        </Button>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center space-x-3">
-          <Checkbox
-            id="new-products"
-            checked={emailSubscription?.subscribed_to_new_products || false}
-            onCheckedChange={(checked) => 
-              setEmailSubscription(prev => prev ? {
-                ...prev,
-                subscribed_to_new_products: Boolean(checked)
-              } : {
-                email: "",
-                subscribed_to_new_products: Boolean(checked)
-              })
-            }
-          />
-          <div className="space-y-1">
-            <Label htmlFor="new-products" className="text-sm font-medium cursor-pointer">
-              Notify me about new products and parts
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Get email notifications when new auto parts and products are listed by sellers
-            </p>
+      <CardContent className="space-y-6">
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label>First Name</Label>
+            <Input
+              value={userInfo.firstName}
+              disabled={!isEditing}
+              onChange={(e) =>
+                setUserInfo({ ...userInfo, firstName: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Last Name</Label>
+            <Input
+              value={userInfo.lastName}
+              disabled={!isEditing}
+              onChange={(e) =>
+                setUserInfo({ ...userInfo, lastName: e.target.value })
+              }
+            />
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <Input value={userInfo.email} disabled />
+          </div>
+          <div className="space-y-2">
+            <Label>Phone</Label>
+            <Input
+              value={userInfo.phone}
+              disabled={!isEditing}
+              onChange={(e) =>
+                setUserInfo({ ...userInfo, phone: e.target.value })
+              }
+            />
           </div>
         </div>
         
-        <div className="flex space-x-4 pt-4">
-          <Button onClick={handleSaveEmailSubscription} size="sm">
-            Save Preferences
-          </Button>
+        {/* Email Preferences Section */}
+        <Separator />
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Email Preferences</h3>
+          <div className="flex items-start space-x-3">
+            <Checkbox
+              id="email-notifications"
+              checked={emailSubscription.subscribed}
+              disabled={emailSubscription.loading}
+              onCheckedChange={(checked) => handleEmailSubscriptionChange(!!checked)}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="email-notifications" className="text-sm font-medium cursor-pointer">
+                Notify me about new products and parts
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Get email notifications when sellers list new products and auto parts that might interest you.
+              </p>
+            </div>
+          </div>
+          {emailSubscription.loading && (
+            <p className="text-xs text-muted-foreground">Updating preferences...</p>
+          )}
         </div>
+
+        {isEditing && (
+          <div className="flex space-x-4">
+            <Button onClick={handleSaveProfile}>Save Changes</Button>
+            <Button variant="outline" onClick={() => setIsEditing(false)}>
+              Cancel
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -2237,6 +2420,14 @@ const Account = () => {
     </div>
   );
 
+  // Helper function to transform order status for user display
+  const getUserDisplayStatus = (status: string) => {
+    if (status === ORDER_STATUS.INVOICE_SENT) {
+      return "Invoice Received";
+    }
+    return status;
+  };
+
   // Orders
   const renderOrdersContent = () => (
     <Card>
@@ -2269,17 +2460,27 @@ const Account = () => {
                           : "bg-yellow-200 text-yellow-800"
                       }`}
                     >
-                      {order.status}
+                      {getUserDisplayStatus(order.status)}
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">${order.total.toFixed(2)}</p>
-                  <Button variant="outline" size="sm" className="mt-2" asChild>
-                    <Link to={`/orders/${order.id}/tracking`}>
-                      Track Order
-                    </Link>
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    {order.status === ORDER_STATUS.INVOICE_SENT && (
+                      <Button variant="default" size="sm" asChild>
+                        <Link to={`/order/${order.id}`}>
+                          <FileText className="h-3 w-3 mr-1" />
+                          Show Invoice
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/orders/${order.id}/tracking`}>
+                        Track Order
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -2396,8 +2597,21 @@ const Account = () => {
             </div>
 
             <div className="p-6 space-y-10">
-              {/* Listing Form */}
-              <Card className="bg-card border-border">
+              {!sellerId ? (
+                <Card className="bg-card border-border">
+                  <CardContent className="p-6 text-center">
+                    <p className="text-muted-foreground">
+                      Loading seller information...
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      If this persists, please contact support.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {/* Listing Form */}
+                  <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     {editingProductId ? "Edit Listing" : "Create New Listing"}
@@ -2709,6 +2923,7 @@ const Account = () => {
                         metaRight={`$${part.price}`}
                         quantity={part.stock_quantity}
                         active={part.is_active}
+                        disabled={!sellerId || deletePartMutation.isPending || archivePartMutation.isPending}
                         onEdit={() => handleEditPart(part)}
                         onArchive={() =>
                           handleArchivePart(part.id, part.is_active)
@@ -2724,6 +2939,7 @@ const Account = () => {
                         metaRight={`$${product.price}`}
                         quantity={product.stock_quantity}
                         active={product.is_active}
+                        disabled={!sellerId || deleteProductMutation.isPending || archiveProductMutation.isPending}
                         onEdit={() => handleEditProduct(product)}
                         onArchive={() =>
                           handleArchiveProduct(product.id, product.is_active)
@@ -2734,6 +2950,8 @@ const Account = () => {
                   </div>
                 )}
               </div>
+            </>
+          )}
             </div>
           </div>
         </div>
@@ -2808,6 +3026,7 @@ const ListingRow = ({
   onEdit,
   onArchive,
   onDelete,
+  disabled = false,
 }: {
   title: string;
   metaLeft?: string;
@@ -2817,6 +3036,7 @@ const ListingRow = ({
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  disabled?: boolean;
 }) => (
   <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 border border-border rounded-lg bg-card/40">
     <div className="flex-1 space-y-1">
@@ -2835,15 +3055,15 @@ const ListingRow = ({
       </div>
     </div>
     <div className="flex flex-wrap gap-2">
-      <Button variant="outline" size="sm" onClick={onEdit}>
+      <Button variant="outline" size="sm" onClick={onEdit} disabled={disabled}>
         <Edit className="h-4 w-4 mr-1" />
         Edit
       </Button>
-      <Button variant="ghost" size="sm" onClick={onArchive}>
+      <Button variant="ghost" size="sm" onClick={onArchive} disabled={disabled}>
         <Archive className="h-4 w-4 mr-1" />
         {active ? "Archive" : "Unarchive"}
       </Button>
-      <Button variant="destructive" size="sm" onClick={onDelete}>
+      <Button variant="destructive" size="sm" onClick={onDelete} disabled={disabled}>
         <Trash2 className="h-4 w-4 mr-1" />
         Delete
       </Button>
