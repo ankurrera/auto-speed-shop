@@ -26,6 +26,7 @@ import CustomOrderFlowDemo from "./pages/CustomOrderFlowDemo";
 import InvoiceDemo from "./pages/InvoiceDemo";
 import ShowInvoiceButtonDemo from "./pages/ShowInvoiceButtonDemo";
 import TrackOrderDemo from "./pages/TrackOrderDemo";
+import AdminStatusDemo from "./pages/AdminStatusDemo";
 import SellerDashboard from "./pages/SellerDashboard";
 import EmailSubscriptionDemo from "./components/EmailSubscriptionDemo";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -67,6 +68,7 @@ const App = () => {
                     <Route path="/custom-checkout" element={<CustomCheckout />} />
                     <Route path="/custom-order-demo" element={<CustomOrderFlowDemo />} />
                     <Route path="/track-order-demo" element={<TrackOrderDemo />} />
+                    <Route path="/admin-status-demo" element={<AdminStatusDemo />} />
                     <Route path="/invoice-demo" element={<InvoiceDemo />} />
                     <Route path="/show-invoice-button-demo" element={<ShowInvoiceButtonDemo />} />
                     <Route path="/order/:orderId" element={<OrderDetails />} />

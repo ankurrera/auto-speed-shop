@@ -5,7 +5,7 @@ interface TrackingStep {
   id: string;
   title: string;
   description: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   status: 'pending' | 'completed' | 'cancelled';
 }
 
