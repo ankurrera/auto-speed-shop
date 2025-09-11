@@ -299,6 +299,53 @@ export async function verifyPayment(orderId: string, verified: boolean) {
   }
 }
 
+export async function cancelOrder(orderId: string, reason?: string) {
+  try {
+    // Handle development mode with sample orders
+    const isDevelopment = import.meta.env.DEV;
+    const isSampleOrder = orderId.startsWith('sample-');
+    
+    if (isDevelopment && isSampleOrder) {
+      // For sample orders in development mode, simulate successful cancellation
+      console.log(`[DEV MODE] Simulating order cancellation for sample order: ${orderId}`);
+      return {
+        id: orderId,
+        status: ORDER_STATUS.CANCELLED,
+        payment_status: PAYMENT_STATUS.FAILED,
+        notes: reason || 'Order cancelled by customer',
+        updated_at: new Date().toISOString()
+      };
+    }
+
+    // Get current user for admin function
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Use admin function to cancel the order
+    const { data: orders, error } = await supabase
+      .rpc('admin_cancel_order', {
+        requesting_user_id: user.id,
+        target_order_id: orderId,
+        cancellation_reason: reason || 'Order cancelled by customer'
+      });
+
+    if (error) {
+      throw new Error(`Failed to cancel order: ${error.message}`);
+    }
+
+    if (!orders || orders.length === 0) {
+      throw new Error(`Order ${orderId} not found or could not be cancelled`);
+    }
+
+    return orders[0];
+  } catch (error) {
+    console.error("Cancel order error:", error);
+    throw error;
+  }
+}
+
 export async function getOrderDetails(orderId: string) {
   try {
     // Handle development mode with sample orders
