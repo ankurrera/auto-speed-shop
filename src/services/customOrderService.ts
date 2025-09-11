@@ -113,46 +113,33 @@ export async function createInvoice(orderId: string, invoice: OrderInvoice) {
       };
     }
 
-    // First check if the order exists
-    const { data: existingOrder, error: checkError } = await supabase
-      .from("orders")
-      .select("id, status")
-      .eq("id", orderId)
-      .maybeSingle();
-
-    if (checkError) {
-      throw new Error(`Failed to check order existence: ${checkError.message}`);
+    // Get current user for admin function
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
     }
 
-    if (!existingOrder) {
-      throw new Error(`Order with ID ${orderId} not found`);
-    }
-
-    // Update the order with invoice details
-    const { data: order, error } = await supabase
-      .from("orders")
-      .update({
-        convenience_fee: invoice.convenience_fee,
-        delivery_charge: invoice.delivery_charge,
-        tax_amount: invoice.tax_amount,
-        total_amount: invoice.total_amount,
-        status: ORDER_STATUS.INVOICE_SENT,
-        notes: invoice.notes || null,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", orderId)
-      .select()
-      .single();
+    // Use admin function to update the order with invoice details
+    const { data: orders, error } = await supabase
+      .rpc('admin_update_order_for_invoice', {
+        requesting_user_id: user.id,
+        target_order_id: orderId,
+        convenience_fee_param: invoice.convenience_fee,
+        delivery_charge_param: invoice.delivery_charge,
+        tax_amount_param: invoice.tax_amount,
+        total_amount_param: invoice.total_amount,
+        notes_param: invoice.notes || null
+      });
 
     if (error) {
       throw new Error(`Failed to create invoice: ${error.message}`);
     }
 
-    if (!order) {
+    if (!orders || orders.length === 0) {
       throw new Error(`Failed to update order ${orderId} - no order returned`);
     }
 
-    return order;
+    return orders[0];
   } catch (error) {
     console.error("Create invoice error:", error);
     throw error;
@@ -167,7 +154,7 @@ export async function respondToInvoice(orderId: string, accepted: boolean) {
     
     if (isDevelopment && isSampleOrder) {
       // For sample orders in development mode, simulate successful response
-      const newStatus = accepted ? ORDER_STATUS.INVOICE_ACCEPTED : ORDER_STATUS.INVOICE_DECLINED;
+      const newStatus = accepted ? ORDER_STATUS.INVOICE_ACCEPTED : ORDER_STATUS.CANCELLED;
       console.log(`[DEV MODE] Simulating invoice response for sample order: ${orderId}, accepted: ${accepted}`);
       return {
         id: orderId,
@@ -177,7 +164,7 @@ export async function respondToInvoice(orderId: string, accepted: boolean) {
       };
     }
 
-    const newStatus = accepted ? ORDER_STATUS.INVOICE_ACCEPTED : ORDER_STATUS.INVOICE_DECLINED;
+    const newStatus = accepted ? ORDER_STATUS.INVOICE_ACCEPTED : ORDER_STATUS.CANCELLED;
     const paymentStatus = accepted ? PAYMENT_STATUS.PENDING : PAYMENT_STATUS.FAILED;
 
     const { data: order, error } = await supabase

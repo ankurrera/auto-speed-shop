@@ -46,6 +46,7 @@ import AdminOrderManagement from "@/components/AdminOrderManagement";
 import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 import { EmailNotificationService } from "@/services/emailNotificationService";
+import { ORDER_STATUS } from "@/types/order";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -251,18 +252,28 @@ const Account = () => {
     queryKey: ["admin-metrics"],
     enabled: userInfo.is_admin,
     queryFn: async () => {
-      const [{ count: userCount }, { count: orderCount }, productRes, partRes, revenueRes] =
+      // Get current user for admin functions
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const [{ count: userCount }, { count: orderItemsCount }, productRes, partRes, allOrdersRes] =
         await Promise.all([
           supabase.from("profiles").select("*", { count: "exact", head: true }),
-            supabase.from("orders").select("*", { count: "exact", head: true }),
-            supabase.from("products").select("id, price, stock_quantity, is_active"),
-            supabase.from("parts").select("id, price, stock_quantity, is_active"),
-            supabase.from("orders").select("total_amount")
+          // Count from order_items table instead of orders table
+          supabase.from("order_items").select("*", { count: "exact", head: true }),
+          supabase.from("products").select("id, price, stock_quantity, is_active"),
+          supabase.from("parts").select("id, price, stock_quantity, is_active"),
+          // Use admin function to get all orders for revenue calculation
+          supabase.rpc('get_all_orders_for_admin', {
+            requesting_user_id: user.id
+          })
         ]);
 
       let revenue = 0;
-      if (revenueRes.data) {
-        revenue = revenueRes.data.reduce(
+      if (allOrdersRes.data) {
+        revenue = allOrdersRes.data.reduce(
           (sum: number, row: { total_amount: number }) => sum + (row.total_amount || 0),
           0
         );
@@ -270,7 +281,7 @@ const Account = () => {
 
       return {
         users: userCount ?? 0,
-        orders: orderCount ?? 0,
+        orders: orderItemsCount ?? 0, // Now showing count from order_items table
         productsActive: [
           ...(productRes.data || []),
           ...(partRes.data || []),
@@ -2409,6 +2420,14 @@ const Account = () => {
     </div>
   );
 
+  // Helper function to transform order status for user display
+  const getUserDisplayStatus = (status: string) => {
+    if (status === ORDER_STATUS.INVOICE_SENT) {
+      return "Invoice Received";
+    }
+    return status;
+  };
+
   // Orders
   const renderOrdersContent = () => (
     <Card>
@@ -2441,17 +2460,27 @@ const Account = () => {
                           : "bg-yellow-200 text-yellow-800"
                       }`}
                     >
-                      {order.status}
+                      {getUserDisplayStatus(order.status)}
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">${order.total.toFixed(2)}</p>
-                  <Button variant="outline" size="sm" className="mt-2" asChild>
-                    <Link to={`/orders/${order.id}/tracking`}>
-                      Track Order
-                    </Link>
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    {order.status === ORDER_STATUS.INVOICE_SENT && (
+                      <Button variant="default" size="sm" asChild>
+                        <Link to={`/orders/${order.id}`}>
+                          <FileText className="h-3 w-3 mr-1" />
+                          Show Invoice
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/orders/${order.id}/tracking`}>
+                        Track Order
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
