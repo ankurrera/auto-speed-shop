@@ -1104,7 +1104,7 @@ const Account = () => {
         const sellerName = sellerData?.name || "Unknown Seller";
 
         // Send email notifications to subscribed users
-        await EmailNotificationService.sendNewProductNotifications({
+        const notificationResult = await EmailNotificationService.sendNewProductNotifications({
           productName: productInfo.name,
           productDescription: productInfo.description,
           price: priceValue,
@@ -1114,14 +1114,26 @@ const Account = () => {
           sellerId: currentSellerId,
         });
 
-        // Show additional success message for notifications
-        toast({
-          title: "Notifications Sent",
-          description: "Email notifications have been sent to subscribed users!",
-        });
+        // Show appropriate success message for notifications
+        if (notificationResult.notificationsSent > 0) {
+          toast({
+            title: "Notifications Sent",
+            description: `Email notifications have been sent to ${notificationResult.notificationsSent} subscribed users!`,
+          });
+        } else {
+          toast({
+            title: "Product Listed Successfully", 
+            description: "Your product was listed! No email notifications were sent as there are no subscribers yet.",
+          });
+        }
       } catch (notificationError) {
         console.error("Error sending notifications:", notificationError);
-        // Don't show error to user as the main action (listing product) was successful
+        // Show a warning toast but don't fail the main action
+        toast({
+          title: "Product Listed Successfully",
+          description: "Your product was listed, but there was an issue sending email notifications. Subscribers may not have been notified.",
+          variant: "default", // Not destructive since the main action succeeded
+        });
       }
     }
 
