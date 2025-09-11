@@ -21,6 +21,9 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Inter', 'system-ui', 'sans-serif'],
+                'sooner': ['Passion One', 'Fredoka One', 'Bungee', 'system-ui', 'sans-serif'],
+                'western': ['Rye', 'Butcherman', 'serif'],
+                'cowboy': ['Passion One', 'system-ui', 'sans-serif'],
             },
             colors: {
                 border: 'hsl(var(--border))',
@@ -70,6 +73,13 @@ export default {
                     red: 'hsl(var(--automotive-red))',
                     dark: 'hsl(var(--automotive-dark))',
                     light: 'hsl(var(--automotive-light))'
+                },
+                western: {
+                    leather: 'hsl(var(--leather-brown))',
+                    tan: 'hsl(var(--saddle-tan))',
+                    sand: 'hsl(var(--desert-sand))',
+                    rust: 'hsl(var(--rust-orange))',
+                    sunset: 'hsl(var(--sunset-red))'
                 },
                 sidebar: {
                     DEFAULT: 'hsl(var(--sidebar-background))',

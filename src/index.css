@@ -14,18 +14,18 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
 
-    --primary: 0 97% 53%; /* Red #E00425 */
+    --primary: 25 85% 50%; /* Western Orange/Burnt Orange #D2691E */
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 0 97% 48%;
+    --primary-hover: 25 85% 45%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 30 25% 85%; /* Light Tan/Beige */
+    --secondary-foreground: 30 15% 25%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 35 20% 90%; /* Very Light Tan */
+    --muted-foreground: 30 15% 40%;
 
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 10%;
+    --accent: 20 40% 75%; /* Sandy Brown */
+    --accent-foreground: 30 15% 25%;
 
     --destructive: 0 97% 53%;
     --destructive-foreground: 0 0% 100%;
@@ -40,14 +40,22 @@
     --warning: 48 96% 53%;
     --warning-foreground: 0 0% 10%;
 
-    /* Minimalist specific colors */
-    --automotive-red: 0 97% 53%; /* #E00425 */
-    --automotive-dark: 0 0% 10%; /* #1A1A1D */
-    --automotive-light: 0 0% 100%; /* #FFFFFF */
+    /* Western/Cowboy specific colors */
+    --automotive-red: 25 85% 50%; /* Burnt Orange */
+    --automotive-dark: 30 15% 15%; /* Dark Brown */
+    --automotive-light: 35 20% 95%; /* Cream/Off-white */
+    
+    /* Western color palette */
+    --leather-brown: 20 40% 25%; /* Dark Leather Brown */
+    --saddle-tan: 30 50% 60%; /* Saddle Tan */
+    --desert-sand: 40 30% 80%; /* Desert Sand */
+    --rust-orange: 15 70% 45%; /* Rust Orange */
+    --sunset-red: 10 80% 55%; /* Sunset Red */
 
-    /* Simplified gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(0 97% 48%));
-    --gradient-hero: linear-gradient(135deg, hsl(0 0% 100%), hsl(0 0% 98%));
+    /* Western-themed gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(15 70% 45%));
+    --gradient-hero: linear-gradient(135deg, hsl(30 25% 85%), hsl(35 20% 90%));
+    --gradient-western: linear-gradient(135deg, hsl(20 40% 25%), hsl(30 50% 60%));
 
     /* Minimal shadows */
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);

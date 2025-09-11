@@ -127,36 +127,38 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Minimalist Hero Section */}
-      <section className="relative h-screen flex items-center justify-center bg-background overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-western-sand via-background to-western-tan text-foreground">
+      {/* Western Hero Section */}
+      <section className="relative h-screen flex items-center justify-center bg-gradient-to-b from-western-sand to-western-tan overflow-hidden">
         <div className="absolute inset-0">
           <img
             src={heroImage}
             alt="Auto Parts Hero"
-            className="w-full h-full object-cover opacity-20" 
+            className="w-full h-full object-cover opacity-30" 
           />
-          <div className="absolute inset-0 bg-background bg-opacity-60"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-western-leather/20 via-transparent to-western-leather/40"></div>
         </div>
-        <div className="relative container mx-auto px-6 text-center z-10 max-w-5xl">
-          <h1 className="text-4xl md:text-6xl font-semibold text-foreground leading-tight mb-6">
-            <span className="text-foreground">Your Ultimate</span>
+        <div className="relative container mx-auto px-6 text-center z-10 max-w-6xl">
+          <h1 className="text-5xl md:text-8xl font-sooner font-black text-western-leather leading-tight mb-8 tracking-wide drop-shadow-2xl">
+            <span className="text-western-leather drop-shadow-lg">YOUR ULTIMATE</span>
             <br />
-            <span className="text-primary">Auto Parts Destination</span>
+            <span className="text-primary font-sooner text-6xl md:text-9xl drop-shadow-xl">AUTO PARTS</span>
+            <br />
+            <span className="text-western-rust font-sooner drop-shadow-lg">DESTINATION</span>
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-12">
+          <p className="text-xl md:text-2xl text-western-leather font-medium max-w-3xl mx-auto mb-12 drop-shadow-md">
             Discover premium parts and accessories for a ride that reflects your style and performance needs.
           </p>
             
-          {/* Minimalist Vehicle Search */}
-          <Card className="w-full max-w-3xl mx-auto bg-card border border-border shadow-sm">
-            <CardContent className="p-8">
-              <h3 className="text-lg font-medium text-foreground mb-6">
-                Find the Perfect Fit
+          {/* Western Vehicle Search */}
+          <Card className="w-full max-w-4xl mx-auto bg-western-sand/90 border-2 border-western-tan shadow-xl backdrop-blur-sm">
+            <CardContent className="p-8 md:p-10">
+              <h3 className="text-2xl md:text-3xl font-sooner font-bold text-western-leather mb-8 text-center tracking-wide">
+                FIND THE PERFECT FIT
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger className="h-11 border-border">
+                  <SelectTrigger className="h-12 border-2 border-western-tan bg-western-sand/50 text-western-leather font-medium hover:bg-western-sand transition-colors">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -169,7 +171,7 @@ const Home = () => {
                 </Select>
                 
                 <Select value={selectedMake} onValueChange={setSelectedMake}>
-                  <SelectTrigger className="h-11 border-border">
+                  <SelectTrigger className="h-12 border-2 border-western-tan bg-western-sand/50 text-western-leather font-medium hover:bg-western-sand transition-colors">
                     <SelectValue placeholder="Make" />
                   </SelectTrigger>
                   <SelectContent>
@@ -182,7 +184,7 @@ const Home = () => {
                 </Select>
                 
                 <Select value={selectedModel} onValueChange={setSelectedModel}>
-                  <SelectTrigger className="h-11 border-border">
+                  <SelectTrigger className="h-12 border-2 border-western-tan bg-western-sand/50 text-western-leather font-medium hover:bg-western-sand transition-colors">
                     <SelectValue placeholder="Model" />
                   </SelectTrigger>
                   <SelectContent>
@@ -194,9 +196,9 @@ const Home = () => {
                   </SelectContent>
                 </Select>
                   
-                <Button size="lg" className="h-11 transition-colors" onClick={handleSearch}>
-                  <Search className="h-4 w-4 mr-2" />
-                  Search Items
+                <Button size="lg" className="h-12 bg-western-rust hover:bg-western-sunset text-white font-sooner font-bold text-lg tracking-wide shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-western-leather/20" onClick={handleSearch}>
+                  <Search className="h-5 w-5 mr-2" />
+                  SEARCH ITEMS
                 </Button>
               </div>
             </CardContent>
@@ -204,60 +206,60 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Minimalist Brand Carousel */}
+      {/* Western Brand Carousel */}
       <BrandCarousel />
 
-      {/* Simplified Features */}
-      <section className="py-20 bg-background">
+      {/* Western Features */}
+      <section className="py-20 bg-gradient-to-b from-western-sand/30 to-background">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <p className="text-sm text-primary font-medium mb-3">Why Choose Us?</p>
-            <h2 className="text-3xl font-semibold text-foreground">Driven by Quality, Delivered with Speed</h2>
+            <p className="text-lg text-western-rust font-sooner font-bold mb-3 tracking-wide">WHY RIDE WITH US?</p>
+            <h2 className="text-4xl font-sooner font-black text-western-leather tracking-wide">DRIVEN BY QUALITY, DELIVERED WITH SPEED</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Card className="text-center p-8 border border-border hover:border-primary/50 transition-colors">
+            <Card className="text-center p-8 bg-western-sand/60 border-2 border-western-tan hover:border-western-rust transition-all duration-300 hover:shadow-xl">
               <CardHeader className="p-0">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Truck className="h-6 w-6 text-primary" />
+                <div className="w-16 h-16 bg-western-rust rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <Truck className="h-8 w-8 text-white" />
                 </div>
-                <CardTitle className="font-medium text-lg">Fast Shipping</CardTitle>
+                <CardTitle className="font-sooner font-bold text-xl text-western-leather tracking-wide">FAST SHIPPING</CardTitle>
               </CardHeader>
-              <CardContent className="p-0 pt-3">
-                <p className="text-muted-foreground text-sm">Free shipping on orders over $75, nationwide.</p>
+              <CardContent className="p-0 pt-4">
+                <p className="text-western-leather font-medium">Free shipping on orders over $75, nationwide.</p>
               </CardContent>
             </Card>
-            <Card className="text-center p-8 border border-border hover:border-primary/50 transition-colors">
+            <Card className="text-center p-8 bg-western-sand/60 border-2 border-western-tan hover:border-western-rust transition-all duration-300 hover:shadow-xl">
               <CardHeader className="p-0">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Shield className="h-6 w-6 text-primary" />
+                <div className="w-16 h-16 bg-western-rust rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <Shield className="h-8 w-8 text-white" />
                 </div>
-                <CardTitle className="font-medium text-lg">Quality Guarantee</CardTitle>
+                <CardTitle className="font-sooner font-bold text-xl text-western-leather tracking-wide">QUALITY GUARANTEE</CardTitle>
               </CardHeader>
-              <CardContent className="p-0 pt-3">
-                <p className="text-muted-foreground text-sm">All parts are backed by a comprehensive warranty.</p>
+              <CardContent className="p-0 pt-4">
+                <p className="text-western-leather font-medium">All parts are backed by a comprehensive warranty.</p>
               </CardContent>
             </Card>
-            <Card className="text-center p-8 border border-border hover:border-primary/50 transition-colors">
+            <Card className="text-center p-8 bg-western-sand/60 border-2 border-western-tan hover:border-western-rust transition-all duration-300 hover:shadow-xl">
               <CardHeader className="p-0">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Wrench className="h-6 w-6 text-primary" />
+                <div className="w-16 h-16 bg-western-rust rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <Wrench className="h-8 w-8 text-white" />
                 </div>
-                <CardTitle className="font-medium text-lg">Expert Support</CardTitle>
+                <CardTitle className="font-sooner font-bold text-xl text-western-leather tracking-wide">EXPERT SUPPORT</CardTitle>
               </CardHeader>
-              <CardContent className="p-0 pt-3">
-                <p className="text-muted-foreground text-sm">Get professional advice from our experienced team.</p>
+              <CardContent className="p-0 pt-4">
+                <p className="text-western-leather font-medium">Get professional advice from our experienced team.</p>
               </CardContent>
             </Card>
             <Link to="/new-arrivals">
-              <Card className="text-center p-8 border border-border hover:border-primary/50 transition-colors cursor-pointer">
+              <Card className="text-center p-8 bg-western-sand/60 border-2 border-western-tan hover:border-western-rust transition-all duration-300 hover:shadow-xl cursor-pointer group">
                 <CardHeader className="p-0">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Sparkles className="h-6 w-6 text-primary" />
+                  <div className="w-16 h-16 bg-western-rust rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:bg-western-sunset transition-colors">
+                    <Sparkles className="h-8 w-8 text-white" />
                   </div>
-                  <CardTitle className="font-medium text-lg">New Arrivals</CardTitle>
+                  <CardTitle className="font-sooner font-bold text-xl text-western-leather tracking-wide">NEW ARRIVALS</CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 pt-3">
-                  <p className="text-muted-foreground text-sm">Always the latest and greatest products in stock.</p>
+                <CardContent className="p-0 pt-4">
+                  <p className="text-western-leather font-medium">Always the latest and greatest products in stock.</p>
                 </CardContent>
               </Card>
             </Link>
@@ -265,12 +267,12 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Minimalist Featured Products */}
-      <section className="py-20 bg-muted/30">
+      {/* Western Featured Products */}
+      <section className="py-20 bg-gradient-to-b from-background to-western-sand/20">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-semibold text-foreground">Featured Products</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto mt-4">
+            <h2 className="text-4xl font-sooner font-black text-western-leather tracking-wide">FEATURED PRODUCTS</h2>
+            <p className="text-western-leather font-medium max-w-3xl mx-auto mt-6 text-lg">
               Top-rated parts chosen by our experts for your car's best performance.
             </p>
           </div>
@@ -280,14 +282,14 @@ const Home = () => {
               <ProductCard 
                 key={product.id} 
                 {...product} 
-                className="hover:border-primary/50 transition-colors"
+                className="hover:border-western-rust transition-all duration-300 hover:shadow-xl bg-western-sand/30"
               />
             ))}
           </div>
           
           <div className="text-center mt-16">
-            <Button size="lg" variant="default" className="px-8 py-3 transition-colors">
-              Explore All Products
+            <Button size="lg" variant="default" className="px-10 py-4 bg-western-rust hover:bg-western-sunset text-white font-sooner font-bold text-lg tracking-wide shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-western-leather/20">
+              EXPLORE ALL PRODUCTS
             </Button>
           </div>
         </div>
