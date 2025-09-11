@@ -277,10 +277,13 @@ const Account = () => {
 
       let revenue = 0;
       if (allOrdersRes.data) {
-        revenue = allOrdersRes.data.reduce(
-          (sum: number, row: { total_amount: number }) => sum + (row.total_amount || 0),
-          0
-        );
+        // Only include confirmed orders in revenue calculation
+        revenue = allOrdersRes.data
+          .filter((row: { status: string }) => row.status === 'confirmed')
+          .reduce(
+            (sum: number, row: { total_amount: number }) => sum + (row.total_amount || 0),
+            0
+          );
       }
 
       return {
@@ -500,7 +503,6 @@ const Account = () => {
     }
   };
 
-  // Auth listener
   // Auth listener
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -2129,7 +2131,7 @@ const Account = () => {
                   icon={<Boxes className="h-5 w-5" />}
                 />
                 <StatCard
-                  title="Revenue"
+                  title="Total Revenue"
                   value={
                     adminMetrics
                       ? "$" +
@@ -2138,7 +2140,7 @@ const Account = () => {
                         )
                       : "--"
                   }
-                  subtitle="Total revenue"
+                  subtitle="Confirmed orders revenue"
                   icon={<TrendingUp className="h-5 w-5" />}
                 />
               </div>

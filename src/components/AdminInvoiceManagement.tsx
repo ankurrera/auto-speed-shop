@@ -598,41 +598,56 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
       case ORDER_STATUS.PAYMENT_SUBMITTED: {
         const paymentData = order.notes ? JSON.parse(order.notes) : null;
         return (
-          <div className="space-y-2">
+          <div className="space-y-3 min-w-[280px]">
             {paymentData && (
-              <div className="text-xs space-y-1">
-                <p><strong>Transaction ID:</strong> {paymentData.transaction_id}</p>
-                <p><strong>Amount:</strong> ${paymentData.payment_amount}</p>
-                {paymentData.payment_screenshot_url && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open(paymentData.payment_screenshot_url, '_blank')}
-                  >
-                    <Eye className="h-3 w-3 mr-1" />
-                    View Screenshot
-                  </Button>
-                )}
+              <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <div className="space-y-2">
+                  <div>
+                    <span className="font-medium">Transaction ID:</span>
+                    <p className="break-all text-gray-600 dark:text-gray-300">{paymentData.transaction_id}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Amount:</span>
+                    <p className="text-gray-600 dark:text-gray-300">${paymentData.payment_amount}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {paymentData.payment_screenshot_url && (
+                    <div>
+                      <span className="font-medium">Screenshot:</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full mt-1"
+                        onClick={() => window.open(paymentData.payment_screenshot_url, '_blank')}
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View Screenshot
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-            <div className="flex gap-1">
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 size="sm"
                 onClick={() => handleVerifyPayment(order.id, true)}
                 disabled={isVerifyingPayment}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 w-full"
               >
                 <CheckCircle className="h-3 w-3 mr-1" />
-                Verify
+                Verify Button
               </Button>
               <Button
                 size="sm"
                 variant="destructive"
                 onClick={() => handleVerifyPayment(order.id, false)}
                 disabled={isVerifyingPayment}
+                className="w-full"
               >
                 <XCircle className="h-3 w-3 mr-1" />
-                Reject
+                Reject Button
               </Button>
             </div>
           </div>
@@ -668,41 +683,43 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
       </CardHeader>
       <CardContent>
         {orders.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order #</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.order_number}</TableCell>
-                  <TableCell>
-                    {order.profiles ? (
-                      <div>
-                        <p className="font-medium">{order.profiles.first_name} {order.profiles.last_name}</p>
-                        <p className="text-xs text-muted-foreground">{order.profiles.email}</p>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Unknown</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>{getStatusBadge(order.status)}</TableCell>
-                  <TableCell className="text-right">${order.total_amount.toFixed(2)}</TableCell>
-                  <TableCell className="text-center">
-                    {getActionButton(order)}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[120px]">Order #</TableHead>
+                  <TableHead className="min-w-[180px]">Customer</TableHead>
+                  <TableHead className="min-w-[100px]">Date</TableHead>
+                  <TableHead className="min-w-[140px]">Status</TableHead>
+                  <TableHead className="text-right min-w-[100px]">Total</TableHead>
+                  <TableHead className="text-center min-w-[300px]">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {orders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">{order.order_number}</TableCell>
+                    <TableCell>
+                      {order.profiles ? (
+                        <div>
+                          <p className="font-medium">{order.profiles.first_name} {order.profiles.last_name}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[160px]">{order.profiles.email}</p>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Unknown</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{getStatusBadge(order.status)}</TableCell>
+                    <TableCell className="text-right">${order.total_amount.toFixed(2)}</TableCell>
+                    <TableCell className="text-center">
+                      {getActionButton(order)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         ) : (
           <div className="text-center py-8">
             <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
