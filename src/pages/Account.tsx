@@ -46,6 +46,7 @@ import AdminOrderManagement from "@/components/AdminOrderManagement";
 import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 import { EmailNotificationService } from "@/services/emailNotificationService";
+import { ORDER_STATUS } from "@/types/order";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -2419,6 +2420,14 @@ const Account = () => {
     </div>
   );
 
+  // Helper function to transform order status for user display
+  const getUserDisplayStatus = (status: string) => {
+    if (status === ORDER_STATUS.INVOICE_SENT) {
+      return "Invoice Received";
+    }
+    return status;
+  };
+
   // Orders
   const renderOrdersContent = () => (
     <Card>
@@ -2451,17 +2460,27 @@ const Account = () => {
                           : "bg-yellow-200 text-yellow-800"
                       }`}
                     >
-                      {order.status}
+                      {getUserDisplayStatus(order.status)}
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">${order.total.toFixed(2)}</p>
-                  <Button variant="outline" size="sm" className="mt-2" asChild>
-                    <Link to={`/orders/${order.id}/tracking`}>
-                      Track Order
-                    </Link>
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    {order.status === ORDER_STATUS.INVOICE_SENT && (
+                      <Button variant="default" size="sm" asChild>
+                        <Link to={`/orders/${order.id}`}>
+                          <FileText className="h-3 w-3 mr-1" />
+                          Show Invoice
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/orders/${order.id}/tracking`}>
+                        Track Order
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
