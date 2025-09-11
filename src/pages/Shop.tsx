@@ -316,62 +316,40 @@ const Shop = () => {
   };
 
 
-  const handleMouseEnter = (ref: React.RefObject<HTMLDivElement>) => {
-    if (ref.current) {
-      let scrollAmount = 0;
-      const scrollStep = 1;
-      let frame: number;
-
-      const scroll = () => {
-        ref.current!.scrollTop += scrollStep;
-        scrollAmount += scrollStep;
-        if (scrollAmount < ref.current!.scrollHeight - ref.current!.clientHeight) {
-          frame = window.requestAnimationFrame(scroll);
-        }
-      };
-
-      frame = window.requestAnimationFrame(scroll);
-
-      ref.current.addEventListener("mouseleave", () => {
-        window.cancelAnimationFrame(frame);
-        ref.current!.scrollTo({ top: 0, behavior: "smooth" });
-      });
-    }
+  const handleMouseEnter = () => {
+    // Simplified for minimalist design - removed complex animations
   };
   
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Shop All Items</h1>
+    <div className="container mx-auto px-6 py-12">
+      <div className="flex flex-col md:flex-row items-center justify-between mb-8">
+        <h1 className="text-3xl font-semibold text-foreground">Shop All Items</h1>
         <div className="relative w-full md:w-1/3 mt-4 md:mt-0">
           <Input
             type="search"
             placeholder="Search for items..."
-            className="pl-10"
+            className="pl-10 border-border"
             value={searchQuery}
             onChange={handleSearchChange}
           />
           <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-            <Search className="h-5 w-5 text-muted-foreground" />
+            <Search className="h-4 w-4 text-muted-foreground" />
           </span>
         </div>
       </div>
 
-      {/* Find the Perfect Fit Box */}
-      <Card className="mt-6 w-full mx-auto bg-card backdrop-blur-md shadow-lg">
-        <CardContent className="p-6">
-          <h3 className="text-xl font-bold text-foreground mb-4">
+      {/* Minimalist Find the Perfect Fit Box */}
+      <Card className="w-full mx-auto bg-card border border-border shadow-sm mb-8">
+        <CardContent className="p-8">
+          <h3 className="text-lg font-medium text-foreground mb-6">
             Find the Perfect Fit
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Select value={selectedYear} onValueChange={(value) => handleSelectChange(setSelectedYear, "year", value)}>
-              <SelectTrigger className="h-12">
+              <SelectTrigger className="h-11 border-border">
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
-              <SelectContent
-                ref={yearSelectRef}
-                onMouseEnter={() => handleMouseEnter(yearSelectRef)}
-              >
+              <SelectContent>
                 <SelectItem value="all">All Years</SelectItem>
                 {vehicleYears.map(year => (
                   <SelectItem key={year} value={year.toString()}>
@@ -382,13 +360,10 @@ const Shop = () => {
             </Select>
             
             <Select value={selectedMake} onValueChange={handleMakeChange}>
-              <SelectTrigger className="h-12">
+              <SelectTrigger className="h-11 border-border">
                 <SelectValue placeholder="Make" />
               </SelectTrigger>
-              <SelectContent
-                ref={makeSelectRef}
-                onMouseEnter={() => handleMouseEnter(makeSelectRef)}
-              >
+              <SelectContent>
                 <SelectItem value="all">All Makes</SelectItem>
                 {vehicleMakes.map(make => (
                   <SelectItem key={make.name} value={make.name}>
@@ -403,13 +378,10 @@ const Shop = () => {
               onValueChange={(value) => handleSelectChange(setSelectedModel, "model", value)}
               disabled={!selectedMake || selectedMake === 'all'}
             >
-              <SelectTrigger className="h-12">
+              <SelectTrigger className="h-11 border-border">
                 <SelectValue placeholder="Model" />
               </SelectTrigger>
-              <SelectContent
-                ref={modelSelectRef}
-                onMouseEnter={() => handleMouseEnter(modelSelectRef)}
-              >
+              <SelectContent>
                 <SelectItem value="all">All Models</SelectItem>
                 {vehicleModels.map(model => (
                   <SelectItem key={model} value={model}>
@@ -418,16 +390,16 @@ const Shop = () => {
                 ))}
               </SelectContent>
             </Select>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
       
-      {/* Filters and Sorting */}
-      <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4 my-8">
-        <div className="flex items-center space-x-2">
-          <Label>Sort by:</Label>
+      {/* Simplified Filters and Sorting */}
+      <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-6 mb-8">
+        <div className="flex items-center space-x-3">
+          <Label className="text-sm font-medium">Sort by:</Label>
           <Select value={sortOrder} onValueChange={handleSortChange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[160px] h-10 border-border">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
@@ -438,10 +410,10 @@ const Shop = () => {
           </Select>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <Label>Price Range:</Label>
+        <div className="flex items-center space-x-3">
+          <Label className="text-sm font-medium">Price Range:</Label>
           <Select value={priceRange} onValueChange={handlePriceRangeChange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[140px] h-10 border-border">
               <SelectValue placeholder="Price Range" />
             </SelectTrigger>
             <SelectContent>
@@ -455,23 +427,26 @@ const Shop = () => {
         </div>
       </div>
 
-      {/* Filter Mode Buttons */}
-      <div className="flex justify-center space-x-4 mb-8">
+      {/* Minimalist Filter Mode Buttons */}
+      <div className="flex justify-center space-x-2 mb-8">
         <Button
           variant={filterMode === "all" ? "default" : "outline"}
           onClick={() => handleFilterModeChange("all")}
+          className="transition-colors"
         >
           All Items
         </Button>
         <Button
           variant={filterMode === "parts" ? "default" : "outline"}
           onClick={() => handleFilterModeChange("parts")}
+          className="transition-colors"
         >
           Parts
         </Button>
         <Button
           variant={filterMode === "products" ? "default" : "outline"}
           onClick={() => handleFilterModeChange("products")}
+          className="transition-colors"
         >
           Products
         </Button>
@@ -479,13 +454,14 @@ const Shop = () => {
 
       {/* Results */}
       <section>
-        {isLoading && <p>Loading items...</p>}
+        {isLoading && <p className="text-center text-muted-foreground py-12">Loading items...</p>}
         {!isLoading && filteredItems.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredItems.map((item) => (
               <ProductCard
                 key={item.id}
                 {...formatCardData(item)}
+                className="hover:border-primary/50 transition-colors"
                 onAddToCart={(event) => {
                   event.stopPropagation();
                   event.preventDefault();
@@ -506,7 +482,7 @@ const Shop = () => {
           </div>
         ) : (
           !isLoading && (
-            <p className="col-span-full text-center text-muted-foreground">
+            <p className="text-center text-muted-foreground py-12">
               No items found matching your criteria.
             </p>
           )
