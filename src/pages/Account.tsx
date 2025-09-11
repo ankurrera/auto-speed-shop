@@ -23,7 +23,8 @@ import {
   Plus,
   RefreshCcw,
   Car,
-  FileText
+  FileText,
+  Star
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -1053,6 +1054,7 @@ const Account = () => {
           specifications: specificationsPayload,
           image_urls: finalImageUrls,
           is_active: stockValue > 0,
+          is_featured: false,
         };
       } else {
         payload = {
@@ -1524,6 +1526,87 @@ const Account = () => {
     },
   });
 
+  // Feature toggle mutations - admin only
+  const toggleProductFeatureMutation = useMutation({
+    mutationFn: async ({
+      productId,
+      is_featured,
+    }: {
+      productId: string;
+      is_featured: boolean;
+    }) => {
+      // Check if user is admin
+      if (!userInfo.is_admin) {
+        throw new Error("Only administrators can feature/unfeature products.");
+      }
+      
+      const { data, error } = await supabase
+        .from("products")
+        .update({ is_featured })
+        .eq("id", productId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller-products"] });
+      queryClient.invalidateQueries({ queryKey: ["featured-products"] });
+      toast({
+        title: "Success",
+        description: "Product feature status updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update product feature status: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const togglePartFeatureMutation = useMutation({
+    mutationFn: async ({
+      partId,
+      is_featured,
+    }: {
+      partId: string;
+      is_featured: boolean;
+    }) => {
+      // Check if user is admin
+      if (!userInfo.is_admin) {
+        throw new Error("Only administrators can feature/unfeature parts.");
+      }
+      
+      const { data, error } = await supabase
+        .from("parts")
+        .update({ is_featured })
+        .eq("id", partId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
+      queryClient.invalidateQueries({ queryKey: ["featured-products"] });
+      toast({
+        title: "Success",
+        description: "Part feature status updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update part feature status: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDeleteProduct = (id: string) => {
     if (window.confirm("Delete this product?")) deleteProductMutation.mutate(id);
   };
@@ -1534,6 +1617,10 @@ const Account = () => {
     archiveProductMutation.mutate({ productId: id, is_active: active });
   const handleArchivePart = (id: string, active: boolean) =>
     archivePartMutation.mutate({ partId: id, is_active: active });
+  const handleToggleProductFeature = (id: string, featured: boolean) =>
+    toggleProductFeatureMutation.mutate({ productId: id, is_featured: featured });
+  const handleTogglePartFeature = (id: string, featured: boolean) =>
+    togglePartFeatureMutation.mutate({ partId: id, is_featured: featured });
 
   // Image handling
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -3039,12 +3126,15 @@ const Account = () => {
                         metaRight={`$${part.price}`}
                         quantity={part.stock_quantity}
                         active={part.is_active}
+                        featured={part.is_featured}
                         disabled={!sellerId || deletePartMutation.isPending || archivePartMutation.isPending}
+                        isAdmin={userInfo.is_admin}
                         onEdit={() => handleEditPart(part)}
                         onArchive={() =>
                           handleArchivePart(part.id, part.is_active)
                         }
                         onDelete={() => handleDeletePart(part.id)}
+                        onToggleFeature={() => handleTogglePartFeature(part.id, !part.is_featured)}
                       />
                     ))}
                     {filteredProducts.map((product) => (
@@ -3055,12 +3145,15 @@ const Account = () => {
                         metaRight={`$${product.price}`}
                         quantity={product.stock_quantity}
                         active={product.is_active}
+                        featured={product.is_featured}
                         disabled={!sellerId || deleteProductMutation.isPending || archiveProductMutation.isPending}
+                        isAdmin={userInfo.is_admin}
                         onEdit={() => handleEditProduct(product)}
                         onArchive={() =>
                           handleArchiveProduct(product.id, product.is_active)
                         }
                         onDelete={() => handleDeleteProduct(product.id)}
+                        onToggleFeature={() => handleToggleProductFeature(product.id, !product.is_featured)}
                       />
                     ))}
                   </div>
@@ -3139,24 +3232,38 @@ const ListingRow = ({
   metaRight,
   quantity,
   active,
+  featured,
   onEdit,
   onArchive,
   onDelete,
+  onToggleFeature,
   disabled = false,
+  isAdmin = false,
 }: {
   title: string;
   metaLeft?: string;
   metaRight?: string;
   quantity: number;
   active: boolean;
+  featured?: boolean;
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onToggleFeature?: () => void;
   disabled?: boolean;
+  isAdmin?: boolean;
 }) => (
   <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 border border-border rounded-lg bg-card/40">
     <div className="flex-1 space-y-1">
-      <h5 className="font-semibold">{title}</h5>
+      <div className="flex items-center gap-2">
+        <h5 className="font-semibold">{title}</h5>
+        {featured && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-yellow-500/10 text-yellow-400 flex items-center gap-1">
+            <Star className="h-3 w-3 fill-current" />
+            Featured
+          </span>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         {metaLeft && <span>{metaLeft}</span>}
         {metaRight && <span>{metaRight}</span>}
@@ -3175,6 +3282,18 @@ const ListingRow = ({
         <Edit className="h-4 w-4 mr-1" />
         Edit
       </Button>
+      {isAdmin && onToggleFeature && (
+        <Button 
+          variant={featured ? "default" : "outline"} 
+          size="sm" 
+          onClick={onToggleFeature} 
+          disabled={disabled}
+          className={featured ? "bg-yellow-500 hover:bg-yellow-600 text-black" : ""}
+        >
+          <Star className={`h-4 w-4 mr-1 ${featured ? "fill-current" : ""}`} />
+          {featured ? "Unfeature" : "Feature"}
+        </Button>
+      )}
       <Button variant="ghost" size="sm" onClick={onArchive} disabled={disabled}>
         <Archive className="h-4 w-4 mr-1" />
         {active ? "Archive" : "Unarchive"}
