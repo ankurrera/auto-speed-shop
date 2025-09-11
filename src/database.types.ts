@@ -198,8 +198,10 @@ export type Database = {
       orders: {
         Row: {
           billing_address: Json | null
+          convenience_fee: number | null
           created_at: string
           currency: string
+          delivery_charge: number | null
           delivered_at: string | null
           id: string
           notes: string | null
@@ -218,8 +220,10 @@ export type Database = {
         }
         Insert: {
           billing_address?: Json | null
+          convenience_fee?: number | null
           created_at?: string
           currency?: string
+          delivery_charge?: number | null
           delivered_at?: string | null
           id?: string
           notes?: string | null
@@ -238,8 +242,10 @@ export type Database = {
         }
         Update: {
           billing_address?: Json | null
+          convenience_fee?: number | null
           created_at?: string
           currency?: string
+          delivery_charge?: number | null
           delivered_at?: string | null
           id?: string
           notes?: string | null
@@ -652,6 +658,33 @@ export type Database = {
           make?: string
           model?: string
           year?: number
+        }
+        Relationships: []
+      }
+      email_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          email: string
+          subscribed_to_new_products: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email: string
+          subscribed_to_new_products?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email?: string
+          subscribed_to_new_products?: boolean
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }

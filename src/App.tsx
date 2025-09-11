@@ -20,24 +20,19 @@ import ProductDetails from "./pages/ProductDetails";
 import NewArrivals from "./pages/NewArrivals";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import OrderTracking from "./pages/OrderTracking";
+import OrderDetails from "./pages/OrderDetails";
+import CustomCheckout from "./pages/CustomCheckout";
+import CustomOrderFlowDemo from "./pages/CustomOrderFlowDemo";
 import SellerDashboard from "./pages/SellerDashboard";
+import EmailSubscriptionDemo from "./components/EmailSubscriptionDemo";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
 import ScrollToTop from "./components/ScrollToTop";
-import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { DevCartHelper } from "./components/DevCartHelper";
 import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient();
-
-const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID ;
-
-
-const paypalOptions = {
-  "clientId": paypalClientId,
-  "currency": "USD",
-};
 
 const App = () => {
   const [showDevTools, setShowDevTools] = useState(false);
@@ -65,11 +60,15 @@ const App = () => {
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/account/*" element={<Account />} />
                     <Route path="/seller-dashboard" element={<SellerDashboard />} />
-                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/checkout" element={<CustomCheckout />} />
+                    <Route path="/custom-checkout" element={<CustomCheckout />} />
+                    <Route path="/custom-order-demo" element={<CustomOrderFlowDemo />} />
+                    <Route path="/order/:orderId" element={<OrderDetails />} />
                     <Route path="/products/:id" element={<ProductDetails />} />
                     <Route path="/new-arrivals" element={<NewArrivals />} />
                     <Route path="/order-confirmation" element={<OrderConfirmation />} />
                     <Route path="/orders/:orderId/tracking" element={<OrderTracking />} />
+                    <Route path="/email-demo" element={<EmailSubscriptionDemo />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
@@ -84,9 +83,7 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <PayPalScriptProvider options={paypalOptions}>
-        <AppContent />
-      </PayPalScriptProvider>
+      <AppContent />
     </QueryClientProvider>
   );
 };
