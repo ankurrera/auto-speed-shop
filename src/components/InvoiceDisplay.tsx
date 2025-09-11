@@ -255,26 +255,16 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
       {/* Formal Invoice Display */}
       <Card className="max-w-4xl mx-auto">
         <CardHeader className="text-center border-b">
-          <div className="company-name text-3xl font-bold text-gray-800 mb-2">
+          <div className="company-name text-3xl font-bold text-foreground mb-2">
             Auto Speed Shop
           </div>
-          <CardTitle className="invoice-title text-xl text-gray-600">
+          <CardTitle className="invoice-title text-xl text-muted-foreground">
             INVOICE
           </CardTitle>
         </CardHeader>
         
         <CardContent className="p-8">
           <div id="invoice-content">
-            {/* Company Header (for completeness) */}
-            <div className="header text-center mb-8 border-b-2 border-gray-300 pb-6">
-              <div className="company-name text-3xl font-bold text-gray-800 mb-2">
-                Auto Speed Shop
-              </div>
-              <div className="invoice-title text-xl text-gray-600">
-                INVOICE
-              </div>
-            </div>
-
             {/* Invoice Header Information */}
             <div className="grid md:grid-cols-2 gap-8 mb-8">
               <div className="invoice-details">
@@ -300,7 +290,7 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
                     <p>{orderDetails.shipping_address.country || "US"}</p>
                   </div>
                 ) : (
-                  <p className="text-gray-500">No billing address available</p>
+                  <p className="text-muted-foreground">No billing address available</p>
                 )}
               </div>
             </div>
@@ -310,22 +300,22 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
               <div className="mb-8">
                 <h3 className="font-semibold text-lg mb-4">Items</h3>
                 <div className="overflow-x-auto">
-                  <table className="items-table w-full border-collapse border border-gray-300">
+                  <table className="items-table w-full border-collapse border border-border">
                     <thead>
-                      <tr className="bg-gray-50">
-                        <th className="border border-gray-300 p-3 text-left">Description</th>
-                        <th className="border border-gray-300 p-3 text-center">Quantity</th>
-                        <th className="border border-gray-300 p-3 text-right">Unit Price</th>
-                        <th className="border border-gray-300 p-3 text-right">Total</th>
+                      <tr className="bg-muted">
+                        <th className="border border-border p-3 text-left">Description</th>
+                        <th className="border border-border p-3 text-center">Quantity</th>
+                        <th className="border border-border p-3 text-right">Unit Price</th>
+                        <th className="border border-border p-3 text-right">Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {orderDetails.order_items.map((item) => (
-                        <tr key={item.id} className="even:bg-gray-50">
-                          <td className="border border-gray-300 p-3">{item.product_name}</td>
-                          <td className="border border-gray-300 p-3 text-center">{item.quantity}</td>
-                          <td className="border border-gray-300 p-3 text-right">${item.unit_price.toFixed(2)}</td>
-                          <td className="border border-gray-300 p-3 text-right">${item.total_price.toFixed(2)}</td>
+                        <tr key={item.id} className="even:bg-muted/50">
+                          <td className="border border-border p-3">{item.product_name}</td>
+                          <td className="border border-border p-3 text-center">{item.quantity}</td>
+                          <td className="border border-border p-3 text-right">${item.unit_price.toFixed(2)}</td>
+                          <td className="border border-border p-3 text-right">${item.total_price.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -363,7 +353,7 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
                       <td className="py-2 px-4 text-right">Tax:</td>
                       <td className="py-2 px-4 text-right">${orderDetails.tax_amount.toFixed(2)}</td>
                     </tr>
-                    <tr className="total-row border-t-2 border-gray-400 bg-gray-50">
+                    <tr className="total-row border-t-2 border-border bg-muted">
                       <td className="py-3 px-4 text-right font-bold text-lg">Total Amount:</td>
                       <td className="py-3 px-4 text-right font-bold text-lg">${orderDetails.total_amount.toFixed(2)}</td>
                     </tr>
