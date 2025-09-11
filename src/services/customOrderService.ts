@@ -176,10 +176,14 @@ export async function respondToInvoice(orderId: string, accepted: boolean) {
       })
       .eq("id", orderId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       throw new Error(`Failed to respond to invoice: ${error.message}`);
+    }
+
+    if (!order) {
+      throw new Error(`Order ${orderId} not found or could not be updated`);
     }
 
     return order;
@@ -227,10 +231,14 @@ export async function submitPayment(orderId: string, paymentData: PaymentSubmiss
       })
       .eq("id", orderId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       throw new Error(`Failed to submit payment: ${error.message}`);
+    }
+
+    if (!order) {
+      throw new Error(`Order ${orderId} not found or could not be updated`);
     }
 
     return order;
@@ -271,10 +279,14 @@ export async function verifyPayment(orderId: string, verified: boolean) {
       })
       .eq("id", orderId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       throw new Error(`Failed to verify payment: ${error.message}`);
+    }
+
+    if (!order) {
+      throw new Error(`Order ${orderId} not found or could not be updated`);
     }
 
     return order;
@@ -333,10 +345,14 @@ export async function getOrderDetails(orderId: string) {
         )
       `)
       .eq("id", orderId)
-      .single();
+      .maybeSingle();
 
     if (orderError) {
       throw new Error(`Failed to get order details: ${orderError.message}`);
+    }
+
+    if (!order) {
+      throw new Error(`Order ${orderId} not found`);
     }
 
     return order;
