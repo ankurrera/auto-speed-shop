@@ -34,7 +34,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { getOrderDetails, respondToInvoice, submitPayment, cancelOrder } from "@/services/customOrderService";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 import InvoiceDisplay from "@/components/InvoiceDisplay";
-import TrackOrderTimeline from "@/components/TrackOrderTimeline";
 
 interface OrderDetails {
   id: string;
@@ -347,12 +346,6 @@ const OrderDetails = () => {
               Order #{orderDetails.order_number} • Created {new Date(orderDetails.created_at).toLocaleDateString()}
             </p>
           </div>
-
-          {/* Track Order Timeline */}
-          <TrackOrderTimeline 
-            orderStatus={orderDetails.status} 
-            className="mb-8"
-          />
 
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             {/* Order Information */}
