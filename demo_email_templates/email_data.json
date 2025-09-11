@@ -1,0 +1,44 @@
+{
+  "productEmail": {
+    "subject": "New Product Available: Performance Exhaust System - Demo",
+    "recipient": "demo.subscriber@example.com",
+    "productData": {
+      "name": "Performance Exhaust System - Demo",
+      "description": "High-performance stainless steel exhaust system for improved sound and power. This is a demo product to test email notifications.",
+      "price": 299.99,
+      "category": "Exhaust",
+      "brand": "SpeedPro",
+      "compatibility": "Universal fit for most vehicles",
+      "image_url": "https://via.placeholder.com/300x200/333/fff?text=Demo+Exhaust+System",
+      "stock_quantity": 10,
+      "sku": "DEMO-EXH-1757594196109",
+      "weight": 25.5,
+      "dimensions": "48\" x 6\" x 6\"",
+      "material": "Stainless Steel",
+      "warranty": "2 years",
+      "installation_difficulty": "Moderate",
+      "is_featured": true
+    }
+  },
+  "partEmail": {
+    "subject": "New Part Available: High-Performance Air Filter - Demo",
+    "recipient": "demo.subscriber@example.com",
+    "productData": {
+      "name": "High-Performance Air Filter - Demo",
+      "description": "Cotton gauze air filter for increased airflow and engine performance. This is a demo part to test email notifications.",
+      "price": 49.99,
+      "category": "Engine",
+      "brand": "FilterMax",
+      "part_number": "DEMO-AF-1757594196109",
+      "compatibility": "Honda Civic 2016-2023, Accord 2018-2023",
+      "image_url": "https://via.placeholder.com/300x200/666/fff?text=Demo+Air+Filter",
+      "stock_quantity": 25,
+      "weight": 1.2,
+      "dimensions": "12\" x 8\" x 2\"",
+      "material": "Cotton Gauze",
+      "warranty": "1 year",
+      "is_oem": false,
+      "condition": "new"
+    }
+  }
+}
