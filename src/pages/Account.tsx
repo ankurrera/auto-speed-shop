@@ -1084,57 +1084,64 @@ const Account = () => {
       await supabase.from(fitmentTable).upsert([fitmentPayload]);
     }
 
-    toast({
-      title: "Success",
-      description: `${isPart ? "Part" : "Product"} ${
-        editingProductId ? "updated" : "listed"
-      }.`,
-    });
+    // Show appropriate success message based on whether it's a new listing or update
+    if (editingProductId) {
+      toast({
+        title: "Success",
+        description: `${isPart ? "Part" : "Product"} updated successfully.`,
+      });
+    } else {
+      // For new listings, show initial success and handle notifications separately below
+      toast({
+        title: "Success",
+        description: `${isPart ? "Part" : "Product"} listed successfully!`,
+      });
+    }
 
-    // Send email notifications for new listings (not updates)
+    // Send email notifications for new listings (not updates) - run asynchronously for better UX
     if (!editingProductId && savedItem) {
-      try {
-        // Get seller name for the notification
-        const { data: sellerData } = await supabase
-          .from("sellers")
-          .select("name")
-          .eq("id", currentSellerId)
-          .single();
+      // Send notifications asynchronously without blocking the UI
+      (async () => {
+        try {
+          // Get seller name for the notification
+          const { data: sellerData } = await supabase
+            .from("sellers")
+            .select("name")
+            .eq("id", currentSellerId)
+            .single();
 
-        const sellerName = sellerData?.name || "Unknown Seller";
+          const sellerName = sellerData?.name || "Unknown Seller";
 
-        // Send email notifications to subscribed users
-        const notificationResult = await EmailNotificationService.sendNewProductNotifications({
-          productName: productInfo.name,
-          productDescription: productInfo.description,
-          price: priceValue,
-          sellerName,
-          productType: isPart ? "part" : "product",
-          imageUrl: finalImageUrls[0], // Use first image if available
-          sellerId: currentSellerId,
-        });
-
-        // Show appropriate success message for notifications
-        if (notificationResult.notificationsSent > 0) {
-          toast({
-            title: "Notifications Sent",
-            description: `Email notifications have been sent to ${notificationResult.notificationsSent} subscribed users!`,
+          // Send email notifications to subscribed users
+          const notificationResult = await EmailNotificationService.sendNewProductNotifications({
+            productName: productInfo.name,
+            productDescription: productInfo.description,
+            price: priceValue,
+            sellerName,
+            productType: isPart ? "part" : "product",
+            imageUrl: finalImageUrls[0], // Use first image if available
+            sellerId: currentSellerId,
           });
-        } else {
+
+          // Show follow-up notification about email results
+          if (notificationResult.notificationsSent > 0) {
+            toast({
+              title: "Notifications Sent",
+              description: `📧 Email notifications have been sent to ${notificationResult.notificationsSent} subscribed users!`,
+            });
+          } else {
+            console.log("ℹ️ No email subscribers found - no notifications sent");
+          }
+        } catch (notificationError) {
+          console.error("Error sending notifications:", notificationError);
+          // Show a warning toast for notification failure
           toast({
-            title: "Product Listed Successfully", 
-            description: "Your product was listed! No email notifications were sent as there are no subscribers yet.",
+            title: "Notification Issue",
+            description: "There was an issue sending email notifications, but your product was listed successfully.",
+            variant: "default",
           });
         }
-      } catch (notificationError) {
-        console.error("Error sending notifications:", notificationError);
-        // Show a warning toast but don't fail the main action
-        toast({
-          title: "Product Listed Successfully",
-          description: "Your product was listed, but there was an issue sending email notifications. Subscribers may not have been notified.",
-          variant: "default", // Not destructive since the main action succeeded
-        });
-      }
+      })();
     }
 
     cleanupAndRefetch();
@@ -1234,20 +1241,37 @@ const Account = () => {
         throw new Error("You can only delete your own products.");
       }
       
-      // Delete related records first to avoid foreign key constraint errors
-      // Delete from cart_items where product_id references this product
-      const { error: cartError } = await supabase
-        .from("cart_items")
-        .delete()
-        .eq("product_id", productId);
-      if (cartError) throw cartError;
+      // Delete related records in parallel for better performance
+      // Use Promise.allSettled to continue even if some deletions fail (cascading deletes should handle most cases)
+      const deletePromises = [
+        // Delete from cart_items where product_id references this product
+        supabase
+          .from("cart_items")
+          .delete()
+          .eq("product_id", productId),
+        
+        // Delete from wishlist where product_id references this product
+        supabase
+          .from("wishlist")
+          .delete()
+          .eq("product_id", productId),
+        
+        // Delete from product_fitments where product_id references this product
+        supabase
+          .from("product_fitments")
+          .delete()
+          .eq("product_id", productId),
+      ];
       
-      // Delete from wishlist where product_id references this product
-      const { error: wishlistError } = await supabase
-        .from("wishlist")
-        .delete()
-        .eq("product_id", productId);
-      if (wishlistError) throw wishlistError;
+      const results = await Promise.allSettled(deletePromises);
+      
+      // Log any failures but don't stop the deletion process
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const tableName = ['cart_items', 'wishlist', 'product_fitments'][index];
+          console.warn(`Failed to delete from ${tableName}:`, result.reason);
+        }
+      });
       
       // Finally delete the product itself
       const { error } = await supabase
@@ -1256,16 +1280,38 @@ const Account = () => {
         .eq("id", productId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast({ title: "Deleted", description: "Product removed." });
-      queryClient.invalidateQueries({ queryKey: ["seller-products"] });
+    onMutate: async (productId) => {
+      // Optimistic update - immediately remove from UI
+      await queryClient.cancelQueries({ queryKey: ["seller-products"] });
+      
+      const previousProducts = queryClient.getQueryData(["seller-products"]);
+      
+      // Optimistically remove the product from the list
+      queryClient.setQueryData(["seller-products"], (old: any) => {
+        if (!old) return old;
+        return old.filter((product: any) => product.id !== productId);
+      });
+      
+      return { previousProducts };
     },
-    onError: (error: any) => {
+    onSuccess: () => {
+      toast({ title: "Deleted", description: "Product removed successfully." });
+    },
+    onError: (error: any, productId, context) => {
+      // Revert optimistic update on error
+      if (context?.previousProducts) {
+        queryClient.setQueryData(["seller-products"], context.previousProducts);
+      }
+      
       toast({
         title: "Error",
         description: `Failed to delete product: ${error.message}`,
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     },
   });
 
@@ -1291,27 +1337,37 @@ const Account = () => {
         throw new Error("You can only delete your own parts.");
       }
       
-      // Delete related records first to avoid foreign key constraint errors
-      // Delete from cart_items where part_id references this part
-      const { error: cartError } = await supabase
-        .from("cart_items")
-        .delete()
-        .eq("part_id", partId);
-      if (cartError) throw cartError;
+      // Delete related records in parallel for better performance
+      // Use Promise.allSettled to continue even if some deletions fail (cascading deletes should handle most cases)
+      const deletePromises = [
+        // Delete from cart_items where part_id references this part
+        supabase
+          .from("cart_items")
+          .delete()
+          .eq("part_id", partId),
+        
+        // Delete from wishlist where part_id references this part
+        supabase
+          .from("wishlist")
+          .delete()
+          .eq("part_id", partId),
+        
+        // Delete from part_fitments where part_id references this part
+        supabase
+          .from("part_fitments")
+          .delete()
+          .eq("part_id", partId),
+      ];
       
-      // Delete from wishlist where part_id references this part
-      const { error: wishlistError } = await supabase
-        .from("wishlist")
-        .delete()
-        .eq("part_id", partId);
-      if (wishlistError) throw wishlistError;
+      const results = await Promise.allSettled(deletePromises);
       
-      // Delete from part_fitments where part_id references this part
-      const { error: fitmentError } = await supabase
-        .from("part_fitments")
-        .delete()
-        .eq("part_id", partId);
-      if (fitmentError) throw fitmentError;
+      // Log any failures but don't stop the deletion process
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const tableName = ['cart_items', 'wishlist', 'part_fitments'][index];
+          console.warn(`Failed to delete from ${tableName}:`, result.reason);
+        }
+      });
       
       // Finally delete the part itself
       const { error } = await supabase
@@ -1320,16 +1376,38 @@ const Account = () => {
         .eq("id", partId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast({ title: "Deleted", description: "Part removed." });
-      queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
+    onMutate: async (partId) => {
+      // Optimistic update - immediately remove from UI
+      await queryClient.cancelQueries({ queryKey: ["seller-parts"] });
+      
+      const previousParts = queryClient.getQueryData(["seller-parts"]);
+      
+      // Optimistically remove the part from the list
+      queryClient.setQueryData(["seller-parts"], (old: any) => {
+        if (!old) return old;
+        return old.filter((part: any) => part.id !== partId);
+      });
+      
+      return { previousParts };
     },
-    onError: (error: any) => {
+    onSuccess: () => {
+      toast({ title: "Deleted", description: "Part removed successfully." });
+    },
+    onError: (error: any, partId, context) => {
+      // Revert optimistic update on error
+      if (context?.previousParts) {
+        queryClient.setQueryData(["seller-parts"], context.previousParts);
+      }
+      
       toast({
         title: "Error",
         description: `Failed to delete part: ${error.message}`,
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
     },
   });
 
