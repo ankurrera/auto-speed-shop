@@ -111,10 +111,6 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
                 <td style="text-align: right;">Subtotal:</td>
                 <td style="text-align: right;">$${orderDetails.subtotal.toFixed(2)}</td>
               </tr>
-              <tr>
-                <td style="text-align: right;">Shipping:</td>
-                <td style="text-align: right;">$${orderDetails.shipping_amount.toFixed(2)}</td>
-              </tr>
               ${orderDetails.convenience_fee ? `
                 <tr>
                   <td style="text-align: right;">Convenience Fee:</td>
@@ -332,10 +328,6 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
                     <tr>
                       <td className="py-2 px-4 text-right">Subtotal:</td>
                       <td className="py-2 px-4 text-right">${orderDetails.subtotal.toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-4 text-right">Shipping:</td>
-                      <td className="py-2 px-4 text-right">${orderDetails.shipping_amount.toFixed(2)}</td>
                     </tr>
                     {orderDetails.convenience_fee && (
                       <tr>

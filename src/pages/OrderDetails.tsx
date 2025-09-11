@@ -410,10 +410,6 @@ const OrderDetails = () => {
                     <span>Subtotal:</span>
                     <span>${orderDetails.subtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Shipping:</span>
-                    <span>${orderDetails.shipping_amount.toFixed(2)}</span>
-                  </div>
                   {orderDetails.convenience_fee && (
                     <div className="flex justify-between">
                       <span>Convenience Fee:</span>

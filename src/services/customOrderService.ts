@@ -30,7 +30,6 @@ export async function createCustomOrder(cartItems: CartItem[], shippingAddress: 
 
     // Calculate basic pricing (before admin adds fees) - include all items
     const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const shipping = subtotal > 75 ? 0 : 9.99;
     const tax = +(subtotal * 0.0825).toFixed(2);
     
     // Generate order number
@@ -43,9 +42,8 @@ export async function createCustomOrder(cartItems: CartItem[], shippingAddress: 
         order_number: orderNumber,
         user_id: userId || null,
         subtotal,
-        shipping_amount: shipping,
         tax_amount: tax,
-        total_amount: subtotal + shipping + tax, // Initial total, will be updated when admin adds fees
+        total_amount: subtotal + tax, // Initial total, will be updated when admin adds fees
         currency: "USD",
         status: ORDER_STATUS.PENDING_ADMIN_REVIEW,
         payment_status: PAYMENT_STATUS.PENDING,
@@ -316,9 +314,8 @@ export async function getOrderDetails(orderId: string) {
         status: ORDER_STATUS.PENDING_ADMIN_REVIEW,
         payment_status: PAYMENT_STATUS.PENDING,
         subtotal: 199.99,
-        shipping_amount: 9.99,
         tax_amount: 16.50,
-        total_amount: 226.48,
+        total_amount: 216.49,
         order_items: [
           {
             id: `${orderId}-item-1`,
