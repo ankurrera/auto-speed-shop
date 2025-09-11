@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'Missing required fields: to, subject, html' });
   }
 
-  const transporter = nodemailer.createTransporter({
+  const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.GMAIL_USER,
