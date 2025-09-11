@@ -25,7 +25,6 @@ import CustomCheckout from "./pages/CustomCheckout";
 import CustomOrderFlowDemo from "./pages/CustomOrderFlowDemo";
 import SellerDashboard from "./pages/SellerDashboard";
 import EmailSubscriptionDemo from "./components/EmailSubscriptionDemo";
-import InvoiceTestDemo from "./components/InvoiceTestDemo";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
@@ -70,7 +69,6 @@ const App = () => {
                     <Route path="/order-confirmation" element={<OrderConfirmation />} />
                     <Route path="/orders/:orderId/tracking" element={<OrderTracking />} />
                     <Route path="/email-demo" element={<EmailSubscriptionDemo />} />
-                    <Route path="/invoice-test" element={<InvoiceTestDemo />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
