@@ -151,13 +151,13 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
   const getStatusIcon = (status: 'completed' | 'current' | 'pending' | 'cancelled') => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="h-6 w-6 text-green-600" />;
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'current':
-        return <Clock className="h-6 w-6 text-blue-600" />;
+        return <Clock className="h-5 w-5 text-blue-600" />;
       case 'cancelled':
-        return <XCircle className="h-6 w-6 text-red-600" />;
+        return <XCircle className="h-5 w-5 text-red-600" />;
       default:
-        return <Clock className="h-6 w-6 text-gray-400" />;
+        return <Clock className="h-5 w-5 text-gray-400" />;
     }
   };
 
@@ -172,35 +172,33 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
+        <div className="space-y-4">
           {trackingSteps.map((step, index) => (
             <div key={step.id} className="relative">
               {/* Timeline line */}
               {index < trackingSteps.length - 1 && (
-                <div className="absolute left-6 top-12 w-0.5 h-8 bg-gray-200"></div>
+                <div className="absolute left-5 top-11 w-0.5 h-5 bg-gray-200" style={{ left: '22px' }}></div>
               )}
               
-              <div className="flex items-start gap-4">
+              <div className="flex items-center gap-4">
                 {/* Status icon */}
-                <div className={`flex-shrink-0 w-12 h-12 rounded-full border-2 flex items-center justify-center ${getStatusColor(step.status)}`}>
+                <div className={`flex-shrink-0 w-11 h-11 rounded-full border-2 flex items-center justify-center ${getStatusColor(step.status)}`}>
                   {getStatusIcon(step.status)}
                 </div>
                 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className={`font-semibold ${step.status === 'cancelled' ? 'text-red-600' : step.status === 'completed' ? 'text-green-600' : 'text-foreground'}`}>
+                  <div className="flex items-center justify-between">
+                    <h4 className={`font-semibold text-sm ${step.status === 'cancelled' ? 'text-red-600' : step.status === 'completed' ? 'text-green-600' : 'text-foreground'}`}>
                       {step.title}
                     </h4>
                     <Badge 
                       variant={step.status === 'completed' ? 'default' : step.status === 'cancelled' ? 'destructive' : 'secondary'}
+                      className="text-xs"
                     >
                       {step.statusText}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {step.description}
-                  </p>
                 </div>
               </div>
             </div>
