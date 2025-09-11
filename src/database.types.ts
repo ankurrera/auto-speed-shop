@@ -103,41 +103,6 @@ export type Database = {
           },
         ]
       }
-      email_subscriptions: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-          subscribed_to_new_products: boolean | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: string
-          subscribed_to_new_products?: boolean | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          subscribed_to_new_products?: boolean | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "email_subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       categories: {
         Row: {
           created_at: string
@@ -233,8 +198,10 @@ export type Database = {
       orders: {
         Row: {
           billing_address: Json | null
+          convenience_fee: number | null
           created_at: string
           currency: string
+          delivery_charge: number | null
           delivered_at: string | null
           id: string
           notes: string | null
@@ -253,8 +220,10 @@ export type Database = {
         }
         Insert: {
           billing_address?: Json | null
+          convenience_fee?: number | null
           created_at?: string
           currency?: string
+          delivery_charge?: number | null
           delivered_at?: string | null
           id?: string
           notes?: string | null
@@ -273,8 +242,10 @@ export type Database = {
         }
         Update: {
           billing_address?: Json | null
+          convenience_fee?: number | null
           created_at?: string
           currency?: string
+          delivery_charge?: number | null
           delivered_at?: string | null
           id?: string
           notes?: string | null
@@ -687,6 +658,33 @@ export type Database = {
           make?: string
           model?: string
           year?: number
+        }
+        Relationships: []
+      }
+      email_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          email: string
+          subscribed_to_new_products: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email: string
+          subscribed_to_new_products?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email?: string
+          subscribed_to_new_products?: boolean
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
