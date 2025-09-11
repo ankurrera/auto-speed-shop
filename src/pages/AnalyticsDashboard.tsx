@@ -145,7 +145,7 @@ const AnalyticsDashboard = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="p-6 space-y-8">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
@@ -329,8 +329,8 @@ const AnalyticsDashboard = () => {
                   <TableRow>
                     <TableHead>Product Name</TableHead>
                     <TableHead className="text-right">Sold</TableHead>
+                    <TableHead className="text-right">Sale</TableHead>
                     <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead className="text-right">Avg Price</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -338,8 +338,8 @@ const AnalyticsDashboard = () => {
                     <TableRow key={index}>
                       <TableCell className="font-medium">{product.product_name}</TableCell>
                       <TableCell className="text-right">{product.total_quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(parseFloat(product.total_sales))}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(parseFloat(product.average_price))}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(parseFloat(product.sale))}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(parseFloat(product.revenue))}</TableCell>
                     </TableRow>
                   ))}
                   {(!bestProducts || bestProducts.length === 0) && (
