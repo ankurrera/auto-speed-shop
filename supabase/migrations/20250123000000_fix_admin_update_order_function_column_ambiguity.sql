@@ -1,5 +1,5 @@
--- Add admin function to update orders for invoice creation
--- This allows admins to update orders even with RLS enabled
+-- Fix column reference ambiguity in admin_update_order_for_invoice function
+-- This fixes the "column reference 'convenience_fee' is ambiguous" error
 
 CREATE OR REPLACE FUNCTION public.admin_update_order_for_invoice(
   requesting_user_id uuid,
@@ -55,6 +55,7 @@ BEGIN
   END IF;
 
   -- Update the order with invoice details
+  -- Fixed column reference ambiguity by qualifying with table name
   UPDATE public.orders 
   SET 
     convenience_fee = COALESCE(convenience_fee_param, orders.convenience_fee),
