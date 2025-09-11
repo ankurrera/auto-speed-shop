@@ -8,7 +8,7 @@ A modern e-commerce platform for automotive parts and accessories, built with Re
 - **Product Catalog**: Browse automotive parts by category, brand, and vehicle compatibility
 - **Shopping Cart**: Add/remove items, quantity management, and persistent cart state
 - **Wishlist**: Save favorite products for later purchase
-- **Checkout Process**: Secure checkout with PayPal integration
+- **Checkout Process**: Secure checkout with custom order management
 - **Order Tracking**: Track order status and shipping information
 - **User Accounts**: Registration, login, profile management
 
@@ -30,7 +30,7 @@ A modern e-commerce platform for automotive parts and accessories, built with Re
 - **Routing**: React Router DOM
 - **Styling**: Tailwind CSS + Shadcn/ui
 - **Backend**: Supabase (Database, Auth, Storage)
-- **Payments**: PayPal integration
+- **Payments**: Custom order & payment flow with admin invoice management
 - **State Management**: React Query + Context API
 - **Maps**: Leaflet/React-Leaflet
 - **Charts**: Recharts
@@ -41,7 +41,6 @@ A modern e-commerce platform for automotive parts and accessories, built with Re
 
 - Node.js 18+ and npm
 - Supabase account (for database and authentication)
-- PayPal Developer account (for payment processing)
 
 ### Installation
 
@@ -62,7 +61,6 @@ A modern e-commerce platform for automotive parts and accessories, built with Re
    ```env
    VITE_SUPABASE_URL=your-supabase-project-url
    VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-anon-key
-   VITE_PAYPAL_CLIENT_ID=your-paypal-client-id
    ```
 
 4. **Start the development server**
@@ -120,14 +118,16 @@ This project uses Supabase for the backend. You'll need to:
 3. Configure authentication providers
 4. Set up row-level security policies
 
-### Payment Integration
+### Custom Order & Payment Flow
 
-PayPal integration is configured for payment processing:
+This project uses a custom order and payment flow:
 
-1. Create a PayPal Developer account
-2. Create a new application
-3. Add your client ID to environment variables
-4. Test with PayPal sandbox before going live
+1. Create a new Supabase project
+2. Set up the database schema (see `supabase/migrations/`)
+3. Configure authentication providers
+4. Set up row-level security policies
+
+The custom flow allows for admin review and invoice management before payment completion.
 
 ## Deployment
 

@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getOrderDetails, respondToInvoice, submitPayment } from "@/services/customOrderService";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
+import InvoiceDisplay from "@/components/InvoiceDisplay";
 
 interface OrderDetails {
   id: string;
@@ -73,16 +74,20 @@ const OrderDetails = () => {
           .from("admin_paypal_credentials")
           .select("paypal_email")
           .eq("is_active", true)
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
 
         if (error) {
-          console.error("Error fetching admin PayPal email:", error);
+          console.warn("Error fetching admin PayPal email:", error.message);
           setAdminPaypalEmail("admin@autospeedshop.com"); // fallback
-        } else {
+        } else if (data) {
           setAdminPaypalEmail(data.paypal_email);
+        } else {
+          // No active PayPal credentials found
+          console.warn("No active admin PayPal credentials found");
+          setAdminPaypalEmail("admin@autospeedshop.com"); // fallback
         }
       } catch (error) {
-        console.error("Error fetching admin PayPal email:", error);
+        console.warn("Unexpected error fetching admin PayPal email:", error);
         setAdminPaypalEmail("admin@autospeedshop.com"); // fallback
       }
     };
@@ -230,17 +235,25 @@ const OrderDetails = () => {
       case ORDER_STATUS.PENDING_ADMIN_REVIEW:
         return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending Review</Badge>;
       case ORDER_STATUS.INVOICE_SENT:
-        return <Badge variant="outline"><FileText className="h-3 w-3 mr-1" />Invoice Sent</Badge>;
+        return <Badge variant="outline"><FileText className="h-3 w-3 mr-1" />Invoice Received</Badge>;
       case ORDER_STATUS.INVOICE_ACCEPTED:
         return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Invoice Accepted</Badge>;
       case ORDER_STATUS.INVOICE_DECLINED:
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Invoice Declined</Badge>;
+      case ORDER_STATUS.PAYMENT_PENDING:
+        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Payment Pending</Badge>;
       case ORDER_STATUS.PAYMENT_SUBMITTED:
         return <Badge variant="secondary"><CreditCard className="h-3 w-3 mr-1" />Payment Submitted</Badge>;
+      case ORDER_STATUS.PAYMENT_VERIFIED:
+        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Payment Verified</Badge>;
       case ORDER_STATUS.CONFIRMED:
         return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Confirmed</Badge>;
       case ORDER_STATUS.CANCELLED:
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Cancelled</Badge>;
+      case ORDER_STATUS.SHIPPED:
+        return <Badge variant="default"><Package className="h-3 w-3 mr-1" />Shipped</Badge>;
+      case ORDER_STATUS.DELIVERED:
+        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Delivered</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -275,7 +288,7 @@ const OrderDetails = () => {
 
   const hasInvoice = orderDetails.convenience_fee !== undefined || orderDetails.delivery_charge !== undefined;
   const canRespondToInvoice = orderDetails.status === ORDER_STATUS.INVOICE_SENT;
-  const canPayment = orderDetails.status === ORDER_STATUS.INVOICE_ACCEPTED;
+  const canPayment = orderDetails.status === ORDER_STATUS.INVOICE_ACCEPTED || orderDetails.status === ORDER_STATUS.PAYMENT_PENDING;
   const paymentSubmitted = orderDetails.status === ORDER_STATUS.PAYMENT_SUBMITTED;
 
   return (
@@ -370,8 +383,20 @@ const OrderDetails = () => {
             </Card>
           )}
 
-          {/* Invoice Section */}
-          {hasInvoice && (
+          {/* Invoice Section - New Formal Design */}
+          {hasInvoice && canRespondToInvoice && (
+            <div className="mb-8">
+              <InvoiceDisplay
+                orderDetails={orderDetails}
+                onAccept={() => handleInvoiceResponse(true)}
+                onDecline={() => handleInvoiceResponse(false)}
+                isResponding={responding}
+              />
+            </div>
+          )}
+
+          {/* Simple Invoice Summary for Non-Interactive Cases */}
+          {hasInvoice && !canRespondToInvoice && (
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -411,37 +436,6 @@ const OrderDetails = () => {
                     <span>${orderDetails.total_amount.toFixed(2)}</span>
                   </div>
                 </div>
-
-                {/* Invoice Response Actions */}
-                {canRespondToInvoice && (
-                  <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                    <div className="flex items-center gap-2 mb-3">
-                      <AlertCircle className="h-5 w-5 text-yellow-600" />
-                      <h4 className="font-semibold">Action Required</h4>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Please review the invoice above and choose to accept or decline.
-                    </p>
-                    <div className="flex gap-3">
-                      <Button 
-                        onClick={() => handleInvoiceResponse(true)}
-                        disabled={responding}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Accept Invoice
-                      </Button>
-                      <Button 
-                        onClick={() => handleInvoiceResponse(false)}
-                        disabled={responding}
-                        variant="destructive"
-                      >
-                        <XCircle className="h-4 w-4 mr-2" />
-                        Decline Invoice
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           )}

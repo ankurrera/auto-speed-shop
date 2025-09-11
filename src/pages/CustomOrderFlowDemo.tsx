@@ -141,7 +141,7 @@ const CustomOrderFlowDemo = () => {
                 <li>1. Admin reviews your order request</li>
                 <li>2. You'll receive an invoice with final pricing</li>
                 <li>3. Accept the invoice to proceed with payment</li>
-                <li>4. Complete payment via PayPal externally</li>
+                <li>4. Complete payment via external payment method</li>
                 <li>5. Submit payment confirmation</li>
               </ol>
             </div>
@@ -257,7 +257,7 @@ const CustomOrderFlowDemo = () => {
         <CardContent>
           <div className="space-y-4">
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <h4 className="font-semibold mb-2">Pay via PayPal</h4>
+              <h4 className="font-semibold mb-2">Pay via External Payment</h4>
               <p className="text-sm text-muted-foreground mb-3">
                 Send payment of <strong>${mockOrder.total_amount.toFixed(2)}</strong> to:
               </p>
@@ -265,7 +265,7 @@ const CustomOrderFlowDemo = () => {
                 <span className="font-mono">admin@autospeedshop.com</span>
                 <Button size="sm" variant="outline">
                   <ExternalLink className="h-3 w-3 mr-1" />
-                  Open PayPal
+                  Open External Payment
                 </Button>
               </div>
             </div>
@@ -287,7 +287,7 @@ const CustomOrderFlowDemo = () => {
                 <Label>Payment Screenshot</Label>
                 <Input type="file" accept="image/*" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Upload a screenshot of your PayPal payment confirmation
+                  Upload a screenshot of your payment confirmation
                 </p>
               </div>
 

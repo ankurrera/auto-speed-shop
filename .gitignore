@@ -6,3 +6,7 @@ dist
 *.log
 npm-debug.log*
 .DS_Store
+
+# Temporary test files
+test_parts_deletion.js
+validate_migrations.sh

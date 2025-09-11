@@ -10,6 +10,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ const CustomCheckout = () => {
   const { cartItems, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -109,6 +111,9 @@ const CustomCheckout = () => {
       // Clear cart and show success message
       clearCart();
       
+      // Invalidate admin orders cache so AdminOrderManagement shows the new order
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      
       toast({
         title: "Order Request Submitted!",
         description: `Your order ${result.orderNumber} has been submitted for admin review. You will receive an invoice soon.`,
@@ -117,11 +122,11 @@ const CustomCheckout = () => {
       // Navigate to order details page
       navigate(`/order/${result.orderId}`);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Order submission error:", error);
       toast({
         title: "Order Failed",
-        description: error.message || "Failed to submit order request. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to submit order request. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -327,7 +332,7 @@ const CustomCheckout = () => {
                     <li>1. Admin reviews your order request</li>
                     <li>2. You'll receive an invoice with final pricing</li>
                     <li>3. Accept the invoice to proceed with payment</li>
-                    <li>4. Complete payment via PayPal externally</li>
+                    <li>4. Complete payment via external payment method</li>
                     <li>5. Submit payment confirmation</li>
                   </ol>
                 </div>
