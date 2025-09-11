@@ -239,12 +239,20 @@ const OrderDetails = () => {
         return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Invoice Accepted</Badge>;
       case ORDER_STATUS.INVOICE_DECLINED:
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Invoice Declined</Badge>;
+      case ORDER_STATUS.PAYMENT_PENDING:
+        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Payment Pending</Badge>;
       case ORDER_STATUS.PAYMENT_SUBMITTED:
         return <Badge variant="secondary"><CreditCard className="h-3 w-3 mr-1" />Payment Submitted</Badge>;
+      case ORDER_STATUS.PAYMENT_VERIFIED:
+        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Payment Verified</Badge>;
       case ORDER_STATUS.CONFIRMED:
         return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Confirmed</Badge>;
       case ORDER_STATUS.CANCELLED:
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Cancelled</Badge>;
+      case ORDER_STATUS.SHIPPED:
+        return <Badge variant="default"><Package className="h-3 w-3 mr-1" />Shipped</Badge>;
+      case ORDER_STATUS.DELIVERED:
+        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Delivered</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -279,7 +287,7 @@ const OrderDetails = () => {
 
   const hasInvoice = orderDetails.convenience_fee !== undefined || orderDetails.delivery_charge !== undefined;
   const canRespondToInvoice = orderDetails.status === ORDER_STATUS.INVOICE_SENT;
-  const canPayment = orderDetails.status === ORDER_STATUS.INVOICE_ACCEPTED;
+  const canPayment = orderDetails.status === ORDER_STATUS.INVOICE_ACCEPTED || orderDetails.status === ORDER_STATUS.PAYMENT_PENDING;
   const paymentSubmitted = orderDetails.status === ORDER_STATUS.PAYMENT_SUBMITTED;
 
   return (

@@ -154,7 +154,7 @@ export async function respondToInvoice(orderId: string, accepted: boolean) {
     
     if (isDevelopment && isSampleOrder) {
       // For sample orders in development mode, simulate successful response
-      const newStatus = accepted ? ORDER_STATUS.INVOICE_ACCEPTED : ORDER_STATUS.INVOICE_DECLINED;
+      const newStatus = accepted ? ORDER_STATUS.INVOICE_ACCEPTED : ORDER_STATUS.CANCELLED;
       console.log(`[DEV MODE] Simulating invoice response for sample order: ${orderId}, accepted: ${accepted}`);
       return {
         id: orderId,
@@ -164,7 +164,7 @@ export async function respondToInvoice(orderId: string, accepted: boolean) {
       };
     }
 
-    const newStatus = accepted ? ORDER_STATUS.INVOICE_ACCEPTED : ORDER_STATUS.INVOICE_DECLINED;
+    const newStatus = accepted ? ORDER_STATUS.INVOICE_ACCEPTED : ORDER_STATUS.CANCELLED;
     const paymentStatus = accepted ? PAYMENT_STATUS.PENDING : PAYMENT_STATUS.FAILED;
 
     const { data: order, error } = await supabase
