@@ -8,6 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Package,
   Clock,
   CheckCircle,
@@ -20,7 +31,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { getOrderDetails, respondToInvoice, submitPayment } from "@/services/customOrderService";
+import { getOrderDetails, respondToInvoice, submitPayment, cancelOrder } from "@/services/customOrderService";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 import InvoiceDisplay from "@/components/InvoiceDisplay";
 
@@ -57,6 +68,7 @@ const OrderDetails = () => {
   const [loading, setLoading] = useState(true);
   const [responding, setResponding] = useState(false);
   const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [cancellingOrder, setCancellingOrder] = useState(false);
   const [adminPaypalEmail, setAdminPaypalEmail] = useState<string>("");
   
   // Payment submission form state
@@ -163,6 +175,32 @@ const OrderDetails = () => {
       });
     } finally {
       setResponding(false);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!orderDetails) return;
+
+    setCancellingOrder(true);
+    try {
+      await cancelOrder(orderDetails.id, 'Order cancelled by customer');
+      
+      // Refresh order details
+      const updatedOrder = await getOrderDetails(orderDetails.id);
+      setOrderDetails(updatedOrder);
+
+      toast({
+        title: "Order Cancelled",
+        description: "Your order has been successfully cancelled. Refunds, if applicable, will follow company policy.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel order",
+        variant: "destructive"
+      });
+    } finally {
+      setCancellingOrder(false);
     }
   };
 
@@ -290,6 +328,9 @@ const OrderDetails = () => {
   const canRespondToInvoice = orderDetails.status === ORDER_STATUS.INVOICE_SENT;
   const canPayment = orderDetails.status === ORDER_STATUS.INVOICE_ACCEPTED || orderDetails.status === ORDER_STATUS.PAYMENT_PENDING;
   const paymentSubmitted = orderDetails.status === ORDER_STATUS.PAYMENT_SUBMITTED;
+  
+  // Show cancel button only if user has accepted invoice but hasn't submitted payment yet
+  const canCancelOrder = orderDetails.status === ORDER_STATUS.INVOICE_ACCEPTED || orderDetails.status === ORDER_STATUS.PAYMENT_PENDING;
 
   return (
     <div className="min-h-screen bg-background">
@@ -563,6 +604,42 @@ const OrderDetails = () => {
             <Button variant="secondary" asChild>
               <Link to="/shop">Continue Shopping</Link>
             </Button>
+            {canCancelOrder && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={cancellingOrder}>
+                    {cancellingOrder ? (
+                      <>
+                        <Clock className="h-4 w-4 mr-2 animate-spin" />
+                        Cancelling...
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Cancel Order
+                      </>
+                    )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to cancel this order?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. Your order will be cancelled and you will be notified of any refund processing according to company policy.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>No, Keep Order</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleCancelOrder}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Yes, Cancel Order
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         </div>
       </div>

@@ -368,6 +368,26 @@ const OrderTracking = () => {
                 </Card>
               )}
 
+              {/* Post-Payment Cancellation Guidance */}
+              {(orderDetails.status === "payment_submitted" || 
+                orderDetails.status === "payment_verified" || 
+                orderDetails.status === "confirmed" ||
+                orderDetails.status === "shipped" ||
+                orderDetails.status === "delivered") && (
+                <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+                  <CardHeader>
+                    <CardTitle className="text-blue-700 dark:text-blue-300 text-sm">
+                      Need to Cancel or Update Your Order?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-blue-600 dark:text-blue-400 text-sm">
+                      For cancellations or updates after payment confirmation, please contact Customer Care Services.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
               <div className="space-y-2">
                 <Button asChild className="w-full">
                   <Link to="/account/orders">View All Orders</Link>

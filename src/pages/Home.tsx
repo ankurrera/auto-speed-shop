@@ -354,8 +354,8 @@ const Home = () => {
             </div>
             
             <div className="text-center mt-16 animate-fade-in-up delay-400">
-              <Button size="lg" variant="default" className="text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
-                Explore All Products
+              <Button size="lg" variant="default" className="text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300" asChild>
+                <Link to="/shop">Explore All Products</Link>
               </Button>
             </div>
           </div>
