@@ -49,7 +49,7 @@ export interface ExtendedOrder {
   status: OrderStatus;
   payment_status: PaymentStatus;
   subtotal: number;
-  shipping_amount: number;
+
   tax_amount: number;
   total_amount: number;
   convenience_fee?: number;

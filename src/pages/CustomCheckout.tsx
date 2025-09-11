@@ -63,9 +63,8 @@ const CustomCheckout = () => {
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal > 75 ? 0 : 9.99;
   const tax = +(subtotal * TAX_RATE).toFixed(2);
-  const total = +(subtotal + shipping + tax).toFixed(2);
+  const total = +(subtotal + tax).toFixed(2);
 
   const handleInputChange = (field: string, value: string) => {
     setShippingInfo(prev => ({ ...prev, [field]: value }));
@@ -278,10 +277,6 @@ const CustomCheckout = () => {
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
                     <span>${subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Shipping:</span>
-                    <span>${shipping.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Tax:</span>
