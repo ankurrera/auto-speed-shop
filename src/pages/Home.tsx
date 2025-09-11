@@ -35,10 +35,6 @@ const Home = () => {
   const [selectedModel, setSelectedModel] = useState("");
   const navigate = useNavigate();
 
-  const yearSelectRef = useRef<HTMLDivElement>(null);
-  const makeSelectRef = useRef<HTMLDivElement>(null);
-  const modelSelectRef = useRef<HTMLDivElement>(null);
-
   // Fetch featured products from Supabase
   // We use the new Product type to ensure the data is correctly structured
   const { data: featuredProducts = [] } = useQuery<Product[]>({
@@ -63,8 +59,7 @@ const Home = () => {
         rating: 4.5,
         reviews: Math.floor(Math.random() * 200) + 50,
         inStock: product.stock_quantity > 0,
-        isOnSale: product.compare_at_price && Number(product.compare_at_price) > Number(product.price),
-        className: "hover:scale-105 transition-transform duration-300 animate-fade-in-up" // Add this line
+        isOnSale: product.compare_at_price && Number(product.compare_at_price) > Number(product.price)
       }));
     }
   });
@@ -131,67 +126,40 @@ const Home = () => {
     navigate(`/shop?${searchParams.toString()}`);
   };
 
-  const handleMouseEnter = (ref: React.RefObject<HTMLDivElement>) => {
-    if (ref.current) {
-      let scrollAmount = 0;
-      const scrollStep = 1;
-      let frame: number;
-
-      const scroll = () => {
-        ref.current!.scrollTop += scrollStep;
-        scrollAmount += scrollStep;
-        if (scrollAmount < ref.current!.scrollHeight - ref.current!.clientHeight) {
-          frame = window.requestAnimationFrame(scroll);
-        }
-      };
-
-      frame = window.requestAnimationFrame(scroll);
-
-      ref.current.addEventListener("mouseleave", () => {
-        window.cancelAnimationFrame(frame);
-        ref.current!.scrollTo({ top: 0, behavior: "smooth" });
-      });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Hero Section */}
+      {/* Minimalist Hero Section */}
       <section className="relative h-screen flex items-center justify-center bg-background overflow-hidden">
         <div className="absolute inset-0">
           <img
             src={heroImage}
             alt="Auto Parts Hero"
-            className="w-full h-full object-cover opacity-80" 
+            className="w-full h-full object-cover opacity-20" 
           />
-          {/* Semi-transparent overlay for text contrast */}
-          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+          <div className="absolute inset-0 bg-background bg-opacity-60"></div>
         </div>
-        <div className="relative container mx-auto px-4 text-center z-10">
-          <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight animate-fade-in-up">
-            <span className="text-white dark:text-white">Your Ultimate</span>
+        <div className="relative container mx-auto px-6 text-center z-10 max-w-5xl">
+          <h1 className="text-4xl md:text-6xl font-semibold text-foreground leading-tight mb-6">
+            <span className="text-foreground">Your Ultimate</span>
             <br />
-            <span className="bg-gradient-primary bg-clip-text text-transparent">Auto Parts Destination</span>
+            <span className="text-primary">Auto Parts Destination</span>
           </h1>
-          <p className="text-lg md:text-xl mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100 text-white">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-12">
             Discover premium parts and accessories for a ride that reflects your style and performance needs.
           </p>
             
-          {/* Vehicle Search */}
-          <Card className="mt-12 w-full max-w-4xl mx-auto bg-card/70 backdrop-blur-md shadow-lg animate-fade-in-up delay-200">
-            <CardContent className="p-6">
-              <h3 className="text-xl font-bold text-foreground mb-4">
+          {/* Minimalist Vehicle Search */}
+          <Card className="w-full max-w-3xl mx-auto bg-card border border-border shadow-sm">
+            <CardContent className="p-8">
+              <h3 className="text-lg font-medium text-foreground mb-6">
                 Find the Perfect Fit
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger className="h-12">
+                  <SelectTrigger className="h-11 border-border">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
-                  <SelectContent
-                    ref={yearSelectRef}
-                    onMouseEnter={() => handleMouseEnter(yearSelectRef)}
-                  >
+                  <SelectContent>
                     {vehicleYears.map(year => (
                       <SelectItem key={year} value={year.toString()}>
                         {year}
@@ -201,13 +169,10 @@ const Home = () => {
                 </Select>
                 
                 <Select value={selectedMake} onValueChange={setSelectedMake}>
-                  <SelectTrigger className="h-12">
+                  <SelectTrigger className="h-11 border-border">
                     <SelectValue placeholder="Make" />
                   </SelectTrigger>
-                  <SelectContent
-                    ref={makeSelectRef}
-                    onMouseEnter={() => handleMouseEnter(makeSelectRef)}
-                  >
+                  <SelectContent>
                     {vehicleMakes.map(make => (
                       <SelectItem key={make.name} value={make.name}>
                         {make.name}
@@ -217,13 +182,10 @@ const Home = () => {
                 </Select>
                 
                 <Select value={selectedModel} onValueChange={setSelectedModel}>
-                  <SelectTrigger className="h-12">
+                  <SelectTrigger className="h-11 border-border">
                     <SelectValue placeholder="Model" />
                   </SelectTrigger>
-                  <SelectContent
-                    ref={modelSelectRef}
-                    onMouseEnter={() => handleMouseEnter(modelSelectRef)}
-                  >
+                  <SelectContent>
                     {vehicleModels.map(model => (
                       <SelectItem key={model} value={model}>
                         {model}
@@ -232,106 +194,106 @@ const Home = () => {
                   </SelectContent>
                 </Select>
                   
-                  <Button size="lg" className="h-12 shadow-primary hover:shadow-lg transition-all duration-300" onClick={handleSearch}>
-                    <Search className="h-5 w-5 mr-2" />
-                    Search Items
-                  </Button>
+                <Button size="lg" className="h-11 transition-colors" onClick={handleSearch}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Search Items
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Minimalist Brand Carousel */}
+      <BrandCarousel />
+
+      {/* Simplified Features */}
+      <section className="py-20 bg-background">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <p className="text-sm text-primary font-medium mb-3">Why Choose Us?</p>
+            <h2 className="text-3xl font-semibold text-foreground">Driven by Quality, Delivered with Speed</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <Card className="text-center p-8 border border-border hover:border-primary/50 transition-colors">
+              <CardHeader className="p-0">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Truck className="h-6 w-6 text-primary" />
                 </div>
+                <CardTitle className="font-medium text-lg">Fast Shipping</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 pt-3">
+                <p className="text-muted-foreground text-sm">Free shipping on orders over $75, nationwide.</p>
               </CardContent>
             </Card>
-          </div>
-        </section>
-
-        {/* 2. Add the Brand Carousel component here */}
-        <BrandCarousel />
-
-        {/* Features */}
-        <section className="py-24 bg-background">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <Badge variant="secondary" className="mb-4 text-primary">Why Choose Us?</Badge>
-              <h2 className="text-4xl font-bold">Driven by Quality, Delivered with Speed</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up">
+            <Card className="text-center p-8 border border-border hover:border-primary/50 transition-colors">
+              <CardHeader className="p-0">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle className="font-medium text-lg">Quality Guarantee</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 pt-3">
+                <p className="text-muted-foreground text-sm">All parts are backed by a comprehensive warranty.</p>
+              </CardContent>
+            </Card>
+            <Card className="text-center p-8 border border-border hover:border-primary/50 transition-colors">
+              <CardHeader className="p-0">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Wrench className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle className="font-medium text-lg">Expert Support</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 pt-3">
+                <p className="text-muted-foreground text-sm">Get professional advice from our experienced team.</p>
+              </CardContent>
+            </Card>
+            <Link to="/new-arrivals">
+              <Card className="text-center p-8 border border-border hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="p-0">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Truck className="h-8 w-8 text-primary-foreground" />
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="h-6 w-6 text-primary" />
                   </div>
-                  <CardTitle className="font-semibold text-lg">Fast Shipping</CardTitle>
+                  <CardTitle className="font-medium text-lg">New Arrivals</CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 pt-2">
-                  <p className="text-muted-foreground text-sm">Free shipping on orders over $75, nationwide.</p>
+                <CardContent className="p-0 pt-3">
+                  <p className="text-muted-foreground text-sm">Always the latest and greatest products in stock.</p>
                 </CardContent>
               </Card>
-              <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-100">
-                <CardHeader className="p-0">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Shield className="h-8 w-8 text-primary-foreground" />
-                  </div>
-                  <CardTitle className="font-semibold text-lg">Quality Guarantee</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 pt-2">
-                  <p className="text-muted-foreground text-sm">All parts are backed by a comprehensive warranty.</p>
-                </CardContent>
-              </Card>
-              <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-200">
-                <CardHeader className="p-0">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Wrench className="h-8 w-8 text-primary-foreground" />
-                  </div>
-                  <CardTitle className="font-semibold text-lg">Expert Support</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 pt-2">
-                  <p className="text-muted-foreground text-sm">Get professional advice from our experienced team.</p>
-                </CardContent>
-              </Card>
-              <Link to="/new-arrivals">
-                <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-300">
-                  <CardHeader className="p-0">
-                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Sparkles className="h-8 w-8 text-primary-foreground" />
-                    </div>
-                    <CardTitle className="font-semibold text-lg">New Arrivals</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0 pt-2">
-                    <p className="text-muted-foreground text-sm">Always the latest and greatest products in stock.</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            </div>
+            </Link>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Featured Products */}
-        <section className="py-24 bg-secondary">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16 animate-fade-in-up">
-              <h2 className="text-4xl font-bold">Featured Products</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto mt-4">
-                Top-rated parts chosen by our experts for your car's best performance.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {featuredProducts.map((product) => (
-                <ProductCard 
-                  key={product.id} 
-                  {...product} 
-                  className="hover:scale-105 transition-transform duration-300 animate-fade-in-up"
-                />
-              ))}
-            </div>
-            
-            <div className="text-center mt-16 animate-fade-in-up delay-400">
-              <Button size="lg" variant="default" className="text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
-                Explore All Products
-              </Button>
-            </div>
+      {/* Minimalist Featured Products */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-semibold text-foreground">Featured Products</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto mt-4">
+              Top-rated parts chosen by our experts for your car's best performance.
+            </p>
           </div>
-        </section>
-      </div>
-    );
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredProducts.map((product) => (
+              <ProductCard 
+                key={product.id} 
+                {...product} 
+                className="hover:border-primary/50 transition-colors"
+              />
+            ))}
+          </div>
+          
+          <div className="text-center mt-16">
+            <Button size="lg" variant="default" className="px-8 py-3 transition-colors">
+              Explore All Products
+            </Button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
   };
   
   export default Home;

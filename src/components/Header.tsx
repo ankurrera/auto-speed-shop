@@ -139,32 +139,31 @@ const Header = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header className="bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <header className="bg-background border-b border-border sticky top-0 z-50 transition-all duration-300">
+      <div className="container mx-auto px-6 py-3 flex items-center justify-between">
         
         {/* Mobile Header (Hamburger, Logo, Actions) */}
         <div className="flex items-center justify-between w-full md:hidden">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 hover:bg-muted transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </Button>
             <Link to="/" className="flex items-center space-x-2">
-              <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-10 w-auto" />
+              <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-8 w-auto" />
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl font-bold text-foreground truncate">AutoParts Pro</h1>
-                <p className="text-xs text-muted-foreground truncate">Premium Auto Parts</p>
+                <h1 className="text-lg font-semibold text-foreground tracking-tight">AutoParts Pro</h1>
               </div>
             </Link>
           </div>
-          <div className="flex items-center space-x-2">
-             <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
+          <div className="flex items-center space-x-1">
+             <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0 hover:bg-muted transition-colors">
               <Link to="/wishlist">
-                <Heart className="h-4 w-4 md:h-5 md:w-5" />
+                <Heart className="h-4 w-4" />
                 {wishlistCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
                     {wishlistCount}
@@ -172,9 +171,9 @@ const Header = () => {
                 )}
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
+            <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0 hover:bg-muted transition-colors">
               <Link to="/cart">
-                <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
+                <ShoppingCart className="h-4 w-4" />
                 {cartItemCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
                     {cartItemCount}
@@ -185,12 +184,12 @@ const Header = () => {
             {userSession ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative md:h-10 md:w-10 md:p-0">
-                    <User className="h-4 w-4 md:h-5 md:w-5" />
+                  <Button variant="ghost" size="sm" className="relative h-9 w-9 p-0 hover:bg-muted transition-colors">
+                    <User className="h-4 w-4" />
                     <span className="sr-only">User Account Menu</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem asChild>
                     <Link to="/account">Profile</Link>
                   </DropdownMenuItem>
@@ -227,9 +226,9 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
+              <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0 hover:bg-muted transition-colors">
                 <Link to="/account">
-                  <User className="h-4 w-4 md:h-5 md:w-5" />
+                  <User className="h-4 w-4" />
                 </Link>
               </Button>
             )}
@@ -240,11 +239,11 @@ const Header = () => {
         {/* Desktop Layout */}
         <div className="hidden md:flex md:w-full items-center justify-between">
           {/* Left: Logo & Name */}
-          <Link to="/" className="flex items-center space-x-2">
-            <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-14 w-auto" />
+          <Link to="/" className="flex items-center space-x-3 group">
+            <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-10 w-auto transition-transform group-hover:scale-105" />
             <div>
-              <h1 className="text-2xl font-bold text-foreground">AutoParts Pro</h1>
-              <p className="text-sm text-muted-foreground">Premium Auto Parts</p>
+              <h1 className="text-xl font-semibold text-foreground tracking-tight">AutoParts Pro</h1>
+              <p className="text-xs text-muted-foreground">Premium Auto Parts</p>
             </div>
           </Link>
           
@@ -254,21 +253,24 @@ const Header = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
+                className={`text-sm font-medium transition-all duration-200 hover:text-primary relative ${
                   isActive(item.href)
-                    ? "text-primary border-b-2 border-primary pb-3"
+                    ? "text-primary"
                     : "text-foreground"
                 }`}
               >
                 {item.name}
+                {isActive(item.href) && (
+                  <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full"></div>
+                )}
               </Link>
             ))}
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary">
+              <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium transition-all duration-200 hover:text-primary">
                 Shop by Brands
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-3 w-3" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
+              <DropdownMenuContent className="w-48">
                 {brands.map((brand) => (
                   <Link to={`/shop?make=${brand.name}`} key={brand.name}>
                     <DropdownMenuItem className="cursor-pointer">
@@ -278,7 +280,7 @@ const Header = () => {
                 ))}
                 <DropdownMenuSeparator />
                 <Link to="/shop">
-                  <DropdownMenuItem className="cursor-pointer">
+                  <DropdownMenuItem className="cursor-pointer font-medium">
                     View All Brands
                   </DropdownMenuItem>
                 </Link>
@@ -288,9 +290,9 @@ const Header = () => {
           
           {/* Right: Action Buttons */}
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
+            <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0 hover:bg-muted transition-colors">
               <Link to="/wishlist">
-                <Heart className="h-4 w-4 md:h-5 md:w-5" />
+                <Heart className="h-4 w-4" />
                 {wishlistCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
                     {wishlistCount}
@@ -298,9 +300,9 @@ const Header = () => {
                 )}
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
+            <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0 hover:bg-muted transition-colors">
               <Link to="/cart">
-                <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
+                <ShoppingCart className="h-4 w-4" />
                 {cartItemCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
                     {cartItemCount}
@@ -312,12 +314,12 @@ const Header = () => {
             {userSession ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative md:h-10 md:w-10 md:p-0">
-                    <User className="h-4 w-4 md:h-5 md:w-5" />
+                  <Button variant="ghost" size="sm" className="relative h-9 w-9 p-0 hover:bg-muted transition-colors">
+                    <User className="h-4 w-4" />
                     <span className="sr-only">User Account Menu</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem asChild>
                     <Link to="/account">Profile</Link>
                   </DropdownMenuItem>
@@ -354,9 +356,9 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
+              <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0 hover:bg-muted transition-colors">
                 <Link to="/account">
-                  <User className="h-4 w-4 md:h-5 md:w-5" />
+                  <User className="h-4 w-4" />
                 </Link>
               </Button>
             )}
@@ -365,20 +367,20 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Mobile menu (collapsible with transition) */}
+      {/* Mobile menu (minimalist collapsible) */}
       <div
-        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-          isMobileMenuOpen ? 'max-h-96 opacity-100 py-4 border-t border-border' : 'max-h-0 opacity-0'
+        className={`md:hidden overflow-hidden transition-all duration-200 ease-in-out ${
+          isMobileMenuOpen ? 'max-h-80 opacity-100 border-t border-border' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="container mx-auto px-4 flex flex-col space-y-4">
-          <div className="flex flex-col space-y-4">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex flex-col space-y-3">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`text-sm font-medium ${
-                    isActive(item.href) ? "text-primary" : "text-foreground"
+                  className={`text-sm font-medium transition-colors py-2 ${
+                    isActive(item.href) ? "text-primary" : "text-foreground hover:text-primary"
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
@@ -386,9 +388,9 @@ const Header = () => {
                 </Link>
               ))}
               <DropdownMenu>
-                <DropdownMenuTrigger className="flex justify-start items-center gap-1 text-sm font-medium transition-colors hover:text-primary">
+                <DropdownMenuTrigger className="flex justify-start items-center gap-1 text-sm font-medium transition-colors hover:text-primary py-2">
                   Shop by Brands
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="h-3 w-3" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   {brands.map((brand) => (
@@ -400,7 +402,7 @@ const Header = () => {
                   ))}
                   <DropdownMenuSeparator />
                   <Link to="/shop">
-                    <DropdownMenuItem className="cursor-pointer">
+                    <DropdownMenuItem className="cursor-pointer font-medium">
                       View All Brands
                     </DropdownMenuItem>
                   </Link>
