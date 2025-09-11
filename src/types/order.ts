@@ -6,6 +6,7 @@ export const ORDER_STATUS = {
   INVOICE_ACCEPTED: 'invoice_accepted',
   INVOICE_DECLINED: 'invoice_declined',
   PAYMENT_PENDING: 'payment_pending',
+  PAYPAL_SHARED: 'paypal_shared',
   PAYMENT_SUBMITTED: 'payment_submitted',
   PAYMENT_VERIFIED: 'payment_verified',
   CONFIRMED: 'confirmed',

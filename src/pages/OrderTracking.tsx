@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, Package, Truck, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import OrderProgressTracker from "@/components/OrderProgressTracker";
 
 interface OrderDetails {
   id: string;
@@ -254,9 +255,22 @@ const OrderTracking = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Tracking Timeline */}
+            {/* Track Order Progress */}
             <div className="md:col-span-2">
               <Card>
+                <CardHeader>
+                  <CardTitle>Track Order Progress</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <OrderProgressTracker 
+                    currentStatus={orderDetails.status}
+                    paymentStatus={orderDetails.payment_status}
+                  />
+                </CardContent>
+              </Card>
+              
+              {/* Tracking History */}
+              <Card className="mt-6">
                 <CardHeader>
                   <CardTitle>Tracking History</CardTitle>
                 </CardHeader>
