@@ -251,18 +251,28 @@ const Account = () => {
     queryKey: ["admin-metrics"],
     enabled: userInfo.is_admin,
     queryFn: async () => {
-      const [{ count: userCount }, { count: orderCount }, productRes, partRes, revenueRes] =
+      // Get current user for admin functions
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const [{ count: userCount }, { count: orderItemsCount }, productRes, partRes, allOrdersRes] =
         await Promise.all([
           supabase.from("profiles").select("*", { count: "exact", head: true }),
-            supabase.from("orders").select("*", { count: "exact", head: true }),
-            supabase.from("products").select("id, price, stock_quantity, is_active"),
-            supabase.from("parts").select("id, price, stock_quantity, is_active"),
-            supabase.from("orders").select("total_amount")
+          // Count from order_items table instead of orders table
+          supabase.from("order_items").select("*", { count: "exact", head: true }),
+          supabase.from("products").select("id, price, stock_quantity, is_active"),
+          supabase.from("parts").select("id, price, stock_quantity, is_active"),
+          // Use admin function to get all orders for revenue calculation
+          supabase.rpc('get_all_orders_for_admin', {
+            requesting_user_id: user.id
+          })
         ]);
 
       let revenue = 0;
-      if (revenueRes.data) {
-        revenue = revenueRes.data.reduce(
+      if (allOrdersRes.data) {
+        revenue = allOrdersRes.data.reduce(
           (sum: number, row: { total_amount: number }) => sum + (row.total_amount || 0),
           0
         );
@@ -270,7 +280,7 @@ const Account = () => {
 
       return {
         users: userCount ?? 0,
-        orders: orderCount ?? 0,
+        orders: orderItemsCount ?? 0, // Now showing count from order_items table
         productsActive: [
           ...(productRes.data || []),
           ...(partRes.data || []),
