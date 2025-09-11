@@ -164,25 +164,29 @@ export async function respondToInvoice(orderId: string, accepted: boolean) {
       };
     }
 
-    const newStatus = accepted ? ORDER_STATUS.INVOICE_ACCEPTED : ORDER_STATUS.CANCELLED;
-    const paymentStatus = accepted ? PAYMENT_STATUS.PENDING : PAYMENT_STATUS.FAILED;
+    // Get current user for admin function
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
 
-    const { data: order, error } = await supabase
-      .from("orders")
-      .update({
-        status: newStatus,
-        payment_status: paymentStatus,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", orderId)
-      .select()
-      .single();
+    // Use admin function to respond to the invoice
+    const { data: orders, error } = await supabase
+      .rpc('admin_respond_to_invoice', {
+        requesting_user_id: user.id,
+        target_order_id: orderId,
+        accepted: accepted
+      });
 
     if (error) {
       throw new Error(`Failed to respond to invoice: ${error.message}`);
     }
 
-    return order;
+    if (!orders || orders.length === 0) {
+      throw new Error(`Order ${orderId} not found or could not be updated`);
+    }
+
+    return orders[0];
   } catch (error) {
     console.error("Respond to invoice error:", error);
     throw error;
@@ -212,28 +216,37 @@ export async function submitPayment(orderId: string, paymentData: PaymentSubmiss
       };
     }
 
-    const { data: order, error } = await supabase
-      .from("orders")
-      .update({
-        status: ORDER_STATUS.PAYMENT_SUBMITTED,
-        payment_status: PAYMENT_STATUS.SUBMITTED,
-        notes: JSON.stringify({
-          transaction_id: paymentData.transaction_id,
-          payment_screenshot_url: paymentData.payment_screenshot_url,
-          payment_amount: paymentData.payment_amount,
-          submitted_at: paymentData.submitted_at
-        }),
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", orderId)
-      .select()
-      .single();
+    // Get current user for admin function
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Prepare payment notes as JSON
+    const paymentNotes = JSON.stringify({
+      transaction_id: paymentData.transaction_id,
+      payment_screenshot_url: paymentData.payment_screenshot_url,
+      payment_amount: paymentData.payment_amount,
+      submitted_at: paymentData.submitted_at
+    });
+
+    // Use admin function to submit payment
+    const { data: orders, error } = await supabase
+      .rpc('admin_submit_payment', {
+        requesting_user_id: user.id,
+        target_order_id: orderId,
+        payment_notes: paymentNotes
+      });
 
     if (error) {
       throw new Error(`Failed to submit payment: ${error.message}`);
     }
 
-    return order;
+    if (!orders || orders.length === 0) {
+      throw new Error(`Order ${orderId} not found or could not be updated`);
+    }
+
+    return orders[0];
   } catch (error) {
     console.error("Submit payment error:", error);
     throw error;
@@ -259,25 +272,29 @@ export async function verifyPayment(orderId: string, verified: boolean) {
       };
     }
 
-    const newStatus = verified ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PAYMENT_PENDING;
-    const paymentStatus = verified ? PAYMENT_STATUS.VERIFIED : PAYMENT_STATUS.FAILED;
+    // Get current user for admin function
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
 
-    const { data: order, error } = await supabase
-      .from("orders")
-      .update({
-        status: newStatus,
-        payment_status: paymentStatus,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", orderId)
-      .select()
-      .single();
+    // Use admin function to verify payment
+    const { data: orders, error } = await supabase
+      .rpc('admin_verify_payment', {
+        requesting_user_id: user.id,
+        target_order_id: orderId,
+        verified: verified
+      });
 
     if (error) {
       throw new Error(`Failed to verify payment: ${error.message}`);
     }
 
-    return order;
+    if (!orders || orders.length === 0) {
+      throw new Error(`Order ${orderId} not found or could not be updated`);
+    }
+
+    return orders[0];
   } catch (error) {
     console.error("Verify payment error:", error);
     throw error;
@@ -333,10 +350,14 @@ export async function getOrderDetails(orderId: string) {
         )
       `)
       .eq("id", orderId)
-      .single();
+      .maybeSingle();
 
     if (orderError) {
       throw new Error(`Failed to get order details: ${orderError.message}`);
+    }
+
+    if (!order) {
+      throw new Error(`Order ${orderId} not found`);
     }
 
     return order;
