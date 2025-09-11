@@ -441,8 +441,22 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
         return <Badge variant="outline"><FileText className="h-3 w-3 mr-1" />Invoice Sent</Badge>;
       case ORDER_STATUS.INVOICE_ACCEPTED:
         return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Accepted</Badge>;
+      case ORDER_STATUS.INVOICE_DECLINED:
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Invoice Declined</Badge>;
+      case ORDER_STATUS.PAYMENT_PENDING:
+        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Payment Pending</Badge>;
       case ORDER_STATUS.PAYMENT_SUBMITTED:
         return <Badge variant="secondary"><DollarSign className="h-3 w-3 mr-1" />Payment Submitted</Badge>;
+      case ORDER_STATUS.PAYMENT_VERIFIED:
+        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Payment Verified</Badge>;
+      case ORDER_STATUS.CONFIRMED:
+        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Confirmed</Badge>;
+      case ORDER_STATUS.CANCELLED:
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Cancelled</Badge>;
+      case ORDER_STATUS.SHIPPED:
+        return <Badge variant="default"><Package className="h-3 w-3 mr-1" />Shipped</Badge>;
+      case ORDER_STATUS.DELIVERED:
+        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Delivered</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
