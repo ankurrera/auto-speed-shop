@@ -48,6 +48,7 @@ const AdminUserManagement = () => {
           `)
           .eq('is_admin', false)
           .eq('is_seller', false)
+          .eq('role', 'user')
           .order('created_at', { ascending: false });
         
         if (fallbackError) throw fallbackError;
