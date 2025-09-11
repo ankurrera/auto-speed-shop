@@ -1111,6 +1111,7 @@ const Account = () => {
           sellerName,
           productType: isPart ? "part" : "product",
           imageUrl: finalImageUrls[0], // Use first image if available
+          sellerId: currentSellerId,
         });
 
         // Show additional success message for notifications

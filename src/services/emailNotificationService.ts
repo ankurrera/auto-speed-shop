@@ -1,4 +1,4 @@
-import { EmailSubscriptionService } from './emailSubscriptionService';
+import { supabase } from "@/integrations/supabase/client";
 
 export interface NewProductNotification {
   productName: string;
@@ -7,6 +7,7 @@ export interface NewProductNotification {
   sellerName: string;
   productType: 'product' | 'part';
   imageUrl?: string;
+  sellerId: string;
 }
 
 export class EmailNotificationService {
@@ -15,94 +16,36 @@ export class EmailNotificationService {
    */
   static async sendNewProductNotifications(notification: NewProductNotification): Promise<void> {
     try {
-      // Get all subscribed users
-      const subscribedUsers = await EmailSubscriptionService.getSubscribedUsers();
-      
-      if (subscribedUsers.length === 0) {
-        console.log('No subscribed users found for notifications');
-        return;
+      console.log('Sending new product notifications via Supabase Edge Function...');
+
+      // Call the Supabase Edge Function that handles notifications with proper permissions
+      const { data, error } = await supabase.functions.invoke('send-new-product-notifications', {
+        body: notification
+      });
+
+      if (error) {
+        console.error('Error calling notification function:', error);
+        throw error;
       }
 
-      console.log(`Sending notifications to ${subscribedUsers.length} subscribed users`);
-
-      // In a real implementation, you would use a service like:
-      // - Supabase Edge Functions
-      // - SendGrid
-      // - AWS SES
-      // - Nodemailer with SMTP
-      
-      // For now, we'll log the notifications that would be sent
-      const emailContent = this.generateEmailContent(notification);
-      
-      for (const user of subscribedUsers) {
-        try {
-          // Send actual email via API endpoint
-          const response = await fetch('/api/sendNotification', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              to: user.email,
-              subject: `New ${notification.productType} available - ${notification.productName}`,
-              html: emailContent
-            }),
-          });
-
-          if (response.ok) {
-            console.log(`📧 Email notification sent to: ${user.email}`);
-          } else {
-            console.error(`Failed to send email to ${user.email}:`, await response.text());
-          }
-        } catch (error) {
-          console.error(`Error sending email to ${user.email}:`, error);
+      if (data?.success) {
+        console.log(`✅ ${data.message}`);
+        console.log(`📧 Notifications sent to ${data.notificationsSent} users`);
+        
+        if (data.errors && data.errors.length > 0) {
+          console.warn('Some notifications failed:', data.errors);
         }
-      }
 
-      // Show success message to the seller
-      this.showNotificationSuccess(subscribedUsers.length);
+        // Show success message to the seller
+        this.showNotificationSuccess(data.notificationsSent);
+      } else {
+        throw new Error(data?.message || 'Unknown error occurred');
+      }
 
     } catch (error) {
       console.error('Error sending email notifications:', error);
+      throw error;
     }
-  }
-
-  /**
-   * Generate HTML email content for new product notifications
-   */
-  private static generateEmailContent(notification: NewProductNotification): string {
-    // Use a fallback URL for server-side rendering
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8080';
-    
-    return `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">New ${notification.productType} Available!</h2>
-        
-        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0;">
-          ${notification.imageUrl ? `<img src="${notification.imageUrl}" alt="${notification.productName}" style="max-width: 200px; height: auto; border-radius: 4px;">` : ''}
-          
-          <h3 style="color: #0066cc; margin: 10px 0;">${notification.productName}</h3>
-          
-          <p style="color: #666; line-height: 1.6;">${notification.productDescription}</p>
-          
-          <div style="background: #f9f9f9; padding: 15px; border-radius: 4px; margin: 15px 0;">
-            <p style="margin: 5px 0;"><strong>Price:</strong> $${notification.price.toFixed(2)}</p>
-            <p style="margin: 5px 0;"><strong>Seller:</strong> ${notification.sellerName}</p>
-            <p style="margin: 5px 0;"><strong>Type:</strong> ${notification.productType}</p>
-          </div>
-          
-          <a href="${baseUrl}/shop" 
-             style="display: inline-block; background: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 10px 0;">
-            View in Shop
-          </a>
-        </div>
-        
-        <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; color: #666; font-size: 12px;">
-          <p>You're receiving this email because you're subscribed to new product notifications.</p>
-          <p>To unsubscribe, visit your <a href="${baseUrl}/account">account settings</a>.</p>
-        </div>
-      </div>
-    `;
   }
 
   /**
