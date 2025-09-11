@@ -27,6 +27,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { createInvoice, verifyPayment } from "@/services/customOrderService";
 import { ORDER_STATUS, PAYMENT_STATUS, type OrderInvoice } from "@/types/order";
@@ -225,6 +226,7 @@ const getSampleInvoiceOrders = (): Order[] => {
 
 const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -598,58 +600,22 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
       case ORDER_STATUS.PAYMENT_SUBMITTED: {
         const paymentData = order.notes ? JSON.parse(order.notes) : null;
         return (
-          <div className="space-y-3 min-w-[280px]">
+          <div className="space-y-3 min-w-[200px]">
             {paymentData && (
-              <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                <div className="space-y-2">
-                  <div>
-                    <span className="font-medium">Transaction ID:</span>
-                    <p className="break-all text-gray-600 dark:text-gray-300">{paymentData.transaction_id}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Amount:</span>
-                    <p className="text-gray-600 dark:text-gray-300">${paymentData.payment_amount}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {paymentData.payment_screenshot_url && (
-                    <div>
-                      <span className="font-medium">Screenshot:</span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full mt-1"
-                        onClick={() => window.open(paymentData.payment_screenshot_url, '_blank')}
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        View Screenshot
-                      </Button>
-                    </div>
-                  )}
-                </div>
+              <div className="text-center">
+                <Button
+                  size="sm"
+                  onClick={() => navigate(`/admin/view-payment/${order.id}`)}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Payment
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Payment submitted: ${paymentData.payment_amount}
+                </p>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                size="sm"
-                onClick={() => handleVerifyPayment(order.id, true)}
-                disabled={isVerifyingPayment}
-                className="bg-green-600 hover:bg-green-700 w-full"
-              >
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Verify Button
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => handleVerifyPayment(order.id, false)}
-                disabled={isVerifyingPayment}
-                className="w-full"
-              >
-                <XCircle className="h-3 w-3 mr-1" />
-                Reject Button
-              </Button>
-            </div>
           </div>
         );
       }

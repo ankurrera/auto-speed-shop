@@ -262,9 +262,12 @@ const Account = () => {
         throw new Error('User not authenticated');
       }
 
-      const [{ count: userCount }, { count: orderItemsCount }, productRes, partRes, allOrdersRes] =
+      const [userCountResult, { count: orderItemsCount }, productRes, partRes, allOrdersRes] =
         await Promise.all([
-          supabase.from("profiles").select("*", { count: "exact", head: true }),
+          // Count only regular users (not admin AND not seller)
+          supabase.from("profiles").select("*", { count: "exact", head: true })
+            .neq("is_admin", true)
+            .neq("is_seller", true),
           // Count from order_items table instead of orders table
           supabase.from("order_items").select("*", { count: "exact", head: true }),
           supabase.from("products").select("id, price, stock_quantity, is_active"),
@@ -287,7 +290,7 @@ const Account = () => {
       }
 
       return {
-        users: userCount ?? 0,
+        users: userCountResult.count ?? 0,
         orders: orderItemsCount ?? 0, // Now showing count from order_items table
         productsActive: [
           ...(productRes.data || []),
