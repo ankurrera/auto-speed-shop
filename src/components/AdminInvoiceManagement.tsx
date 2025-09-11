@@ -373,7 +373,7 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
     setIsCreatingInvoice(true);
     try {
       const newTaxAmount = +((selectedOrder.subtotal + convenienceFee + deliveryCharge) * 0.0825).toFixed(2);
-      const newTotal = selectedOrder.subtotal + selectedOrder.shipping_amount + convenienceFee + deliveryCharge + newTaxAmount;
+      const newTotal = selectedOrder.subtotal + convenienceFee + deliveryCharge + newTaxAmount;
 
       const invoice: OrderInvoice = {
         subtotal: selectedOrder.subtotal,
@@ -493,10 +493,6 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
                       <span>Subtotal:</span>
                       <span>${order.subtotal.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Shipping:</span>
-                      <span>${order.shipping_amount.toFixed(2)}</span>
-                    </div>
                   </div>
                 </div>
 
@@ -551,10 +547,6 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
                       <span>${order.subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Shipping:</span>
-                      <span>${order.shipping_amount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
                       <span>Convenience Fee:</span>
                       <span>${(parseFloat(invoiceForm.convenience_fee) || 0).toFixed(2)}</span>
                     </div>
@@ -569,7 +561,7 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
                     <Separator className="my-2" />
                     <div className="flex justify-between font-bold">
                       <span>Total:</span>
-                      <span>${(order.subtotal + order.shipping_amount + (parseFloat(invoiceForm.convenience_fee) || 0) + (parseFloat(invoiceForm.delivery_charge) || 0) + ((order.subtotal + (parseFloat(invoiceForm.convenience_fee) || 0) + (parseFloat(invoiceForm.delivery_charge) || 0)) * 0.0825)).toFixed(2)}</span>
+                      <span>${(order.subtotal + (parseFloat(invoiceForm.convenience_fee) || 0) + (parseFloat(invoiceForm.delivery_charge) || 0) + ((order.subtotal + (parseFloat(invoiceForm.convenience_fee) || 0) + (parseFloat(invoiceForm.delivery_charge) || 0)) * 0.0825)).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>

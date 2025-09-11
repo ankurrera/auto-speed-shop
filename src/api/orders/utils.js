@@ -23,10 +23,9 @@ export function computePricing(lineItems) {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const shipping = subtotal > 75 ? 0 : 9.99;
   const tax = +(subtotal * TAX_RATE).toFixed(2);
-  const total = +(subtotal + shipping + tax).toFixed(2);
-  return { subtotal, shipping, tax, total };
+  const total = +(subtotal + tax).toFixed(2);
+  return { subtotal, tax, total };
 }
 
 export function generateOrderNumber() {
