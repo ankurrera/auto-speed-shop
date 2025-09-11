@@ -48,11 +48,97 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
   isResponding
 }) => {
   const generatePDF = () => {
-    // Create a printable version
+    // Create a printable version with complete invoice content
     const printContent = document.getElementById('invoice-content');
     if (printContent) {
       const newWindow = window.open('', '_blank');
       if (newWindow) {
+        // Generate complete invoice HTML content
+        const invoiceHTML = `
+          <div class="header">
+            <div class="company-name">Auto Speed Shop</div>
+            <div class="invoice-title">INVOICE</div>
+          </div>
+          
+          <div class="invoice-info">
+            <div class="invoice-details">
+              <h3>Invoice Details</h3>
+              <p><strong>Invoice Number:</strong> ${orderDetails.order_number}</p>
+              <p><strong>Invoice Date:</strong> ${new Date(orderDetails.created_at).toLocaleDateString()}</p>
+              <p><strong>Due Date:</strong> ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+            </div>
+            
+            <div class="billing-address">
+              <h3>Bill To</h3>
+              ${orderDetails.shipping_address ? `
+                <p><strong>${orderDetails.shipping_address.first_name} ${orderDetails.shipping_address.last_name}</strong></p>
+                <p>${orderDetails.shipping_address.line1}</p>
+                <p>${orderDetails.shipping_address.city}, ${orderDetails.shipping_address.state} ${orderDetails.shipping_address.postal_code}</p>
+                <p>${orderDetails.shipping_address.country || "US"}</p>
+              ` : '<p>No billing address available</p>'}
+            </div>
+          </div>
+
+          ${orderDetails.order_items && orderDetails.order_items.length > 0 ? `
+            <div style="margin-bottom: 30px;">
+              <h3>Items</h3>
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th>Description</th>
+                    <th style="text-align: center;">Quantity</th>
+                    <th style="text-align: right;">Unit Price</th>
+                    <th style="text-align: right;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${orderDetails.order_items.map(item => `
+                    <tr>
+                      <td>${item.product_name}</td>
+                      <td style="text-align: center;">${item.quantity}</td>
+                      <td style="text-align: right;">$${item.unit_price.toFixed(2)}</td>
+                      <td style="text-align: right;">$${item.total_price.toFixed(2)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : ''}
+
+          <div class="totals">
+            <table>
+              <tr>
+                <td style="text-align: right;">Subtotal:</td>
+                <td style="text-align: right;">$${orderDetails.subtotal.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="text-align: right;">Shipping:</td>
+                <td style="text-align: right;">$${orderDetails.shipping_amount.toFixed(2)}</td>
+              </tr>
+              ${orderDetails.convenience_fee ? `
+                <tr>
+                  <td style="text-align: right;">Convenience Fee:</td>
+                  <td style="text-align: right;">$${orderDetails.convenience_fee.toFixed(2)}</td>
+                </tr>
+              ` : ''}
+              ${orderDetails.delivery_charge ? `
+                <tr>
+                  <td style="text-align: right;">Delivery Charge:</td>
+                  <td style="text-align: right;">$${orderDetails.delivery_charge.toFixed(2)}</td>
+                </tr>
+              ` : ''}
+              <tr>
+                <td style="text-align: right;">Tax:</td>
+                <td style="text-align: right;">$${orderDetails.tax_amount.toFixed(2)}</td>
+              </tr>
+              <tr class="total-row">
+                <td style="text-align: right;"><strong>Total Amount:</strong></td>
+                <td style="text-align: right;"><strong>$${orderDetails.total_amount.toFixed(2)}</strong></td>
+              </tr>
+            </table>
+          </div>
+        `;
+
         newWindow.document.write(`
           <html>
             <head>
@@ -62,6 +148,7 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
                   font-family: Arial, sans-serif; 
                   margin: 20px; 
                   line-height: 1.6; 
+                  color: #333;
                 }
                 .header { 
                   text-align: center; 
@@ -91,6 +178,11 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
                   color: #333; 
                   border-bottom: 1px solid #ccc; 
                   padding-bottom: 5px; 
+                  margin-bottom: 15px;
+                  font-size: 18px;
+                }
+                .invoice-details p, .billing-address p {
+                  margin: 5px 0;
                 }
                 .items-table { 
                   width: 100%; 
@@ -112,6 +204,7 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
                 .totals { 
                   float: right; 
                   width: 300px; 
+                  clear: both;
                 }
                 .totals table { 
                   width: 100%; 
@@ -125,20 +218,25 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
                   font-weight: bold; 
                   font-size: 18px; 
                   background-color: #f5f5f5; 
+                  border-top: 2px solid #333;
                 }
                 .footer { 
                   margin-top: 50px; 
                   text-align: center; 
                   color: #666; 
                   font-size: 14px; 
+                  clear: both;
+                  padding-top: 20px;
+                  border-top: 1px solid #ddd;
                 }
                 @media print { 
-                  body { margin: 0; } 
+                  body { margin: 0; padding: 20px; } 
+                  .footer { page-break-inside: avoid; }
                 }
               </style>
             </head>
             <body>
-              ${printContent.innerHTML}
+              ${invoiceHTML}
               <div class="footer">
                 <p>Thank you for your business!</p>
                 <p>Auto Speed Shop - Your Trusted Auto Parts Partner</p>
@@ -157,14 +255,12 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
       {/* Formal Invoice Display */}
       <Card className="max-w-4xl mx-auto">
         <CardHeader className="text-center border-b">
-          <div id="invoice-content">
-            <div className="company-name text-3xl font-bold text-gray-800 mb-2">
-              Auto Speed Shop
-            </div>
-            <CardTitle className="invoice-title text-xl text-gray-600">
-              INVOICE
-            </CardTitle>
+          <div className="company-name text-3xl font-bold text-foreground mb-2">
+            Auto Speed Shop
           </div>
+          <CardTitle className="invoice-title text-xl text-muted-foreground">
+            INVOICE
+          </CardTitle>
         </CardHeader>
         
         <CardContent className="p-8">
@@ -194,7 +290,7 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
                     <p>{orderDetails.shipping_address.country || "US"}</p>
                   </div>
                 ) : (
-                  <p className="text-gray-500">No billing address available</p>
+                  <p className="text-muted-foreground">No billing address available</p>
                 )}
               </div>
             </div>
@@ -204,22 +300,22 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
               <div className="mb-8">
                 <h3 className="font-semibold text-lg mb-4">Items</h3>
                 <div className="overflow-x-auto">
-                  <table className="items-table w-full border-collapse border border-gray-300">
+                  <table className="items-table w-full border-collapse border border-border">
                     <thead>
-                      <tr className="bg-gray-50">
-                        <th className="border border-gray-300 p-3 text-left">Description</th>
-                        <th className="border border-gray-300 p-3 text-center">Quantity</th>
-                        <th className="border border-gray-300 p-3 text-right">Unit Price</th>
-                        <th className="border border-gray-300 p-3 text-right">Total</th>
+                      <tr className="bg-muted">
+                        <th className="border border-border p-3 text-left">Description</th>
+                        <th className="border border-border p-3 text-center">Quantity</th>
+                        <th className="border border-border p-3 text-right">Unit Price</th>
+                        <th className="border border-border p-3 text-right">Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {orderDetails.order_items.map((item) => (
-                        <tr key={item.id} className="even:bg-gray-50">
-                          <td className="border border-gray-300 p-3">{item.product_name}</td>
-                          <td className="border border-gray-300 p-3 text-center">{item.quantity}</td>
-                          <td className="border border-gray-300 p-3 text-right">${item.unit_price.toFixed(2)}</td>
-                          <td className="border border-gray-300 p-3 text-right">${item.total_price.toFixed(2)}</td>
+                        <tr key={item.id} className="even:bg-muted/50">
+                          <td className="border border-border p-3">{item.product_name}</td>
+                          <td className="border border-border p-3 text-center">{item.quantity}</td>
+                          <td className="border border-border p-3 text-right">${item.unit_price.toFixed(2)}</td>
+                          <td className="border border-border p-3 text-right">${item.total_price.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -257,7 +353,7 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
                       <td className="py-2 px-4 text-right">Tax:</td>
                       <td className="py-2 px-4 text-right">${orderDetails.tax_amount.toFixed(2)}</td>
                     </tr>
-                    <tr className="total-row border-t-2 border-gray-400 bg-gray-50">
+                    <tr className="total-row border-t-2 border-border bg-muted">
                       <td className="py-3 px-4 text-right font-bold text-lg">Total Amount:</td>
                       <td className="py-3 px-4 text-right font-bold text-lg">${orderDetails.total_amount.toFixed(2)}</td>
                     </tr>
