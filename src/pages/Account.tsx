@@ -146,6 +146,9 @@ const Account = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Form submission loading state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Admin product management
   const [listingType, setListingType] = useState<"part" | "product">("part");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -894,250 +897,278 @@ const Account = () => {
   // Product/Part submission
   const handleProductSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      toast({
-        title: "Error",
-        description: "You must be logged in.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    let currentSellerId = sellerId;
-    if (!currentSellerId) {
-      const { data: sellerData, error: sellerError } = await supabase
-        .from("sellers")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .single();
-      if (sellerError) {
+    setIsSubmitting(true);
+    
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
         toast({
           title: "Error",
-          description: "Seller ID not found.",
+          description: "You must be logged in.",
           variant: "destructive",
         });
         return;
       }
-      currentSellerId = sellerData.id;
-      setSellerId(currentSellerId);
-    }
 
-    const uploadedImageUrls: string[] = [];
-    if (productFiles.length > 0) {
-      const bucketName =
-        listingType === "part" ? "part_images" : "products_images";
-      for (const f of productFiles) {
-        const ext = f.name.split(".").pop();
-        const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(filePath, f, { upsert: true });
-        if (uploadError) {
+      let currentSellerId = sellerId;
+      if (!currentSellerId) {
+        const { data: sellerData, error: sellerError } = await supabase
+          .from("sellers")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .single();
+        if (sellerError) {
           toast({
             title: "Error",
-            description: "Image upload failed.",
+            description: "Seller ID not found.",
             variant: "destructive",
           });
           return;
         }
-        const { data: publicUrlData } = supabase.storage
-          .from(bucketName)
-          .getPublicUrl(filePath);
-        uploadedImageUrls.push(publicUrlData.publicUrl);
+        currentSellerId = sellerData.id;
+        setSellerId(currentSellerId);
       }
-    }
 
-    const finalImageUrls = editingProductId
-      ? [...productInfo.image_urls, ...uploadedImageUrls]
-      : uploadedImageUrls;
+      // Show initial progress
+      toast({
+        title: "Processing...",
+        description: "Uploading images and saving your listing...",
+      });
 
-    // Vehicle compatibility (optional)
-    let vehicleId: string | null = null;
-    if (productInfo.year && productInfo.make && productInfo.model) {
-      try {
-        const makeId = vehicleMakes.find(
-          (m) => m.name === productInfo.make
-        )?.id;
-        if (!makeId) throw new Error("Make not found");
-        const { data: yearRow } = await supabase
-          .from("vehicle_years")
-          .select("id")
-          .eq("year", parseInt(productInfo.year, 10))
-          .single();
-        const { data: modelRow } = await supabase
-          .from("vehicle_models")
-          .select("id")
-          .eq("name", productInfo.model)
-          .eq("make_id", makeId)
-          .single();
-        const { data: existingVehicle, error: exErr } = await supabase
-          .from("vehicles_new")
-          .select("id")
-          .eq("make_id", makeId)
-          .eq("model_id", modelRow?.id)
-          .eq("year_id", yearRow?.id)
-          .maybeSingle();
-        if (exErr && exErr.code !== "PGRST116") throw exErr;
-        if (existingVehicle) {
-          vehicleId = existingVehicle.id;
-        } else {
-          const { data: newVehicle, error: vehicleInsertError } =
-            await supabase
-              .from("vehicles_new")
-              .insert({
-                make_id: makeId,
-                model_id: modelRow?.id,
-                year_id: yearRow?.id,
-              })
-              .select("id")
-              .single();
-          if (vehicleInsertError) throw vehicleInsertError;
-          vehicleId = newVehicle.id;
+      const uploadedImageUrls: string[] = [];
+      if (productFiles.length > 0) {
+        const bucketName =
+          listingType === "part" ? "part_images" : "products_images";
+        for (const f of productFiles) {
+          const ext = f.name.split(".").pop();
+          const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
+          const { error: uploadError } = await supabase.storage
+            .from(bucketName)
+            .upload(filePath, f, { upsert: true });
+          if (uploadError) {
+            toast({
+              title: "Error",
+              description: "Image upload failed.",
+              variant: "destructive",
+            });
+            return;
+          }
+          const { data: publicUrlData } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(filePath);
+          uploadedImageUrls.push(publicUrlData.publicUrl);
         }
-      } catch (err: any) {
+      }
+
+      const finalImageUrls = editingProductId
+        ? [...productInfo.image_urls, ...uploadedImageUrls]
+        : uploadedImageUrls;
+
+      // Vehicle compatibility (optional)
+      let vehicleId: string | null = null;
+      if (productInfo.year && productInfo.make && productInfo.model) {
+        try {
+          const makeId = vehicleMakes.find(
+            (m) => m.name === productInfo.make
+          )?.id;
+          if (!makeId) throw new Error("Make not found");
+          const { data: yearRow } = await supabase
+            .from("vehicle_years")
+            .select("id")
+            .eq("year", parseInt(productInfo.year, 10))
+            .single();
+          const { data: modelRow } = await supabase
+            .from("vehicle_models")
+            .select("id")
+            .eq("name", productInfo.model)
+            .eq("make_id", makeId)
+            .single();
+          const { data: existingVehicle, error: exErr } = await supabase
+            .from("vehicles_new")
+            .select("id")
+            .eq("make_id", makeId)
+            .eq("model_id", modelRow?.id)
+            .eq("year_id", yearRow?.id)
+            .maybeSingle();
+          if (exErr && exErr.code !== "PGRST116") throw exErr;
+          if (existingVehicle) {
+            vehicleId = existingVehicle.id;
+          } else {
+            const { data: newVehicle, error: vehicleInsertError } =
+              await supabase
+                .from("vehicles_new")
+                .insert({
+                  make_id: makeId,
+                  model_id: modelRow?.id,
+                  year_id: yearRow?.id,
+                })
+                .select("id")
+                .single();
+            if (vehicleInsertError) throw vehicleInsertError;
+            vehicleId = newVehicle.id;
+          }
+        } catch (err: any) {
+          toast({
+            title: "Error",
+            description:
+              "Vehicle compatibility failed: " + (err.message || "Unknown"),
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      const isPart = listingType === "part";
+      const priceValue = parseFloat(productInfo.price);
+      const stockValue = Number(productInfo.stock_quantity);
+      if (isNaN(priceValue) || isNaN(stockValue)) {
         toast({
           title: "Error",
-          description:
-            "Vehicle compatibility failed: " + (err.message || "Unknown"),
+          description: "Price / quantity invalid",
           variant: "destructive",
         });
         return;
       }
-    }
 
-    const isPart = listingType === "part";
-    const priceValue = parseFloat(productInfo.price);
-    const stockValue = Number(productInfo.stock_quantity);
-    if (isNaN(priceValue) || isNaN(stockValue)) {
-      toast({
-        title: "Error",
-        description: "Price / quantity invalid",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const specificationsPayload = {
-      category: productInfo.category,
-      make: productInfo.make,
-      model: productInfo.model,
-      year: productInfo.year,
-      vin: productInfo.vin,
-      additional: productInfo.specifications,
-    };
-
-    let payload: any;
-    if (isPart) {
-      payload = {
-        name: productInfo.name,
-        description: productInfo.description,
-        price: priceValue,
-        stock_quantity: stockValue,
-        brand: productInfo.make,
-        seller_id: currentSellerId,
-        specifications: specificationsPayload,
-        image_urls: finalImageUrls,
-        is_active: stockValue > 0,
-      };
-    } else {
-      payload = {
-        name: productInfo.name,
-        description: productInfo.description,
-        price: priceValue,
-        stock_quantity: stockValue,
-        seller_id: currentSellerId,
-        image_urls: finalImageUrls,
-        is_active: stockValue > 0,
-        is_featured: false,
+      const specificationsPayload = {
         category: productInfo.category,
-        product_type: "GENERIC",
+        make: productInfo.make,
+        model: productInfo.model,
+        year: productInfo.year,
+        vin: productInfo.vin,
+        additional: productInfo.specifications,
       };
-    }
 
-    const table = isPart ? "parts" : "products";
-    const { data: savedItem, error } = editingProductId
-      ? await supabase
-          .from(table)
-          .update(payload)
-          .eq("id", editingProductId)
-          .select()
-          .single()
-      : await supabase.from(table).insert([payload]).select().single();
+      let payload: any;
+      if (isPart) {
+        payload = {
+          name: productInfo.name,
+          description: productInfo.description,
+          price: priceValue,
+          stock_quantity: stockValue,
+          brand: productInfo.make,
+          seller_id: currentSellerId,
+          specifications: specificationsPayload,
+          image_urls: finalImageUrls,
+          is_active: stockValue > 0,
+        };
+      } else {
+        payload = {
+          name: productInfo.name,
+          description: productInfo.description,
+          price: priceValue,
+          stock_quantity: stockValue,
+          seller_id: currentSellerId,
+          image_urls: finalImageUrls,
+          is_active: stockValue > 0,
+          is_featured: false,
+          category: productInfo.category,
+          product_type: "GENERIC",
+        };
+      }
 
-    if (error) {
+      const table = isPart ? "parts" : "products";
+      const { data: savedItem, error } = editingProductId
+        ? await supabase
+            .from(table)
+            .update(payload)
+            .eq("id", editingProductId)
+            .select()
+            .single()
+        : await supabase.from(table).insert([payload]).select().single();
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (savedItem && vehicleId) {
+        const fitmentTable = isPart ? "part_fitments" : "product_fitments";
+        const fitmentPayload = isPart
+          ? { part_id: savedItem.id, vehicle_id: vehicleId }
+          : { product_id: savedItem.id, vehicle_id: vehicleId };
+        await supabase.from(fitmentTable).upsert([fitmentPayload]);
+      }
+
+      // Show success immediately
+      toast({
+        title: "Success",
+        description: `${isPart ? "Part" : "Product"} ${
+          editingProductId ? "updated" : "listed"
+        } successfully!`,
+      });
+
+      // Clean up form immediately for better UX
+      cleanupAndRefetch();
+
+      // Send email notifications asynchronously for new listings (not updates)
+      if (!editingProductId && savedItem) {
+        // Don't await this - let it run in background
+        sendNotificationsAsync(currentSellerId, isPart, priceValue, finalImageUrls);
+      }
+
+    } catch (error: any) {
+      console.error("Error in product submission:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    if (savedItem && vehicleId) {
-      const fitmentTable = isPart ? "part_fitments" : "product_fitments";
-      const fitmentPayload = isPart
-        ? { part_id: savedItem.id, vehicle_id: vehicleId }
-        : { product_id: savedItem.id, vehicle_id: vehicleId };
-      await supabase.from(fitmentTable).upsert([fitmentPayload]);
-    }
+  // Async function to handle email notifications without blocking UI
+  const sendNotificationsAsync = async (
+    currentSellerId: string, 
+    isPart: boolean, 
+    priceValue: number, 
+    finalImageUrls: string[]
+  ) => {
+    try {
+      // Get seller name for the notification
+      const { data: sellerData } = await supabase
+        .from("sellers")
+        .select("name")
+        .eq("id", currentSellerId)
+        .single();
 
-    toast({
-      title: "Success",
-      description: `${isPart ? "Part" : "Product"} ${
-        editingProductId ? "updated" : "listed"
-      }.`,
-    });
+      const sellerName = sellerData?.name || "Unknown Seller";
 
-    // Send email notifications for new listings (not updates)
-    if (!editingProductId && savedItem) {
-      try {
-        // Get seller name for the notification
-        const { data: sellerData } = await supabase
-          .from("sellers")
-          .select("name")
-          .eq("id", currentSellerId)
-          .single();
+      // Send email notifications to subscribed users
+      const notificationResult = await EmailNotificationService.sendNewProductNotifications({
+        productName: productInfo.name,
+        productDescription: productInfo.description,
+        price: priceValue,
+        sellerName,
+        productType: isPart ? "part" : "product",
+        imageUrl: finalImageUrls[0], // Use first image if available
+        sellerId: currentSellerId,
+      });
 
-        const sellerName = sellerData?.name || "Unknown Seller";
-
-        // Send email notifications to subscribed users
-        const notificationResult = await EmailNotificationService.sendNewProductNotifications({
-          productName: productInfo.name,
-          productDescription: productInfo.description,
-          price: priceValue,
-          sellerName,
-          productType: isPart ? "part" : "product",
-          imageUrl: finalImageUrls[0], // Use first image if available
-          sellerId: currentSellerId,
-        });
-
-        // Show appropriate success message for notifications
-        if (notificationResult.notificationsSent > 0) {
-          toast({
-            title: "Notifications Sent",
-            description: `Email notifications have been sent to ${notificationResult.notificationsSent} subscribed users!`,
-          });
-        } else {
-          toast({
-            title: "Product Listed Successfully", 
-            description: "Your product was listed! No email notifications were sent as there are no subscribers yet.",
-          });
-        }
-      } catch (notificationError) {
-        console.error("Error sending notifications:", notificationError);
-        // Show a warning toast but don't fail the main action
+      // Show appropriate success message for notifications
+      if (notificationResult.notificationsSent > 0) {
         toast({
-          title: "Product Listed Successfully",
-          description: "Your product was listed, but there was an issue sending email notifications. Subscribers may not have been notified.",
-          variant: "default", // Not destructive since the main action succeeded
+          title: "Notifications Sent",
+          description: `Email notifications have been sent to ${notificationResult.notificationsSent} subscribed users!`,
         });
       }
+    } catch (notificationError) {
+      console.error("Error sending notifications:", notificationError);
+      // Show a warning toast but don't fail the main action
+      toast({
+        title: "Notification Warning",
+        description: "Your product was listed successfully, but there was an issue sending email notifications.",
+        variant: "default",
+      });
     }
-
-    cleanupAndRefetch();
   };
 
   const cleanupAndRefetch = () => {
@@ -1256,16 +1287,44 @@ const Account = () => {
         .eq("id", productId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast({ title: "Deleted", description: "Product removed." });
-      queryClient.invalidateQueries({ queryKey: ["seller-products"] });
+    onMutate: async (productId) => {
+      // Cancel any outgoing refetches to prevent optimistic updates from being overwritten
+      await queryClient.cancelQueries({ queryKey: ["seller-products"] });
+
+      // Snapshot the previous value
+      const previousProducts = queryClient.getQueryData(["seller-products"]);
+
+      // Optimistically remove the product from the list
+      queryClient.setQueryData(["seller-products"], (old: any) => {
+        if (!old) return old;
+        return old.filter((product: any) => product.id !== productId);
+      });
+
+      // Show immediate feedback
+      toast({ 
+        title: "Deleting...", 
+        description: "Removing product from your listings..." 
+      });
+
+      return { previousProducts };
     },
-    onError: (error: any) => {
+    onSuccess: () => {
+      toast({ title: "Deleted", description: "Product removed successfully." });
+    },
+    onError: (error: any, productId, context) => {
+      // Rollback to previous data on error
+      if (context?.previousProducts) {
+        queryClient.setQueryData(["seller-products"], context.previousProducts);
+      }
       toast({
         title: "Error",
         description: `Failed to delete product: ${error.message}`,
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have the latest data
+      queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     },
   });
 
@@ -1320,16 +1379,44 @@ const Account = () => {
         .eq("id", partId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast({ title: "Deleted", description: "Part removed." });
-      queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
+    onMutate: async (partId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["seller-parts"] });
+
+      // Snapshot the previous value
+      const previousParts = queryClient.getQueryData(["seller-parts"]);
+
+      // Optimistically remove the part from the list
+      queryClient.setQueryData(["seller-parts"], (old: any) => {
+        if (!old) return old;
+        return old.filter((part: any) => part.id !== partId);
+      });
+
+      // Show immediate feedback
+      toast({ 
+        title: "Deleting...", 
+        description: "Removing part from your listings..." 
+      });
+
+      return { previousParts };
     },
-    onError: (error: any) => {
+    onSuccess: () => {
+      toast({ title: "Deleted", description: "Part removed successfully." });
+    },
+    onError: (error: any, partId, context) => {
+      // Rollback to previous data on error
+      if (context?.previousParts) {
+        queryClient.setQueryData(["seller-parts"], context.previousParts);
+      }
       toast({
         title: "Error",
         description: `Failed to delete part: ${error.message}`,
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
     },
   });
 
@@ -2876,9 +2963,18 @@ const Account = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-3">
-                      <Button type="submit">
-                        {editingProductId ? "Update" : "List"}{" "}
-                        {listingType === "part" ? "Part" : "Product"}
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? (
+                          <>
+                            <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
+                            {editingProductId ? "Updating..." : "Listing..."}
+                          </>
+                        ) : (
+                          <>
+                            {editingProductId ? "Update" : "List"}{" "}
+                            {listingType === "part" ? "Part" : "Product"}
+                          </>
+                        )}
                       </Button>
                       {editingProductId && (
                         <Button
