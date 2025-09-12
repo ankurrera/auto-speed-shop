@@ -24,11 +24,7 @@ import {
   RefreshCcw,
   Car,
   FileText,
-  Star,
-  Gift,
-  MessageCircle,
-  DollarSign,
-  BarChart3
+  Star
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -49,10 +45,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
 import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
-import AdminCouponManagement from "@/components/AdminCouponManagement";
-import AdminInventoryManagement from "@/components/AdminInventoryManagement";
-import AdminCustomerSupport from "@/components/AdminCustomerSupport";
-import AdminPayoutManagement from "@/components/AdminPayoutManagement";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 import { EmailNotificationService } from "@/services/emailNotificationService";
 import { ORDER_STATUS } from "@/types/order";
@@ -104,10 +96,6 @@ const Account = () => {
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
   const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
-  const [showCouponManagement, setShowCouponManagement] = useState(false);
-  const [showInventoryManagement, setShowInventoryManagement] = useState(false);
-  const [showCustomerSupport, setShowCustomerSupport] = useState(false);
-  const [showPayoutManagement, setShowPayoutManagement] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -2061,18 +2049,6 @@ const Account = () => {
     if (showInvoiceManagement) {
       return <AdminInvoiceManagement onBack={() => setShowInvoiceManagement(false)} />;
     }
-    if (showCouponManagement) {
-      return <AdminCouponManagement onBack={() => setShowCouponManagement(false)} />;
-    }
-    if (showInventoryManagement) {
-      return <AdminInventoryManagement onBack={() => setShowInventoryManagement(false)} />;
-    }
-    if (showCustomerSupport) {
-      return <AdminCustomerSupport onBack={() => setShowCustomerSupport(false)} />;
-    }
-    if (showPayoutManagement) {
-      return <AdminPayoutManagement onBack={() => setShowPayoutManagement(false)} />;
-    }
     switch (currentPath) {
       case "addresses":
         return renderAddressesContent();
@@ -2209,33 +2185,9 @@ const Account = () => {
                   />
                   <ActionCard
                     title="Invoice Management"
-                    description="Create and send invoices to customers"
+                    description="Create invoices and verify payments"
                     icon={<FileText className="h-5 w-5" />}
                     onClick={() => setShowInvoiceManagement(true)}
-                  />
-                  <ActionCard
-                    title="Coupon Management"
-                    description="Create and manage discount coupons"
-                    icon={<Gift className="h-5 w-5" />}
-                    onClick={() => setShowCouponManagement(true)}
-                  />
-                  <ActionCard
-                    title="Inventory Management"
-                    description="Monitor stock levels and alerts"
-                    icon={<BarChart3 className="h-5 w-5" />}
-                    onClick={() => setShowInventoryManagement(true)}
-                  />
-                  <ActionCard
-                    title="Customer Support"
-                    description="Manage support tickets and messages"
-                    icon={<MessageCircle className="h-5 w-5" />}
-                    onClick={() => setShowCustomerSupport(true)}
-                  />
-                  <ActionCard
-                    title="Payout Management"
-                    description="Verify payments and manage seller payouts"
-                    icon={<DollarSign className="h-5 w-5" />}
-                    onClick={() => setShowPayoutManagement(true)}
                   />
                 </div>
                 
