@@ -102,8 +102,7 @@ const Account = () => {
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
   const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
-  const [showPaymentManagement, setShowPaymentManagement] = useState(false);
-  const [showPayoutManagement, setShowPayoutManagement] = useState(false);
+  const [showPayoutManagement, setShowPaymentManagement] = useState(false);
   const [showInventoryManagement, setShowInventoryManagement] = useState(false);
   const [showDiscountCouponManagement, setShowDiscountCouponManagement] = useState(false);
   const [showCustomerSupportTools, setShowCustomerSupportTools] = useState(false);
@@ -2060,11 +2059,8 @@ const Account = () => {
     if (showInvoiceManagement) {
       return <AdminInvoiceManagement onBack={() => setShowInvoiceManagement(false)} />;
     }
-    if (showPaymentManagement) {
-      return <AdminPaymentManagement onBack={() => setShowPaymentManagement(false)} />;
-    }
     if (showPayoutManagement) {
-      return <AdminPayoutManagement onBack={() => setShowPayoutManagement(false)} />;
+      return <AdminPayoutManagement onBack={() => setShowPaymentManagement(false)} />;
     }
     if (showInventoryManagement) {
       return <AdminInventoryManagement onBack={() => setShowInventoryManagement(false)} />;
@@ -2210,12 +2206,6 @@ const Account = () => {
                     onClick={() => setShowOrderManagement(true)}
                   />
                   <ActionCard
-                    title="Payment Management"
-                    description="Review seller payment and verify payments"
-                    icon={<FileText className="h-5 w-5" />}
-                    onClick={() => setShowPayoutManagement(true)}
-                  />
-                  <ActionCard
                     title="Invoice Management"
                     description="Create and send invoices to customers"
                     icon={<FileText className="h-5 w-5" />}
@@ -2223,13 +2213,13 @@ const Account = () => {
                   />
                   <ActionCard
                     title="Payment Management"
-                    description="Track and manage payment verifications and rejections"
-                    icon={<DollarSign className="h-5 w-5" />}
+                    description="Review customer payment and verify payments"
+                    icon={<FileText className="h-5 w-5" />}
                     onClick={() => setShowPaymentManagement(true)}
                   />
                   <ActionCard
                     title="Inventory Management"
-                    description="Stock alerts and auto-disable out-of-stock products"
+                    description="Stock alerts and disable out-of-stock products"
                     icon={<Package className="h-5 w-5" />}
                     onClick={() => setShowInventoryManagement(true)}
                   />
