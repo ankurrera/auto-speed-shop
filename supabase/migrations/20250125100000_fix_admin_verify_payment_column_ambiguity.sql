@@ -1,6 +1,6 @@
--- Fix column reference ambiguity in admin_verify_payment function
--- This fixes the "column reference 'notes' is ambiguous" error
--- Also adds support for rejection_reason parameter that the TypeScript code uses
+-- Fix column reference ambiguity in admin_verify_payment function from migration 20250203000000
+-- This fixes the "column reference 'notes' is ambiguous" error in the CASE statement
+-- The issue occurs because 'notes' can refer to either the table column or the return field
 
 CREATE OR REPLACE FUNCTION public.admin_verify_payment(
   requesting_user_id uuid,
@@ -38,6 +38,8 @@ DECLARE
   is_admin boolean := false;
   new_status text;
   new_payment_status text;
+  order_item RECORD;
+  current_notes text;
   updated_notes text;
 BEGIN
   -- Get the current user's admin status
@@ -50,11 +52,12 @@ BEGIN
     RAISE EXCEPTION 'Access denied: Admin privileges required';
   END IF;
 
-  -- Check if the order exists
-  IF NOT EXISTS (
-    SELECT 1 FROM public.orders 
-    WHERE orders.id = target_order_id
-  ) THEN
+  -- Check if the order exists and get current notes
+  SELECT orders.notes INTO current_notes 
+  FROM public.orders 
+  WHERE orders.id = target_order_id;
+
+  IF current_notes IS NULL AND NOT FOUND THEN
     RAISE EXCEPTION 'Order with ID % not found', target_order_id;
   END IF;
 
@@ -62,23 +65,50 @@ BEGIN
   IF verified THEN
     new_status := 'confirmed';
     new_payment_status := 'verified';
-    -- Keep existing notes for verified payments
-    SELECT orders.notes INTO updated_notes 
-    FROM public.orders 
-    WHERE orders.id = target_order_id;
+    updated_notes := current_notes; -- Keep existing notes if verified
+    
+    -- Decrement stock for each order item when order is confirmed
+    FOR order_item IN 
+      SELECT oi.product_id, oi.part_id, oi.quantity 
+      FROM public.order_items oi 
+      WHERE oi.order_id = target_order_id
+    LOOP
+      -- Decrement product stock if it's a product
+      IF order_item.product_id IS NOT NULL THEN
+        UPDATE public.products 
+        SET 
+          stock_quantity = GREATEST(0, products.stock_quantity - order_item.quantity),
+          updated_at = now()
+        WHERE products.id = order_item.product_id;
+      END IF;
+      
+      -- Decrement part stock if it's a part
+      IF order_item.part_id IS NOT NULL THEN
+        UPDATE public.parts 
+        SET 
+          stock_quantity = GREATEST(0, parts.stock_quantity - order_item.quantity),
+          updated_at = now()
+        WHERE parts.id = order_item.part_id;
+      END IF;
+    END LOOP;
   ELSE
     new_status := 'payment_rejected';
     new_payment_status := 'rejected';
-    -- Add rejection reason to notes for rejected payments
+    
+    -- Handle rejection reason using variables to avoid column ambiguity
     IF rejection_reason IS NOT NULL THEN
-      updated_notes := rejection_reason;
+      IF current_notes IS NULL THEN
+        updated_notes := rejection_reason;
+      ELSE
+        updated_notes := current_notes || E'\n\nRejection Reason: ' || rejection_reason;
+      END IF;
     ELSE
-      updated_notes := 'Payment rejected by admin';
+      updated_notes := current_notes;
     END IF;
   END IF;
 
   -- Update the order with payment verification
-  -- Fixed column reference ambiguity by qualifying with table name and using variables
+  -- Fixed column reference ambiguity by using qualified variables
   UPDATE public.orders 
   SET 
     status = new_status,
@@ -88,7 +118,6 @@ BEGIN
   WHERE orders.id = target_order_id;
 
   -- Return the updated order
-  -- Fixed column reference ambiguity by qualifying all columns with table alias
   RETURN QUERY
   SELECT 
     o.id,
