@@ -760,6 +760,189 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          id: string
+          ticket_id: string
+          user_id: string
+          subject: string
+          description: string
+          status: string
+          priority: string
+          category: string
+          admin_response: string | null
+          admin_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          ticket_id?: string
+          user_id: string
+          subject: string
+          description: string
+          status?: string
+          priority?: string
+          category?: string
+          admin_response?: string | null
+          admin_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          ticket_id?: string
+          user_id?: string
+          subject?: string
+          description?: string
+          status?: string
+          priority?: string
+          category?: string
+          admin_response?: string | null
+          admin_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "support_tickets_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          id: string
+          coupon_id: string
+          code: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          min_order_amount: number | null
+          max_discount_amount: number | null
+          usage_limit: number | null
+          used_count: number
+          valid_from: string
+          valid_until: string | null
+          status: string
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          coupon_id?: string
+          code: string
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          min_order_amount?: number | null
+          max_discount_amount?: number | null
+          usage_limit?: number | null
+          used_count?: number
+          valid_from?: string
+          valid_until?: string | null
+          status?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          coupon_id?: string
+          code?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          min_order_amount?: number | null
+          max_discount_amount?: number | null
+          usage_limit?: number | null
+          used_count?: number
+          valid_from?: string
+          valid_until?: string | null
+          status?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_coupons: {
+        Row: {
+          id: string
+          user_id: string
+          coupon_id: string
+          assigned_at: string
+          used_at: string | null
+          status: string
+          order_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          coupon_id: string
+          assigned_at?: string
+          used_at?: string | null
+          status?: string
+          order_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          coupon_id?: string
+          assigned_at?: string
+          used_at?: string | null
+          status?: string
+          order_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_coupons_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_coupons_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_coupons_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wishlist: {
         Row: {
           created_at: string

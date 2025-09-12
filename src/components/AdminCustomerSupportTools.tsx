@@ -32,52 +32,21 @@ import {
   MoreHorizontal,
   Plus,
   Search,
-  Filter
+  Filter,
+  ArrowLeft
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatService, ChatMessage } from "@/services/chatService";
+import { SupportTicketService, SupportTicket } from "@/services/supportTicketService";
 import AdminChatConversation from "./AdminChatConversation";
-
-interface Ticket {
-  id: string;
-  ticket_number: string;
-  subject: string;
-  description: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  category: string;
-  user_id: string;
-  assigned_to: string | null;
-  created_at: string;
-  updated_at: string;
-  user?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-}
-
-interface ChatMessage {
-  id: string;
-  user_id: string;
-  admin_id: string | null;
-  message: string;
-  is_from_admin: boolean;
-  created_at: string;
-  user?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-}
 
 interface CustomerSupportToolsProps {
   onBack: () => void;
 }
 
 const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("tickets");
@@ -85,18 +54,48 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [showTicketDialog, setShowTicketDialog] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<{
     userId: string;
     userName: string;
     userEmail: string;
   } | null>(null);
+  const [ticketStats, setTicketStats] = useState({
+    total: 0,
+    open: 0,
+    pending: 0,
+    resolved: 0,
+    closed: 0,
+    byPriority: { low: 0, medium: 0, high: 0, urgent: 0 },
+  });
   const { toast } = useToast();
 
   const fetchTickets = useCallback(async () => {
     try {
-      // Mock data for demonstration
-      const mockTickets: Ticket[] = [
+      setLoading(true);
+      const filters = {
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(priorityFilter !== 'all' && { priority: priorityFilter }),
+      };
+      
+      const [allTickets, stats] = await Promise.all([
+        SupportTicketService.getAllTickets(filters),
+        SupportTicketService.getTicketStats(),
+      ]);
+      
+      setTickets(allTickets);
+      setTicketStats(stats);
+    } catch (error) {
+      console.error('Error fetching tickets:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch support tickets',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter, priorityFilter, toast]);
         {
           id: '1',
           ticket_number: 'TKT-001',
@@ -151,18 +150,47 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
             email: 'mike.johnson@example.com'
           }
         }
-      ];
-      setTickets(mockTickets);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to fetch tickets";
-      console.error('Error fetching tickets:', error);
+  }, [statusFilter, priorityFilter, toast]);
+
+  const handleUpdateTicket = async (ticketId: string, updates: {
+    status?: string;
+    priority?: string;
+    admin_response?: string;
+  }) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('Not authenticated');
+
+      await SupportTicketService.updateTicket(ticketId, {
+        ...updates,
+        admin_id: session.user.id,
+      });
+
       toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
+        title: 'Success',
+        description: 'Ticket updated successfully',
+      });
+
+      // Refresh tickets
+      fetchTickets();
+    } catch (error) {
+      console.error('Error updating ticket:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update ticket',
+        variant: 'destructive',
       });
     }
-  }, [toast]);
+  };
+
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesSearch = 
+      ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.ticket_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ticket.user?.first_name + ' ' + ticket.user?.last_name).toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesSearch;
+  });
 
   const fetchChatMessages = useCallback(async () => {
     try {
