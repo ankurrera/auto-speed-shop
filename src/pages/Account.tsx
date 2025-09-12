@@ -2204,8 +2204,8 @@ const Account = () => {
                     onClick={() => setShowOrderManagement(true)}
                   />
                   <ActionCard
-                    title="Payout Management"
-                    description="Review seller payouts and verify payments"
+                    title="Payment Management"
+                    description="Review seller payment and verify payments"
                     icon={<FileText className="h-5 w-5" />}
                     onClick={() => setShowPayoutManagement(true)}
                   />

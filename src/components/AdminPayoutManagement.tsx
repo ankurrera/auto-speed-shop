@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -292,7 +293,7 @@ const PayoutManagement = ({ onBack }: PayoutManagementProps) => {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-lg">
           <DollarSign className="h-5 w-5" />
-          Payout Management
+          Payment Management
         </CardTitle>
         <Button variant="outline" onClick={onBack}>
           Back
