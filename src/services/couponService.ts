@@ -204,7 +204,7 @@ export class CouponService {
       query = query.eq('status', status);
     }
 
-    query = query.order('assigned_at', { ascending: false });
+    query = query.order('created_at', { ascending: false });
 
     const { data, error } = await query;
 
@@ -334,32 +334,43 @@ export class CouponService {
     totalAssigned: number;
     totalUsed: number;
   }> {
-    const [couponsResult, userCouponsResult] = await Promise.all([
-      supabase.from('coupons').select('status'),
-      supabase.from('user_coupons').select('status'),
-    ]);
+    try {
+      const [couponsResult, userCouponsResult] = await Promise.all([
+        supabase.from('coupons').select('status'),
+        supabase.from('user_coupons').select('status'),
+      ]);
 
-    if (couponsResult.error || userCouponsResult.error) {
-      throw new Error('Failed to fetch coupon statistics');
+      if (couponsResult.error) {
+        console.error('Error fetching coupons:', couponsResult.error);
+        throw new Error(`Failed to fetch coupon statistics: ${couponsResult.error.message}`);
+      }
+
+      if (userCouponsResult.error) {
+        console.error('Error fetching user coupons:', userCouponsResult.error);
+        throw new Error(`Failed to fetch coupon statistics: ${userCouponsResult.error.message}`);
+      }
+
+      const stats = {
+        total: couponsResult.data?.length || 0,
+        active: 0,
+        expired: 0,
+        totalAssigned: userCouponsResult.data?.length || 0,
+        totalUsed: 0,
+      };
+
+      couponsResult.data?.forEach((coupon) => {
+        if (coupon.status === 'active') stats.active++;
+        else if (coupon.status === 'expired') stats.expired++;
+      });
+
+      userCouponsResult.data?.forEach((userCoupon) => {
+        if (userCoupon.status === 'used') stats.totalUsed++;
+      });
+
+      return stats;
+    } catch (error) {
+      console.error('Error in getCouponStats:', error);
+      throw error;
     }
-
-    const stats = {
-      total: couponsResult.data.length,
-      active: 0,
-      expired: 0,
-      totalAssigned: userCouponsResult.data.length,
-      totalUsed: 0,
-    };
-
-    couponsResult.data.forEach((coupon) => {
-      if (coupon.status === 'active') stats.active++;
-      else if (coupon.status === 'expired') stats.expired++;
-    });
-
-    userCouponsResult.data.forEach((userCoupon) => {
-      if (userCoupon.status === 'used') stats.totalUsed++;
-    });
-
-    return stats;
   }
 }

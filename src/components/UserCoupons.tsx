@@ -22,7 +22,7 @@ const UserCoupons = () => {
 
   useEffect(() => {
     loadUserCoupons();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUserCoupons = async () => {
     try {
@@ -161,7 +161,7 @@ const UserCoupons = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center text-muted-foreground">
                     <Calendar className="w-4 h-4 mr-2" />
-                    <span>Assigned: {formatDate(userCoupon.assigned_at)}</span>
+                    <span>Assigned: {formatDate(userCoupon.assigned_at || userCoupon.created_at)}</span>
                   </div>
                   
                   {userCoupon.coupon?.valid_until && (

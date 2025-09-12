@@ -103,7 +103,7 @@ const UserSupportTickets = () => {
     return () => {
       subscription.data.subscription.unsubscribe();
     };
-  }, [toast]);
+  }, [toast]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTickets = async () => {
     try {

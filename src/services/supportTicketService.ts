@@ -40,14 +40,7 @@ export class SupportTicketService {
     const { data: ticket, error } = await supabase
       .from('support_tickets')
       .insert(ticketData)
-      .select(`
-        *,
-        user:profiles!support_tickets_user_id_fkey(
-          first_name,
-          last_name,
-          email
-        )
-      `)
+      .select('*')
       .single();
 
     if (error) {
@@ -63,19 +56,7 @@ export class SupportTicketService {
   static async getUserTickets(userId: string): Promise<SupportTicket[]> {
     const { data, error } = await supabase
       .from('support_tickets')
-      .select(`
-        *,
-        user:profiles!support_tickets_user_id_fkey(
-          first_name,
-          last_name,
-          email
-        ),
-        admin:profiles!support_tickets_admin_id_fkey(
-          first_name,
-          last_name,
-          email
-        )
-      `)
+      .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
@@ -96,19 +77,7 @@ export class SupportTicketService {
   }): Promise<SupportTicket[]> {
     let query = supabase
       .from('support_tickets')
-      .select(`
-        *,
-        user:profiles!support_tickets_user_id_fkey(
-          first_name,
-          last_name,
-          email
-        ),
-        admin:profiles!support_tickets_admin_id_fkey(
-          first_name,
-          last_name,
-          email
-        )
-      `);
+      .select('*');
 
     if (filters?.status) {
       query = query.eq('status', filters.status);
@@ -147,19 +116,7 @@ export class SupportTicketService {
       .from('support_tickets')
       .update(updates)
       .eq('id', ticketId)
-      .select(`
-        *,
-        user:profiles!support_tickets_user_id_fkey(
-          first_name,
-          last_name,
-          email
-        ),
-        admin:profiles!support_tickets_admin_id_fkey(
-          first_name,
-          last_name,
-          email
-        )
-      `)
+      .select('*')
       .single();
 
     if (error) {
