@@ -603,16 +603,11 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
           <div className="space-y-3 min-w-[200px]">
             {paymentData && (
               <div className="text-center">
-                <Button
-                  size="sm"
-                  onClick={() => navigate(`/admin/view-payment/${order.id}`)}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Payment
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground">
                   Payment submitted: ${paymentData.payment_amount}
+                </p>
+                <p className="text-xs text-blue-600 font-medium">
+                  Payment verification managed in Payout section
                 </p>
               </div>
             )}

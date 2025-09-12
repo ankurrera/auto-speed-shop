@@ -13,6 +13,7 @@ import {
 import { SimpleThemeToggle } from "./SimpleThemeToggle";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
+import NotificationIcon from "./NotificationIcon";
 import CarWrenchLogo from "@/assets/car-wrench-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -182,6 +183,8 @@ const Header = () => {
                 )}
               </Link>
             </Button>
+            {/* Notification Icon - only show for logged in users */}
+            {userSession && <NotificationIcon />}
             {userSession ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -308,6 +311,9 @@ const Header = () => {
                 )}
               </Link>
             </Button>
+            
+            {/* Notification Icon - only show for logged in users */}
+            {userSession && <NotificationIcon />}
             
             {userSession ? (
               <DropdownMenu>
