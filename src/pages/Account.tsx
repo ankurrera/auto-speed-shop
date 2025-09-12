@@ -2209,7 +2209,7 @@ const Account = () => {
                   />
                   <ActionCard
                     title="Invoice Management"
-                    description="Create invoices and verify payments"
+                    description="Create and send invoices to customers"
                     icon={<FileText className="h-5 w-5" />}
                     onClick={() => setShowInvoiceManagement(true)}
                   />
@@ -2233,7 +2233,7 @@ const Account = () => {
                   />
                   <ActionCard
                     title="Payout Management"
-                    description="Review and process seller payouts"
+                    description="Verify payments and manage seller payouts"
                     icon={<DollarSign className="h-5 w-5" />}
                     onClick={() => setShowPayoutManagement(true)}
                   />
