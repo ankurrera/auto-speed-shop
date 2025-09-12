@@ -4,7 +4,8 @@
 CREATE OR REPLACE FUNCTION public.admin_verify_payment(
   requesting_user_id uuid,
   target_order_id uuid,
-  verified boolean
+  verified boolean,
+  rejection_reason text DEFAULT NULL
 )
 RETURNS TABLE(
   id uuid,
@@ -71,23 +72,23 @@ BEGIN
       IF order_item.product_id IS NOT NULL THEN
         UPDATE public.products 
         SET 
-          stock_quantity = GREATEST(0, stock_quantity - order_item.quantity),
+          stock_quantity = GREATEST(0, products.stock_quantity - order_item.quantity),
           updated_at = now()
-        WHERE id = order_item.product_id;
+        WHERE products.id = order_item.product_id;
       END IF;
       
       -- Decrement part stock if it's a part
       IF order_item.part_id IS NOT NULL THEN
         UPDATE public.parts 
         SET 
-          stock_quantity = GREATEST(0, stock_quantity - order_item.quantity),
+          stock_quantity = GREATEST(0, parts.stock_quantity - order_item.quantity),
           updated_at = now()
-        WHERE id = order_item.part_id;
+        WHERE parts.id = order_item.part_id;
       END IF;
     END LOOP;
   ELSE
-    new_status := 'payment_pending';
-    new_payment_status := 'failed';
+    new_status := 'payment_rejected';
+    new_payment_status := 'rejected';
   END IF;
 
   -- Update the order with payment verification
@@ -95,6 +96,15 @@ BEGIN
   SET 
     status = new_status,
     payment_status = new_payment_status,
+    notes = CASE 
+      WHEN verified THEN notes  -- Keep existing notes if verified
+      WHEN rejection_reason IS NOT NULL THEN 
+        CASE 
+          WHEN notes IS NULL THEN rejection_reason
+          ELSE notes || E'\n\nRejection Reason: ' || rejection_reason
+        END
+      ELSE notes
+    END,
     updated_at = now()
   WHERE orders.id = target_order_id;
 
@@ -127,4 +137,4 @@ END;
 $$;
 
 -- Grant execute permission to authenticated users (the function checks admin status internally)
-GRANT EXECUTE ON FUNCTION public.admin_verify_payment(uuid, uuid, boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_verify_payment(uuid, uuid, boolean, text) TO authenticated;

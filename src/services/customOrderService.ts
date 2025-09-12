@@ -251,7 +251,7 @@ export async function submitPayment(orderId: string, paymentData: PaymentSubmiss
   }
 }
 
-export async function verifyPayment(orderId: string, verified: boolean) {
+export async function verifyPayment(orderId: string, verified: boolean, rejectionReason?: string) {
   try {
     // Handle development mode with sample orders
     const isDevelopment = import.meta.env.DEV;
@@ -259,8 +259,8 @@ export async function verifyPayment(orderId: string, verified: boolean) {
     
     if (isDevelopment && isSampleOrder) {
       // For sample orders in development mode, simulate successful payment verification
-      const newStatus = verified ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PAYMENT_PENDING;
-      const paymentStatus = verified ? PAYMENT_STATUS.VERIFIED : PAYMENT_STATUS.FAILED;
+      const newStatus = verified ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PAYMENT_REJECTED;
+      const paymentStatus = verified ? PAYMENT_STATUS.VERIFIED : PAYMENT_STATUS.REJECTED;
       console.log(`[DEV MODE] Simulating payment verification for sample order: ${orderId}, verified: ${verified}`);
       return {
         id: orderId,
@@ -281,7 +281,8 @@ export async function verifyPayment(orderId: string, verified: boolean) {
       .rpc('admin_verify_payment', {
         requesting_user_id: user.id,
         target_order_id: orderId,
-        verified: verified
+        verified: verified,
+        rejection_reason: rejectionReason || null
       });
 
     if (error) {

@@ -189,10 +189,10 @@ const AdminPayoutManagement = ({ onBack }: { onBack: () => void }) => {
   });
 
   // Handle payment verification
-  const handleVerifyPayment = async (orderId: string, verified: boolean) => {
+  const handleVerifyPayment = async (orderId: string, verified: boolean, rejectionReason?: string) => {
     setIsVerifyingPayment(true);
     try {
-      await verifyPayment(orderId, verified);
+      await verifyPayment(orderId, verified, rejectionReason);
 
       toast({
         title: verified ? "Payment Verified" : "Payment Rejected",
