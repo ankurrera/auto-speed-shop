@@ -329,18 +329,18 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({
                       <td className="py-2 px-4 text-right">Subtotal:</td>
                       <td className="py-2 px-4 text-right">${orderDetails.subtotal.toFixed(2)}</td>
                     </tr>
-                    {orderDetails.convenience_fee && (
+                    {orderDetails.convenience_fee ? (
                       <tr>
                         <td className="py-2 px-4 text-right">Convenience Fee:</td>
                         <td className="py-2 px-4 text-right">${orderDetails.convenience_fee.toFixed(2)}</td>
                       </tr>
-                    )}
-                    {orderDetails.delivery_charge && (
+                    ) : null}
+                    {orderDetails.delivery_charge ? (
                       <tr>
                         <td className="py-2 px-4 text-right">Delivery Charge:</td>
                         <td className="py-2 px-4 text-right">${orderDetails.delivery_charge.toFixed(2)}</td>
                       </tr>
-                    )}
+                    ) : null}
                     <tr>
                       <td className="py-2 px-4 text-right">Tax:</td>
                       <td className="py-2 px-4 text-right">${orderDetails.tax_amount.toFixed(2)}</td>
