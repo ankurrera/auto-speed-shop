@@ -102,7 +102,8 @@ const Account = () => {
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
   const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
-  const [showPayoutManagement, setShowPaymentManagement] = useState(false);
+  const [showPaymentManagement, setShowPaymentManagement] = useState(false);
+  const [showPayoutManagement, setShowPayoutManagement] = useState(false);
   const [showInventoryManagement, setShowInventoryManagement] = useState(false);
   const [showDiscountCouponManagement, setShowDiscountCouponManagement] = useState(false);
   const [showCustomerSupportTools, setShowCustomerSupportTools] = useState(false);
@@ -2059,8 +2060,11 @@ const Account = () => {
     if (showInvoiceManagement) {
       return <AdminInvoiceManagement onBack={() => setShowInvoiceManagement(false)} />;
     }
+    if (showPaymentManagement) {
+      return <AdminPaymentManagement onBack={() => setShowPaymentManagement(false)} />;
+    }
     if (showPayoutManagement) {
-      return <AdminPayoutManagement onBack={() => setShowPaymentManagement(false)} />;
+      return <AdminPayoutManagement onBack={() => setShowPayoutManagement(false)} />;
     }
     if (showInventoryManagement) {
       return <AdminInventoryManagement onBack={() => setShowInventoryManagement(false)} />;
