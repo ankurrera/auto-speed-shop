@@ -96,61 +96,6 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
       setLoading(false);
     }
   }, [statusFilter, priorityFilter, toast]);
-        {
-          id: '1',
-          ticket_number: 'TKT-001',
-          subject: 'Order Delivery Issue',
-          description: 'My order was supposed to arrive yesterday but I haven\'t received it yet.',
-          status: 'open',
-          priority: 'high',
-          category: 'Delivery',
-          user_id: 'user1',
-          assigned_to: null,
-          created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          user: {
-            first_name: 'John',
-            last_name: 'Doe',
-            email: 'john.doe@example.com'
-          }
-        },
-        {
-          id: '2',
-          ticket_number: 'TKT-002',
-          subject: 'Product Quality Concern',
-          description: 'The brake pads I received seem to have manufacturing defects.',
-          status: 'in_progress',
-          priority: 'urgent',
-          category: 'Product Quality',
-          user_id: 'user2',
-          assigned_to: 'admin1',
-          created_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          user: {
-            first_name: 'Jane',
-            last_name: 'Smith',
-            email: 'jane.smith@example.com'
-          }
-        },
-        {
-          id: '3',
-          ticket_number: 'TKT-003',
-          subject: 'Refund Request',
-          description: 'I would like to return the air filter as it doesn\'t fit my car model.',
-          status: 'resolved',
-          priority: 'medium',
-          category: 'Returns',
-          user_id: 'user3',
-          assigned_to: 'admin1',
-          created_at: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-          user: {
-            first_name: 'Mike',
-            last_name: 'Johnson',
-            email: 'mike.johnson@example.com'
-          }
-        }
-  }, [statusFilter, priorityFilter, toast]);
 
   const handleUpdateTicket = async (ticketId: string, updates: {
     status?: string;
@@ -266,20 +211,6 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
     }
   };
 
-  const filterTickets = (tickets: Ticket[]) => {
-    return tickets.filter(ticket => {
-      const matchesSearch = !searchTerm || 
-        ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (ticket.user?.email && ticket.user.email.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
-      const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
-      
-      return matchesSearch && matchesStatus && matchesPriority;
-    });
-  };
-
   const groupMessagesByUser = (messages: ChatMessage[]) => {
     const grouped = messages.reduce((acc, message) => {
       const key = message.user_id;
@@ -314,7 +245,6 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
     );
   }
 
-  const filteredTickets = filterTickets(tickets);
   const groupedMessages = groupMessagesByUser(chatMessages);
 
   // If viewing a conversation, show that instead
