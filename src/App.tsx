@@ -25,7 +25,10 @@ import CustomCheckout from "./pages/CustomCheckout";
 import CustomOrderFlowDemo from "./pages/CustomOrderFlowDemo";
 import InvoiceDemo from "./pages/InvoiceDemo";
 import ShowInvoiceButtonDemo from "./pages/ShowInvoiceButtonDemo";
+import TrackOrderDemo from "./pages/TrackOrderDemo";
 import SellerDashboard from "./pages/SellerDashboard";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard";
+import ViewPayment from "./pages/ViewPayment";
 import EmailSubscriptionDemo from "./components/EmailSubscriptionDemo";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
@@ -44,7 +47,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
           <CartProvider>
             <WishlistProvider>
@@ -62,11 +65,14 @@ const App = () => {
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/account/*" element={<Account />} />
                     <Route path="/seller-dashboard" element={<SellerDashboard />} />
+                    <Route path="/analytics" element={<AnalyticsDashboard />} />
                     <Route path="/checkout" element={<CustomCheckout />} />
                     <Route path="/custom-checkout" element={<CustomCheckout />} />
                     <Route path="/custom-order-demo" element={<CustomOrderFlowDemo />} />
                     <Route path="/invoice-demo" element={<InvoiceDemo />} />
                     <Route path="/show-invoice-button-demo" element={<ShowInvoiceButtonDemo />} />
+                    <Route path="/track-order-demo" element={<TrackOrderDemo />} />
+                    <Route path="/admin/view-payment/:orderId" element={<ViewPayment />} />
                     <Route path="/order/:orderId" element={<OrderDetails />} />
                     <Route path="/products/:id" element={<ProductDetails />} />
                     <Route path="/new-arrivals" element={<NewArrivals />} />

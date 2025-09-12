@@ -23,7 +23,8 @@ import {
   Plus,
   RefreshCcw,
   Car,
-  FileText
+  FileText,
+  Star
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,13 @@ const categories = [
 ];
 
 const Account = () => {
+  // Helper function to check if user has admin access (shared access)
+  const hasAdminAccess = (userInfo: any) => {
+    return userInfo.is_admin && 
+           (userInfo.role === "admin" || 
+            (userInfo.is_seller && userInfo.role === "admin"));
+  };
+
   // Auth / profile
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [view, setView] = useState<"login" | "signup">("login");
@@ -115,6 +123,7 @@ const Account = () => {
     phone: "",
     is_admin: false,
     is_seller: false,
+    role: "user",
   });
 
   // Email subscription state
@@ -253,7 +262,7 @@ const Account = () => {
   // Admin metrics (totals)
   const { data: adminMetrics } = useQuery({
     queryKey: ["admin-metrics"],
-    enabled: userInfo.is_admin,
+    enabled: hasAdminAccess(userInfo),
     queryFn: async () => {
       // Get current user for admin functions
       const { data: { user } } = await supabase.auth.getUser();
@@ -261,9 +270,13 @@ const Account = () => {
         throw new Error('User not authenticated');
       }
 
-      const [{ count: userCount }, { count: orderItemsCount }, productRes, partRes, allOrdersRes] =
+      const [userCountResult, { count: orderItemsCount }, productRes, partRes, allOrdersRes] =
         await Promise.all([
-          supabase.from("profiles").select("*", { count: "exact", head: true }),
+          // Count only regular users (is_admin = FALSE, is_seller = FALSE, role = user)
+          supabase.from("profiles").select("*", { count: "exact", head: true })
+            .eq("is_admin", false)
+            .eq("is_seller", false)
+            .eq("role", "user"),
           // Count from order_items table instead of orders table
           supabase.from("order_items").select("*", { count: "exact", head: true }),
           supabase.from("products").select("id, price, stock_quantity, is_active"),
@@ -276,14 +289,17 @@ const Account = () => {
 
       let revenue = 0;
       if (allOrdersRes.data) {
-        revenue = allOrdersRes.data.reduce(
-          (sum: number, row: { total_amount: number }) => sum + (row.total_amount || 0),
-          0
-        );
+        // Only include confirmed orders in revenue calculation
+        revenue = allOrdersRes.data
+          .filter((row: { status: string }) => row.status === 'confirmed')
+          .reduce(
+            (sum: number, row: { total_amount: number }) => sum + (row.total_amount || 0),
+            0
+          );
       }
 
       return {
-        users: userCount ?? 0,
+        users: userCountResult.count ?? 0,
         orders: orderItemsCount ?? 0, // Now showing count from order_items table
         productsActive: [
           ...(productRes.data || []),
@@ -330,7 +346,7 @@ const Account = () => {
   const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("first_name, last_name, email, phone, is_admin, is_seller")
+      .select("first_name, last_name, email, phone, is_admin, is_seller, role")
       .eq("user_id", userId)
       .single();
     
@@ -342,6 +358,7 @@ const Account = () => {
         phone: data.phone || "",
         is_admin: data.is_admin || false,
         is_seller: data.is_seller || false,
+        role: data.role || "user",
       });
       setSellerExistsForAdmin(data.is_seller || false);
 
@@ -500,7 +517,6 @@ const Account = () => {
   };
 
   // Auth listener
-  // Auth listener
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -519,6 +535,7 @@ const Account = () => {
             phone: "",
             is_admin: false,
             is_seller: false,
+            role: "user",
           });
           setAddresses([]);
           setOrders([]);
@@ -1053,6 +1070,7 @@ const Account = () => {
           specifications: specificationsPayload,
           image_urls: finalImageUrls,
           is_active: stockValue > 0,
+          is_featured: false,
         };
       } else {
         payload = {
@@ -1524,6 +1542,87 @@ const Account = () => {
     },
   });
 
+  // Feature toggle mutations - admin only
+  const toggleProductFeatureMutation = useMutation({
+    mutationFn: async ({
+      productId,
+      is_featured,
+    }: {
+      productId: string;
+      is_featured: boolean;
+    }) => {
+      // Check if user is admin
+      if (!hasAdminAccess(userInfo)) {
+        throw new Error("Only administrators can feature/unfeature products.");
+      }
+      
+      const { data, error } = await supabase
+        .from("products")
+        .update({ is_featured })
+        .eq("id", productId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller-products"] });
+      queryClient.invalidateQueries({ queryKey: ["featured-products"] });
+      toast({
+        title: "Success",
+        description: "Product feature status updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update product feature status: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const togglePartFeatureMutation = useMutation({
+    mutationFn: async ({
+      partId,
+      is_featured,
+    }: {
+      partId: string;
+      is_featured: boolean;
+    }) => {
+      // Check if user is admin
+      if (!hasAdminAccess(userInfo)) {
+        throw new Error("Only administrators can feature/unfeature parts.");
+      }
+      
+      const { data, error } = await supabase
+        .from("parts")
+        .update({ is_featured })
+        .eq("id", partId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
+      queryClient.invalidateQueries({ queryKey: ["featured-products"] });
+      toast({
+        title: "Success",
+        description: "Part feature status updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update part feature status: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDeleteProduct = (id: string) => {
     if (window.confirm("Delete this product?")) deleteProductMutation.mutate(id);
   };
@@ -1534,6 +1633,10 @@ const Account = () => {
     archiveProductMutation.mutate({ productId: id, is_active: active });
   const handleArchivePart = (id: string, active: boolean) =>
     archivePartMutation.mutate({ partId: id, is_active: active });
+  const handleToggleProductFeature = (id: string, featured: boolean) =>
+    toggleProductFeatureMutation.mutate({ productId: id, is_featured: featured });
+  const handleTogglePartFeature = (id: string, featured: boolean) =>
+    togglePartFeatureMutation.mutate({ partId: id, is_featured: featured });
 
   // Image handling
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -1999,7 +2102,7 @@ const Account = () => {
                 <div>
                   <p className="font-medium">Administrator Status</p>
                   <p className="text-sm text-muted-foreground">
-                    User Role: {userInfo.is_admin ? "Administrator" : "User"}
+                    User Role: {hasAdminAccess(userInfo) ? "Administrator" : "User"}
                     {userInfo.is_seller ? " | Seller" : ""}
                   </p>
                 </div>
@@ -2042,7 +2145,7 @@ const Account = () => {
                   icon={<Boxes className="h-5 w-5" />}
                 />
                 <StatCard
-                  title="Revenue"
+                  title="Total Revenue"
                   value={
                     adminMetrics
                       ? "$" +
@@ -2051,7 +2154,7 @@ const Account = () => {
                         )
                       : "--"
                   }
-                  subtitle="Total revenue"
+                  subtitle="Confirmed orders revenue"
                   icon={<TrendingUp className="h-5 w-5" />}
                 />
               </div>
@@ -2633,7 +2736,7 @@ const Account = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {userInfo.is_admin && currentPath !== "admin-dashboard" && (
+            {hasAdminAccess(userInfo) && currentPath !== "admin-dashboard" && (
               <Button 
                 variant="outline" 
                 onClick={() => navigate("/account/admin-dashboard")}
@@ -3039,12 +3142,15 @@ const Account = () => {
                         metaRight={`$${part.price}`}
                         quantity={part.stock_quantity}
                         active={part.is_active}
+                        featured={part.is_featured}
                         disabled={!sellerId || deletePartMutation.isPending || archivePartMutation.isPending}
+                        isAdmin={hasAdminAccess(userInfo)}
                         onEdit={() => handleEditPart(part)}
                         onArchive={() =>
                           handleArchivePart(part.id, part.is_active)
                         }
                         onDelete={() => handleDeletePart(part.id)}
+                        onToggleFeature={() => handleTogglePartFeature(part.id, !part.is_featured)}
                       />
                     ))}
                     {filteredProducts.map((product) => (
@@ -3055,12 +3161,15 @@ const Account = () => {
                         metaRight={`$${product.price}`}
                         quantity={product.stock_quantity}
                         active={product.is_active}
+                        featured={product.is_featured}
                         disabled={!sellerId || deleteProductMutation.isPending || archiveProductMutation.isPending}
+                        isAdmin={hasAdminAccess(userInfo)}
                         onEdit={() => handleEditProduct(product)}
                         onArchive={() =>
                           handleArchiveProduct(product.id, product.is_active)
                         }
                         onDelete={() => handleDeleteProduct(product.id)}
+                        onToggleFeature={() => handleToggleProductFeature(product.id, !product.is_featured)}
                       />
                     ))}
                   </div>
@@ -3139,24 +3248,38 @@ const ListingRow = ({
   metaRight,
   quantity,
   active,
+  featured,
   onEdit,
   onArchive,
   onDelete,
+  onToggleFeature,
   disabled = false,
+  isAdmin = false,
 }: {
   title: string;
   metaLeft?: string;
   metaRight?: string;
   quantity: number;
   active: boolean;
+  featured?: boolean;
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onToggleFeature?: () => void;
   disabled?: boolean;
+  isAdmin?: boolean;
 }) => (
   <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 border border-border rounded-lg bg-card/40">
     <div className="flex-1 space-y-1">
-      <h5 className="font-semibold">{title}</h5>
+      <div className="flex items-center gap-2">
+        <h5 className="font-semibold">{title}</h5>
+        {featured && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-yellow-500/10 text-yellow-400 flex items-center gap-1">
+            <Star className="h-3 w-3 fill-current" />
+            Featured
+          </span>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         {metaLeft && <span>{metaLeft}</span>}
         {metaRight && <span>{metaRight}</span>}
@@ -3175,6 +3298,18 @@ const ListingRow = ({
         <Edit className="h-4 w-4 mr-1" />
         Edit
       </Button>
+      {isAdmin && onToggleFeature && (
+        <Button 
+          variant={featured ? "default" : "outline"} 
+          size="sm" 
+          onClick={onToggleFeature} 
+          disabled={disabled}
+          className={featured ? "bg-yellow-500 hover:bg-yellow-600 text-black" : ""}
+        >
+          <Star className={`h-4 w-4 mr-1 ${featured ? "fill-current" : ""}`} />
+          {featured ? "Unfeature" : "Feature"}
+        </Button>
+      )}
       <Button variant="ghost" size="sm" onClick={onArchive} disabled={disabled}>
         <Archive className="h-4 w-4 mr-1" />
         {active ? "Archive" : "Unarchive"}
