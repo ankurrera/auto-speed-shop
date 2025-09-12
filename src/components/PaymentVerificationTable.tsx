@@ -2,6 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,8 +16,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { CheckCircle, XCircle, DollarSign, Clock } from "lucide-react";
 import { ScreenshotModalViewer } from "./ScreenshotModalViewer";
+import { useState } from "react";
 
 interface PaymentData {
   transaction_id: string;
@@ -40,7 +53,7 @@ interface PaymentVerificationOrder {
 interface PaymentVerificationTableProps {
   orders: PaymentVerificationOrder[];
   loading: boolean;
-  onVerifyPayment: (orderId: string, verified: boolean) => Promise<void>;
+  onVerifyPayment: (orderId: string, verified: boolean, rejectionReason?: string) => Promise<void>;
   isVerifying: boolean;
 }
 
@@ -50,6 +63,24 @@ export const PaymentVerificationTable = ({
   onVerifyPayment,
   isVerifying 
 }: PaymentVerificationTableProps) => {
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  const handleRejectPayment = async () => {
+    if (selectedOrderId && rejectionReason.trim()) {
+      await onVerifyPayment(selectedOrderId, false, rejectionReason.trim());
+      setIsRejectionDialogOpen(false);
+      setRejectionReason('');
+      setSelectedOrderId(null);
+    }
+  };
+
+  const openRejectionDialog = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setRejectionReason('');
+    setIsRejectionDialogOpen(true);
+  };
   const getPaymentData = (order: PaymentVerificationOrder): PaymentData | null => {
     if (!order.notes) return null;
     try {
@@ -192,35 +223,15 @@ export const PaymentVerificationTable = ({
                               </AlertDialogContent>
                             </AlertDialog>
 
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  disabled={isVerifying}
-                                >
-                                  <XCircle className="h-4 w-4 mr-1" />
-                                  Reject
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Reject Payment</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to reject this payment? This will notify the customer that their payment was not accepted.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => onVerifyPayment(order.id, false)}
-                                    className="bg-red-600 hover:bg-red-700"
-                                  >
-                                    Reject Payment
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={isVerifying}
+                              onClick={() => openRejectionDialog(order.id)}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -357,6 +368,49 @@ export const PaymentVerificationTable = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Rejection Reason Dialog */}
+      <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Payment</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this payment. This will be included in the notification sent to the customer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">Rejection Reason</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Please explain why this payment is being rejected..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRejectionDialogOpen(false);
+                setRejectionReason('');
+                setSelectedOrderId(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectPayment}
+              disabled={!rejectionReason.trim() || isVerifying}
+            >
+              Reject Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

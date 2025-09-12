@@ -8,6 +8,7 @@ export const ORDER_STATUS = {
   PAYMENT_PENDING: 'payment_pending',
   PAYMENT_SUBMITTED: 'payment_submitted',
   PAYMENT_VERIFIED: 'payment_verified',
+  PAYMENT_REJECTED: 'payment_rejected',
   CONFIRMED: 'confirmed',
   CANCELLED: 'cancelled',
   SHIPPED: 'shipped',
@@ -19,6 +20,7 @@ export const PAYMENT_STATUS = {
   PENDING: 'pending',
   SUBMITTED: 'submitted',
   VERIFIED: 'verified',
+  REJECTED: 'rejected',
   COMPLETED: 'completed',
   FAILED: 'failed'
 } as const;
