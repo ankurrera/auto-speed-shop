@@ -24,7 +24,8 @@ import {
   RefreshCcw,
   Car,
   FileText,
-  Star
+  Star,
+  DollarSign
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
 import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
+import AdminPaymentManagement from "@/components/AdminPaymentManagement";
 import AdminPayoutManagement from "@/components/AdminPayoutManagement";
 import AdminInventoryManagement from "@/components/AdminInventoryManagement";
 import AdminDiscountCouponManagement from "@/components/AdminDiscountCouponManagement";
@@ -100,6 +102,7 @@ const Account = () => {
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
   const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
+  const [showPaymentManagement, setShowPaymentManagement] = useState(false);
   const [showPayoutManagement, setShowPayoutManagement] = useState(false);
   const [showInventoryManagement, setShowInventoryManagement] = useState(false);
   const [showDiscountCouponManagement, setShowDiscountCouponManagement] = useState(false);
@@ -2057,6 +2060,9 @@ const Account = () => {
     if (showInvoiceManagement) {
       return <AdminInvoiceManagement onBack={() => setShowInvoiceManagement(false)} />;
     }
+    if (showPaymentManagement) {
+      return <AdminPaymentManagement onBack={() => setShowPaymentManagement(false)} />;
+    }
     if (showPayoutManagement) {
       return <AdminPayoutManagement onBack={() => setShowPayoutManagement(false)} />;
     }
@@ -2214,6 +2220,12 @@ const Account = () => {
                     description="Create and send invoices to customers"
                     icon={<FileText className="h-5 w-5" />}
                     onClick={() => setShowInvoiceManagement(true)}
+                  />
+                  <ActionCard
+                    title="Payment Management"
+                    description="Track and manage payment verifications and rejections"
+                    icon={<DollarSign className="h-5 w-5" />}
+                    onClick={() => setShowPaymentManagement(true)}
                   />
                   <ActionCard
                     title="Inventory Management"
