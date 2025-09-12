@@ -29,7 +29,6 @@ import TrackOrderDemo from "./pages/TrackOrderDemo";
 import SellerDashboard from "./pages/SellerDashboard";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import ViewPayment from "./pages/ViewPayment";
-import EmailSubscriptionDemo from "./components/EmailSubscriptionDemo";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
@@ -79,7 +78,6 @@ const App = () => {
                     <Route path="/new-arrivals" element={<NewArrivals />} />
                     <Route path="/order-confirmation" element={<OrderConfirmation />} />
                     <Route path="/orders/:orderId/tracking" element={<OrderTracking />} />
-                    <Route path="/email-demo" element={<EmailSubscriptionDemo />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>

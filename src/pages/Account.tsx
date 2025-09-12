@@ -49,12 +49,6 @@ import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
 import AdminPaymentManagement from "@/components/AdminPaymentManagement";
 import AdminPayoutManagement from "@/components/AdminPayoutManagement";
 import AdminInventoryManagement from "@/components/AdminInventoryManagement";
-import AdminDiscountCouponManagement from "@/components/AdminDiscountCouponManagement";
-import AdminCustomerSupportTools from "@/components/AdminCustomerSupportTools";
-import UserSupportTickets from "@/components/UserSupportTickets";
-import UserCoupons from "@/components/UserCoupons";
-import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
-import { EmailNotificationService } from "@/services/emailNotificationService";
 import { ORDER_STATUS } from "@/types/order";
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -107,8 +101,6 @@ const Account = () => {
   const [showPaymentManagement, setShowPaymentManagement] = useState(false);
   const [showPayoutManagement, setShowPayoutManagement] = useState(false);
   const [showInventoryManagement, setShowInventoryManagement] = useState(false);
-  const [showDiscountCouponManagement, setShowDiscountCouponManagement] = useState(false);
-  const [showCustomerSupportTools, setShowCustomerSupportTools] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -2071,21 +2063,11 @@ const Account = () => {
     if (showInventoryManagement) {
       return <AdminInventoryManagement onBack={() => setShowInventoryManagement(false)} />;
     }
-    if (showDiscountCouponManagement) {
-      return <AdminDiscountCouponManagement onBack={() => setShowDiscountCouponManagement(false)} />;
-    }
-    if (showCustomerSupportTools) {
-      return <AdminCustomerSupportTools onBack={() => setShowCustomerSupportTools(false)} />;
-    }
     switch (currentPath) {
       case "addresses":
         return renderAddressesContent();
       case "orders":
         return renderOrdersContent();
-      case "support":
-        return renderSupportContent();
-      case "coupons":
-        return renderCouponsContent();
       case "admin-dashboard":
         return renderAdminDashboardContent();
       case "analytics-dashboard":
@@ -2245,18 +2227,6 @@ const Account = () => {
                         description="Manage your seller profile and information"
                         icon={<Car className="h-5 w-5" />}
                         onClick={() => navigate("/seller-dashboard")}
-                      />
-                      <ActionCard
-                        title="Discount & Coupon Management"
-                        description="Create promo codes, seasonal discounts, referral rewards"
-                        icon={<Star className="h-5 w-5" />}
-                        onClick={() => setShowDiscountCouponManagement(true)}
-                      />
-                      <ActionCard
-                        title="Customer Support Tools"
-                        description="Support tickets and chat/message logs"
-                        icon={<Users className="h-5 w-5" />}
-                        onClick={() => setShowCustomerSupportTools(true)}
                       />
                     </div>
                   </div>
@@ -2745,12 +2715,6 @@ const Account = () => {
       </CardContent>
     </Card>
   );
-
-  // User Coupons
-  const renderCouponsContent = () => <UserCoupons />;
-
-  // Support Tickets
-  const renderSupportContent = () => <UserSupportTickets />;
 
   // Filter & display inside Manage Products modal
   const lowercasedQuery = searchQuery.toLowerCase();
