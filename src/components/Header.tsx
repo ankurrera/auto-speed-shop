@@ -13,7 +13,7 @@ import {
 import { SimpleThemeToggle } from "./SimpleThemeToggle";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
-import NotificationIcon from "./NotificationIcon";
+
 import CarWrenchLogo from "@/assets/car-wrench-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -163,8 +163,6 @@ const Header = () => {
             </Link>
           </div>
           <div className="flex items-center space-x-2">
-            {/* Notification Icon - only show for logged in users */}
-            {userSession && <NotificationIcon />}
             <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
               <Link to="/wishlist">
                 <Heart className="h-4 w-4 md:h-5 md:w-5" />
@@ -204,10 +202,8 @@ const Header = () => {
                     <Link to="/account/orders">Order History</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/account/support">Support Tickets</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/account/coupons">My Coupons</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/contact">Customer Care</Link>
@@ -300,8 +296,6 @@ const Header = () => {
           
           {/* Right: Action Buttons */}
           <div className="flex items-center space-x-2">
-            {/* Notification Icon - only show for logged in users */}
-            {userSession && <NotificationIcon />}
             
             <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
               <Link to="/wishlist">
@@ -343,10 +337,8 @@ const Header = () => {
                     <Link to="/account/orders">Order History</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/account/support">Support Tickets</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/account/coupons">My Coupons</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/contact">Customer Care</Link>
