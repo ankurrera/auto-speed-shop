@@ -2,17 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { ArrowLeft, CheckCircle, XCircle, Download, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { verifyPayment } from "@/services/customOrderService";
@@ -45,8 +35,6 @@ const ViewPayment = () => {
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
 
   const fetchOrderDetails = useCallback(async () => {
     try {
@@ -114,12 +102,12 @@ const ViewPayment = () => {
     fetchOrderDetails();
   }, [orderId, navigate, fetchOrderDetails]);
 
-  const handleVerifyPayment = async (verified: boolean, reason?: string) => {
+  const handleVerifyPayment = async (verified: boolean) => {
     if (!orderId) return;
     
     setIsVerifyingPayment(true);
     try {
-      await verifyPayment(orderId, verified, reason);
+      await verifyPayment(orderId, verified);
       
       toast({
         title: verified ? "Payment Verified" : "Payment Rejected",
@@ -139,21 +127,7 @@ const ViewPayment = () => {
       });
     } finally {
       setIsVerifyingPayment(false);
-      setShowRejectDialog(false);
-      setRejectionReason("");
     }
-  };
-
-  const handleRejectPayment = () => {
-    if (!rejectionReason.trim()) {
-      toast({
-        title: "Rejection Reason Required",
-        description: "Please provide a reason for rejecting this payment",
-        variant: "destructive"
-      });
-      return;
-    }
-    handleVerifyPayment(false, rejectionReason);
   };
 
   const handleDownloadScreenshot = async () => {
@@ -383,58 +357,15 @@ const ViewPayment = () => {
                   <CheckCircle className="h-5 w-5 mr-2" />
                   Verify Payment
                 </Button>
-                
-                <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="lg"
-                      variant="destructive"
-                      disabled={isVerifyingPayment}
-                    >
-                      <XCircle className="h-5 w-5 mr-2" />
-                      Reject Payment
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Reject Payment</DialogTitle>
-                      <DialogDescription>
-                        Please provide a reason for rejecting this payment. This will be communicated to the customer.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="rejection-reason">Rejection Reason</Label>
-                        <Input
-                          id="rejection-reason"
-                          value={rejectionReason}
-                          onChange={(e) => setRejectionReason(e.target.value)}
-                          placeholder="e.g., Payment amount doesn't match invoice, Screenshot unclear, etc."
-                          className="mt-1"
-                        />
-                      </div>
-                      <div className="flex justify-end gap-3">
-                        <Button 
-                          variant="outline" 
-                          onClick={() => {
-                            setShowRejectDialog(false);
-                            setRejectionReason("");
-                          }}
-                          disabled={isVerifyingPayment}
-                        >
-                          Cancel
-                        </Button>
-                        <Button 
-                          variant="destructive"
-                          onClick={handleRejectPayment}
-                          disabled={isVerifyingPayment || !rejectionReason.trim()}
-                        >
-                          {isVerifyingPayment ? "Rejecting..." : "Reject Payment"}
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button
+                  size="lg"
+                  variant="destructive"
+                  onClick={() => handleVerifyPayment(false)}
+                  disabled={isVerifyingPayment}
+                >
+                  <XCircle className="h-5 w-5 mr-2" />
+                  Reject Payment
+                </Button>
               </div>
               
               {isVerifyingPayment && (
