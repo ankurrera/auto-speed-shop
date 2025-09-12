@@ -270,13 +270,8 @@ const Account = () => {
         throw new Error('User not authenticated');
       }
 
-      const [userCountResult, { count: orderItemsCount }, productRes, partRes, allOrdersRes] =
+      const [{ count: orderItemsCount }, productRes, partRes, allOrdersRes] =
         await Promise.all([
-          // Count only regular users (is_admin = FALSE, is_seller = FALSE, role = user)
-          supabase.from("profiles").select("*", { count: "exact", head: true })
-            .eq("is_admin", false)
-            .eq("is_seller", false)
-            .eq("role", "user"),
           // Count from order_items table instead of orders table
           supabase.from("order_items").select("*", { count: "exact", head: true }),
           supabase.from("products").select("id, price, stock_quantity, is_active"),
@@ -299,7 +294,6 @@ const Account = () => {
       }
 
       return {
-        users: userCountResult.count ?? 0,
         orders: orderItemsCount ?? 0, // Now showing count from order_items table
         productsActive: [
           ...(productRes.data || []),
@@ -2113,17 +2107,7 @@ const Account = () => {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-10">
-                <StatCard
-                  title="Total Users"
-                  value={
-                    adminMetrics
-                      ? Intl.NumberFormat().format(adminMetrics.users)
-                      : "--"
-                  }
-                  subtitle="System users"
-                  icon={<Users className="h-5 w-5" />}
-                />
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-10">
                 <StatCard
                   title="Total Orders"
                   value={
