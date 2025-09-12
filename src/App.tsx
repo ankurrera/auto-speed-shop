@@ -30,6 +30,10 @@ import SellerDashboard from "./pages/SellerDashboard";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import ViewPayment from "./pages/ViewPayment";
 import EmailSubscriptionDemo from "./components/EmailSubscriptionDemo";
+import AdminCouponsPage from "./pages/AdminCouponsPage";
+import AdminSupportPage from "./pages/AdminSupportPage";
+import UserCouponsPage from "./pages/UserCouponsPage";
+import UserSupportPage from "./pages/UserSupportPage";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
@@ -79,6 +83,10 @@ const App = () => {
                     <Route path="/order-confirmation" element={<OrderConfirmation />} />
                     <Route path="/orders/:orderId/tracking" element={<OrderTracking />} />
                     <Route path="/email-demo" element={<EmailSubscriptionDemo />} />
+                    <Route path="/admin/coupons" element={<AdminCouponsPage />} />
+                    <Route path="/admin/support" element={<AdminSupportPage />} />
+                    <Route path="/user/coupons" element={<UserCouponsPage />} />
+                    <Route path="/user/support" element={<UserSupportPage />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
