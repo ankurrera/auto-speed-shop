@@ -6,7 +6,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Package, X, RefreshCw } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Package, X, RefreshCw, Filter } from "lucide-react";
 import { Database } from "@/database.types";
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
@@ -109,13 +110,85 @@ const getSampleOrders = (): Order[] => {
       updated_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
       shipped_at: new Date(Date.now() - 172800000).toISOString(),
       delivered_at: null
+    },
+    {
+      id: 'sample-order-4',
+      order_number: 'ORD-DEV-004',
+      user_id: 'sample-user-4',
+      status: 'payment_submitted',
+      payment_status: 'submitted',
+      payment_method: 'custom_external',
+      subtotal: 199.99,
+      shipping_amount: 9.99,
+      tax_amount: 17.32,
+      total_amount: 227.30,
+      convenience_fee: 8.00,
+      delivery_charge: 12.00,
+      currency: 'USD',
+      notes: '{"transaction_id":"TXN123456","payment_amount":227.30,"payment_screenshot_url":"https://example.com/screenshot.jpg","submitted_at":"2025-01-12T10:30:00Z"}',
+      shipping_address: {
+        first_name: 'Sarah',
+        last_name: 'Wilson',
+        line1: '789 Pine St',
+        city: 'Houston',
+        state: 'TX',
+        postal_code: '77001',
+        country: 'US'
+      },
+      billing_address: null,
+      created_at: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+      updated_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+      shipped_at: null,
+      delivered_at: null
+    },
+    {
+      id: 'sample-order-5',
+      order_number: 'ORD-DEV-005',
+      user_id: 'sample-user-5',
+      status: 'payment_rejected',
+      payment_status: 'rejected',
+      payment_method: 'custom_external',
+      subtotal: 149.99,
+      shipping_amount: 9.99,
+      tax_amount: 13.19,
+      total_amount: 173.17,
+      convenience_fee: 5.00,
+      delivery_charge: 10.00,
+      currency: 'USD',
+      notes: 'Payment rejected due to insufficient funds verification. Customer notified to resubmit payment.',
+      shipping_address: {
+        first_name: 'Robert',
+        last_name: 'Brown',
+        line1: '321 Cedar Ave',
+        city: 'San Antonio',
+        state: 'TX',
+        postal_code: '78201',
+        country: 'US'
+      },
+      billing_address: null,
+      created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+      updated_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      shipped_at: null,
+      delivered_at: null
     }
   ];
+  
+  // Populate profiles for sample orders
+  sampleOrders.forEach(order => {
+    if (order.shipping_address) {
+      (order as any).profiles = {
+        first_name: order.shipping_address.first_name,
+        last_name: order.shipping_address.last_name,
+        email: `${order.shipping_address.first_name?.toLowerCase()}.${order.shipping_address.last_name?.toLowerCase()}@example.com`
+      };
+    }
+  });
   return sampleOrders;
 };
 
 const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const queryClient = useQueryClient();
 
   const { data: fetchedOrders, isLoading, error, refetch } = useQuery<Order[]>({
@@ -212,6 +285,18 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
     }
   }, [fetchedOrders]);
 
+  // Filter orders based on payment status
+  const filteredOrders = orders.filter(order => {
+    if (paymentFilter === "all") return true;
+    if (paymentFilter === "paid") {
+      return order.payment_status === "verified" || order.status === "confirmed" || order.status === "shipped" || order.status === "delivered";
+    }
+    if (paymentFilter === "unpaid") {
+      return order.payment_status === "pending" || order.payment_status === "submitted" || order.payment_status === "rejected" || order.payment_status === "failed";
+    }
+    return true;
+  });
+
   const handleRefresh = async () => {
     await refetch();
   };
@@ -229,9 +314,20 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Package className="h-5 w-5" />
-          All Orders
+          All Orders ({filteredOrders.length})
         </CardTitle>
         <div className="flex gap-2">
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <SelectTrigger className="w-40">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Filter by payment" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Orders</SelectItem>
+              <SelectItem value="paid">Paid Orders</SelectItem>
+              <SelectItem value="unpaid">Unpaid Orders</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -243,7 +339,7 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
         </div>
       </CardHeader>
       <CardContent>
-        {orders.length > 0 ? (
+        {filteredOrders.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -255,7 +351,7 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((order) => (
+              {filteredOrders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">{order.order_number}</TableCell>
                   <TableCell>
@@ -270,15 +366,33 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
                   </TableCell>
                   <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>
-                    <span
-                      className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${
-                        order.status === "delivered" ? "bg-green-500/10 text-green-400"
-                          : order.status === "shipped" ? "bg-blue-500/10 text-blue-400"
-                          : "bg-yellow-500/10 text-yellow-400"
-                      }`}
-                    >
-                      {order.status}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${
+                          order.status === "delivered" ? "bg-green-500/10 text-green-400"
+                            : order.status === "shipped" ? "bg-blue-500/10 text-blue-400"
+                            : order.status === "confirmed" ? "bg-green-500/10 text-green-400"
+                            : order.status === "payment_verified" ? "bg-green-500/10 text-green-400"
+                            : order.status === "payment_rejected" ? "bg-red-500/10 text-red-400"
+                            : order.status === "payment_submitted" ? "bg-purple-500/10 text-purple-400"
+                            : order.status === "invoice_sent" ? "bg-blue-500/10 text-blue-400"
+                            : order.status === "cancelled" ? "bg-red-500/10 text-red-400"
+                            : "bg-yellow-500/10 text-yellow-400"
+                        }`}
+                      >
+                        {order.status.replace(/_/g, ' ')}
+                      </span>
+                      <span
+                        className={`text-xs px-1 py-0.5 rounded capitalize ${
+                          order.payment_status === "verified" ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                            : order.payment_status === "rejected" ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                            : order.payment_status === "submitted" ? "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
+                            : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                        }`}
+                      >
+                        Payment: {order.payment_status}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">${order.total_amount.toFixed(2)}</TableCell>
                 </TableRow>
@@ -287,7 +401,7 @@ const AdminOrderManagement = ({ onBack }: { onBack: () => void }) => {
           </Table>
         ) : (
           <div className="text-center text-muted-foreground py-8">
-            No orders found.
+            {paymentFilter === "all" ? "No orders found." : `No ${paymentFilter} orders found.`}
           </div>
         )}
       </CardContent>
