@@ -6,13 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProductCard from "@/components/ProductCard";
-import heroImage from "@/assets/McLaren_Home_Hero.jpg";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import BrandCarousel from "@/components/BrandCarousel"; // 1. Import the new component
+import SketchfabCarModel from "@/components/SketchfabCarModel";
 
 // Define the type for a product object to ensure type safety
 interface Product {
@@ -187,23 +187,26 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center bg-background overflow-hidden">
-        <div className="absolute inset-0">
-          <img
-            src={heroImage}
-            alt="Auto Parts Hero"
-            className="w-full h-full object-cover opacity-80" 
-          />
+      <section className="relative h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black overflow-hidden">
+        {/* 3D Car Model Background */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-full h-full max-w-6xl mx-auto">
+            <SketchfabCarModel 
+              className="w-full h-full object-cover"
+              width={1200}
+              height={800}
+            />
+          </div>
           {/* Semi-transparent overlay for text contrast */}
-          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40"></div>
         </div>
         <div className="relative container mx-auto px-4 text-center z-10">
-          <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight animate-fade-in-up">
-            <span className="text-white dark:text-white">Your Ultimate</span>
+          <h1 className="text-5xl md:text-7xl font-extrabold leading-tight animate-fade-in-up drop-shadow-2xl">
+            <span className="text-white">Your Ultimate</span>
             <br />
-            <span className="bg-gradient-primary bg-clip-text text-transparent">Auto Parts Destination</span>
+            <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">Auto Parts Destination</span>
           </h1>
-          <p className="text-lg md:text-xl mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100 text-white">
+          <p className="text-lg md:text-xl mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100 text-white drop-shadow-lg">
             Discover premium parts and accessories for a ride that reflects your style and performance needs.
           </p>
             
