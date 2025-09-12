@@ -5,19 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Package,
   AlertTriangle,
-  CheckCircle,
-  XCircle,
   Search,
   Settings,
-  Eye,
-  Edit
+  Plus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { RestockModal } from "@/components/RestockModal";
+import { getStockStatus, getStockRowClasses, STOCK_THRESHOLD } from "@/lib/stockUtils";
 
 interface Product {
   id: string;
@@ -58,6 +56,16 @@ const InventoryManagement = ({ onBack }: InventoryManagementProps) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("products");
+  const [restockModal, setRestockModal] = useState<{
+    isOpen: boolean;
+    item: (Product | Part) | null;
+    isProduct: boolean;
+  }>({
+    isOpen: false,
+    item: null,
+    isProduct: true
+  });
+  const [isRestocking, setIsRestocking] = useState(false);
   const { toast } = useToast();
 
   const fetchInventory = useCallback(async () => {
@@ -96,102 +104,59 @@ const InventoryManagement = ({ onBack }: InventoryManagementProps) => {
     }
   }, [toast]);
 
-  const updateItemStatus = async (itemId: string, isActive: boolean, isProduct: boolean) => {
+  const handleRestock = async (quantity: number) => {
+    if (!restockModal.item) return;
+
     try {
-      const table = isProduct ? 'products' : 'parts';
+      setIsRestocking(true);
+      const table = restockModal.isProduct ? 'products' : 'parts';
+      const newStockQuantity = restockModal.item.stock_quantity + quantity;
+      
       const { error } = await supabase
         .from(table)
         .update({ 
-          is_active: isActive,
+          stock_quantity: newStockQuantity,
           updated_at: new Date().toISOString()
         })
-        .eq('id', itemId);
+        .eq('id', restockModal.item.id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: `${isProduct ? 'Product' : 'Part'} ${isActive ? 'enabled' : 'disabled'} successfully`
+        description: `${restockModal.isProduct ? 'Product' : 'Part'} restocked successfully. Added ${quantity} units.`
       });
 
-      fetchInventory();
+      // Refresh inventory data
+      await fetchInventory();
 
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to update status";
+      const errorMessage = error instanceof Error ? error.message : "Failed to restock item";
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive"
       });
+      throw error; // Re-throw to let modal handle the error
+    } finally {
+      setIsRestocking(false);
     }
   };
 
-  const getStockAlert = (item: Product | Part) => {
-    const hasMinLevel = 'min_stock_level' in item && item.min_stock_level !== null;
-    const minLevel = hasMinLevel ? item.min_stock_level! : 5; // Default threshold
-    
-    if (item.stock_quantity === 0) {
-      return { type: 'danger', label: 'Out of Stock', color: 'destructive' };
-    } else if (item.stock_quantity <= minLevel) {
-      return { type: 'warning', label: 'Low Stock', color: 'secondary' };
-    } else {
-      return { type: 'good', label: 'In Stock', color: 'default' };
-    }
+  const openRestockModal = (item: Product | Part, isProduct: boolean) => {
+    setRestockModal({
+      isOpen: true,
+      item,
+      isProduct
+    });
   };
 
-  const getStatusBadge = (isActive: boolean) => {
-    return isActive ? (
-      <Badge variant="default" className="bg-green-600">
-        <CheckCircle className="h-3 w-3 mr-1" />Active
-      </Badge>
-    ) : (
-      <Badge variant="destructive">
-        <XCircle className="h-3 w-3 mr-1" />Disabled
-      </Badge>
-    );
-  };
-
-  const autoDisableOutOfStock = async () => {
-    try {
-      // Disable out-of-stock products
-      const { error: productsError } = await supabase
-        .from('products')
-        .update({ 
-          is_active: false,
-          updated_at: new Date().toISOString()
-        })
-        .eq('stock_quantity', 0)
-        .eq('is_active', true);
-
-      if (productsError) throw productsError;
-
-      // Disable out-of-stock parts
-      const { error: partsError } = await supabase
-        .from('parts')
-        .update({ 
-          is_active: false,
-          updated_at: new Date().toISOString()
-        })
-        .eq('stock_quantity', 0)
-        .eq('is_active', true);
-
-      if (partsError) throw partsError;
-
-      toast({
-        title: "Success",
-        description: "All out-of-stock items have been automatically disabled"
-      });
-
-      fetchInventory();
-
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to auto-disable items";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    }
+  const closeRestockModal = () => {
+    setRestockModal({
+      isOpen: false,
+      item: null,
+      isProduct: true
+    });
   };
 
   const filterItems = (items: (Product | Part)[]) => {
@@ -209,7 +174,7 @@ const InventoryManagement = ({ onBack }: InventoryManagementProps) => {
     const outOfStockCount = items.filter(item => item.stock_quantity === 0).length;
     const lowStockCount = items.filter(item => {
       const hasMinLevel = 'min_stock_level' in item && item.min_stock_level !== null;
-      const minLevel = hasMinLevel ? (item as Product).min_stock_level! : 5;
+      const minLevel = hasMinLevel ? (item as Product).min_stock_level! : STOCK_THRESHOLD;
       return item.stock_quantity > 0 && item.stock_quantity <= minLevel;
     }).length;
 
@@ -258,10 +223,8 @@ const InventoryManagement = ({ onBack }: InventoryManagementProps) => {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Brand</TableHead>
-                <TableHead>SKU</TableHead>
+                {!isProduct && <TableHead>Brand</TableHead>}
                 <TableHead>Stock</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Last Updated</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
@@ -269,9 +232,11 @@ const InventoryManagement = ({ onBack }: InventoryManagementProps) => {
             </TableHeader>
             <TableBody>
               {filteredItems.map((item) => {
-                const stockAlert = getStockAlert(item);
+                const stockStatus = getStockStatus(item.stock_quantity);
+                const rowClasses = getStockRowClasses(item.stock_quantity);
+                
                 return (
-                  <TableRow key={item.id} className={stockAlert.type === 'danger' ? 'bg-red-50 dark:bg-red-950/10' : ''}>
+                  <TableRow key={item.id} className={rowClasses}>
                     <TableCell className="font-medium">
                       <div>
                         <p>{item.name}</p>
@@ -280,29 +245,35 @@ const InventoryManagement = ({ onBack }: InventoryManagementProps) => {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{item.brand || 'N/A'}</TableCell>
-                    <TableCell>{item.sku || 'N/A'}</TableCell>
+                    {!isProduct && (
+                      <TableCell>{item.brand || 'N/A'}</TableCell>
+                    )}
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className={`font-medium ${stockAlert.type === 'danger' ? 'text-red-600' : stockAlert.type === 'warning' ? 'text-yellow-600' : 'text-green-600'}`}>
+                        <span className={`font-medium ${stockStatus.color}`}>
                           {item.stock_quantity}
                         </span>
-                        <Badge variant={stockAlert.color as any} className="text-xs">
-                          {stockAlert.label}
+                        <Badge 
+                          variant={stockStatus.level === 'out-of-stock' ? 'destructive' : 
+                                 stockStatus.level === 'low-stock' ? 'secondary' : 'default'}
+                          className="text-xs"
+                        >
+                          {stockStatus.label}
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(item.is_active)}</TableCell>
                     <TableCell>${item.price.toFixed(2)}</TableCell>
                     <TableCell>{new Date(item.updated_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-center">
-                      <div className="flex gap-2 justify-center">
-                        <Switch
-                          checked={item.is_active}
-                          onCheckedChange={(checked) => updateItemStatus(item.id, checked, isProduct)}
-                          disabled={item.stock_quantity === 0}
-                        />
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openRestockModal(item, isProduct)}
+                        className="flex items-center gap-1"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Restock
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
@@ -346,19 +317,9 @@ const InventoryManagement = ({ onBack }: InventoryManagementProps) => {
           <Package className="h-5 w-5" />
           Inventory Management
         </CardTitle>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={autoDisableOutOfStock}
-            className="text-sm"
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Auto-Disable Out of Stock
-          </Button>
-          <Button variant="outline" onClick={onBack}>
-            Back
-          </Button>
-        </div>
+        <Button variant="outline" onClick={onBack}>
+          Back
+        </Button>
       </CardHeader>
       <CardContent>
         {/* Search Bar */}
@@ -394,6 +355,16 @@ const InventoryManagement = ({ onBack }: InventoryManagementProps) => {
             {renderInventoryTable(parts, false)}
           </TabsContent>
         </Tabs>
+
+        {/* Restock Modal */}
+        <RestockModal
+          isOpen={restockModal.isOpen}
+          onClose={closeRestockModal}
+          onRestock={handleRestock}
+          itemName={restockModal.item?.name || ""}
+          currentStock={restockModal.item?.stock_quantity || 0}
+          isLoading={isRestocking}
+        />
       </CardContent>
     </Card>
   );

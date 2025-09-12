@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -23,7 +24,6 @@ import {
   Search,
   Filter,
   RefreshCw,
-  Download,
   User,
   Calendar,
   DollarSign
@@ -61,6 +61,7 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPayment, setSelectedPayment] = useState<PaymentRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState("all");
   const itemsPerPage = 10;
 
   const { toast } = useToast();
@@ -175,9 +176,20 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
     return matchesFilter && matchesSearch;
   }) || [];
 
+  // Filter payments by tab
+  const getPaymentsByTab = (tab: string) => {
+    if (tab === "all") return filteredPayments;
+    if (tab === "verified") return filteredPayments.filter(p => p.payment_status === PAYMENT_STATUS.VERIFIED || p.status === ORDER_STATUS.CONFIRMED);
+    if (tab === "rejected") return filteredPayments.filter(p => p.payment_status === PAYMENT_STATUS.FAILED);
+    if (tab === "pending") return filteredPayments.filter(p => p.payment_status === PAYMENT_STATUS.SUBMITTED || p.status === ORDER_STATUS.PAYMENT_SUBMITTED);
+    return filteredPayments;
+  };
+
+  const currentTabPayments = getPaymentsByTab(activeTab);
+
   // Pagination
-  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
-  const paginatedPayments = filteredPayments.slice(
+  const totalPages = Math.ceil(currentTabPayments.length / itemsPerPage);
+  const paginatedPayments = currentTabPayments.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -318,125 +330,148 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
           </Card>
         </div>
 
-        {/* Payments Table */}
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Payment Status</TableHead>
-                <TableHead>Transaction ID</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedPayments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No payments found matching your criteria
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginatedPayments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{payment.order_number}</p>
-                        <p className="text-sm text-muted-foreground">#{payment.id.slice(0, 8)}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">
-                          {payment.customer_first_name} {payment.customer_last_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{payment.customer_email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <p className="font-medium">${payment.total_amount.toFixed(2)}</p>
-                      {payment.payment_data?.payment_amount && 
-                        payment.payment_data.payment_amount !== payment.total_amount && (
-                        <p className="text-sm text-orange-600">
-                          Paid: ${payment.payment_data.payment_amount.toFixed(2)}
-                        </p>
-                      )}
-                    </TableCell>
-                    <TableCell>{getPaymentStatusBadge(payment)}</TableCell>
-                    <TableCell>
-                      {payment.payment_data?.transaction_id ? (
-                        <p className="font-mono text-sm">{payment.payment_data.transaction_id}</p>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {payment.payment_data?.submitted_at ? (
-                        <div className="text-sm">
-                          <p>{new Date(payment.payment_data.submitted_at).toLocaleDateString()}</p>
-                          <p className="text-muted-foreground">{new Date(payment.payment_data.submitted_at).toLocaleTimeString()}</p>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewPayment(payment)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {payment.rejection_reason && (
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <XCircle className="h-4 w-4 text-red-600" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Rejection Reason</DialogTitle>
-                                <DialogDescription>
-                                  Payment rejection details for order {payment.order_number}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <p className="text-sm font-medium">Reason:</p>
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    {payment.rejection_reason}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium">Rejected At:</p>
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    {new Date(payment.updated_at).toLocaleString()}
-                                  </p>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        )}
-                      </div>
-                    </TableCell>
+        {/* Payment Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all">
+              All ({filteredPayments.length})
+            </TabsTrigger>
+            <TabsTrigger value="verified" className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4" />
+              Verified ({getPaymentsByTab("verified").length})
+            </TabsTrigger>
+            <TabsTrigger value="rejected" className="flex items-center gap-2">
+              <XCircle className="h-4 w-4" />
+              Rejected ({getPaymentsByTab("rejected").length})
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Pending ({getPaymentsByTab("pending").length})
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value={activeTab} className="mt-6">
+            {/* Payments Table */}
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Payment Status</TableHead>
+                    <TableHead>Transaction ID</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                </TableHeader>
+                <TableBody>
+                  {paginatedPayments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No payments found matching your criteria
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedPayments.map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{payment.order_number}</p>
+                            <p className="text-sm text-muted-foreground">#{payment.id.slice(0, 8)}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">
+                              {payment.customer_first_name} {payment.customer_last_name}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{payment.customer_email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="font-medium">${payment.total_amount.toFixed(2)}</p>
+                          {payment.payment_data?.payment_amount && 
+                            payment.payment_data.payment_amount !== payment.total_amount && (
+                            <p className="text-sm text-orange-600">
+                              Paid: ${payment.payment_data.payment_amount.toFixed(2)}
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell>{getPaymentStatusBadge(payment)}</TableCell>
+                        <TableCell>
+                          {payment.payment_data?.transaction_id ? (
+                            <p className="font-mono text-sm">{payment.payment_data.transaction_id}</p>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {payment.payment_data?.submitted_at ? (
+                            <div className="text-sm">
+                              <p>{new Date(payment.payment_data.submitted_at).toLocaleDateString()}</p>
+                              <p className="text-muted-foreground">{new Date(payment.payment_data.submitted_at).toLocaleTimeString()}</p>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewPayment(payment)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {payment.rejection_reason && (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <XCircle className="h-4 w-4 text-red-600" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Rejection Reason</DialogTitle>
+                                    <DialogDescription>
+                                      Payment rejection details for order {payment.order_number}
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div>
+                                      <p className="text-sm font-medium">Reason:</p>
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {payment.rejection_reason}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium">Rejected At:</p>
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {new Date(payment.updated_at).toLocaleString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredPayments.length)} of {filteredPayments.length} payments
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, currentTabPayments.length)} of {currentTabPayments.length} payments
             </p>
             <div className="flex items-center gap-2">
               <Button
