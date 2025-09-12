@@ -24,22 +24,22 @@ export const getStockStatus = (
   if (stockQuantity === 0) {
     return {
       level: 'out-of-stock',
-      color: 'text-red-700',
-      bgColor: 'bg-red-50 dark:bg-red-950/20',
+      color: 'text-red-600',
+      bgColor: '', // Remove background color
       label: 'Out of Stock'
     };
-  } else if (stockQuantity < threshold) {
+  } else if (stockQuantity <= threshold) {
     return {
       level: 'low-stock', 
-      color: 'text-yellow-700',
-      bgColor: 'bg-yellow-50 dark:bg-yellow-950/20',
+      color: 'text-yellow-600',
+      bgColor: '', // Remove background color
       label: 'Low Stock'
     };
   } else {
     return {
       level: 'in-stock',
-      color: 'text-green-700', 
-      bgColor: '',
+      color: 'text-green-600', 
+      bgColor: '', // Keep empty as it was
       label: 'In Stock'
     };
   }
