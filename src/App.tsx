@@ -36,6 +36,7 @@ import { WishlistProvider } from "./contexts/WishlistContext";
 import ScrollToTop from "./components/ScrollToTop";
 import { DevCartHelper } from "./components/DevCartHelper";
 import { Button } from "@/components/ui/button";
+import ChatSupport from "./components/chat/ChatSupport";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,9 @@ const App = () => {
                   </Routes>
                 </main>
                 <Footer />
+                
+                {/* Support Chat - Available globally for logged-in users */}
+                <ChatSupport />
               </div>
             </WishlistProvider>
           </CartProvider>

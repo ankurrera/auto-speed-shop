@@ -144,6 +144,36 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          admin_id: string | null
+          created_at: string
+          id: string
+          is_from_admin: boolean
+          message: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string
+          id?: string
+          is_from_admin?: boolean
+          message: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string
+          id?: string
+          is_from_admin?: boolean
+          message?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -661,6 +691,30 @@ export type Database = {
           make?: string
           model?: string
           year?: number
+        }
+        Relationships: []
+      }
+      typing_indicators: {
+        Row: {
+          conversation_user_id: string
+          created_at: string
+          id: string
+          is_admin: boolean
+          user_id: string
+        }
+        Insert: {
+          conversation_user_id: string
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          user_id: string
+        }
+        Update: {
+          conversation_user_id?: string
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          user_id?: string
         }
         Relationships: []
       }

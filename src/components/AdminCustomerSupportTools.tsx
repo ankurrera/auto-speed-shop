@@ -36,6 +36,8 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ChatService, ChatMessage } from "@/services/chatService";
+import AdminChatConversation from "./AdminChatConversation";
 
 interface Ticket {
   id: string;
@@ -62,7 +64,7 @@ interface ChatMessage {
   admin_id: string | null;
   message: string;
   is_from_admin: boolean;
-  timestamp: string;
+  created_at: string;
   user?: {
     first_name: string;
     last_name: string;
@@ -84,6 +86,11 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [showTicketDialog, setShowTicketDialog] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<{
+    userId: string;
+    userName: string;
+    userEmail: string;
+  } | null>(null);
   const { toast } = useToast();
 
   const fetchTickets = useCallback(async () => {
@@ -159,49 +166,14 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
 
   const fetchChatMessages = useCallback(async () => {
     try {
-      // Mock chat data for demonstration
-      const mockMessages: ChatMessage[] = [
-        {
-          id: '1',
-          user_id: 'user1',
-          admin_id: 'admin1',
-          message: 'Hi, I have a question about my recent order.',
-          is_from_admin: false,
-          timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          user: {
-            first_name: 'John',
-            last_name: 'Doe',
-            email: 'john.doe@example.com'
-          }
-        },
-        {
-          id: '2',
-          user_id: 'user1',
-          admin_id: 'admin1',
-          message: 'Hello John! I\'d be happy to help you with your order. What seems to be the issue?',
-          is_from_admin: true,
-          timestamp: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-          user: {
-            first_name: 'John',
-            last_name: 'Doe',
-            email: 'john.doe@example.com'
-          }
-        },
-        {
-          id: '3',
-          user_id: 'user2',
-          admin_id: null,
-          message: 'When will my brake pads be shipped?',
-          is_from_admin: false,
-          timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-          user: {
-            first_name: 'Jane',
-            last_name: 'Smith',
-            email: 'jane.smith@example.com'
-          }
-        }
-      ];
-      setChatMessages(mockMessages);
+      const conversations = await ChatService.getAllConversations();
+      const allMessages: ChatMessage[] = [];
+      
+      conversations.forEach(conv => {
+        allMessages.push(...conv.messages);
+      });
+      
+      setChatMessages(allMessages);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Failed to fetch messages";
       console.error('Error fetching messages:', error);
@@ -293,8 +265,8 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
     return Object.entries(grouped).map(([userId, userMessages]) => ({
       userId,
       user: userMessages[0].user,
-      messages: userMessages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-      lastMessage: userMessages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
+      messages: userMessages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+      lastMessage: userMessages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
     }));
   };
 
@@ -316,6 +288,18 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
 
   const filteredTickets = filterTickets(tickets);
   const groupedMessages = groupMessagesByUser(chatMessages);
+
+  // If viewing a conversation, show that instead
+  if (selectedConversation) {
+    return (
+      <AdminChatConversation
+        userId={selectedConversation.userId}
+        userName={selectedConversation.userName}
+        userEmail={selectedConversation.userEmail}
+        onBack={() => setSelectedConversation(null)}
+      />
+    );
+  }
 
   return (
     <Card className="bg-card border-border">
@@ -482,7 +466,7 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
                       </div>
                       <div className="text-right text-sm text-muted-foreground">
                         <p>Last message</p>
-                        <p>{new Date(lastMessage.timestamp).toLocaleString()}</p>
+                        <p>{new Date(lastMessage.created_at).toLocaleString()}</p>
                       </div>
                     </div>
                     <div className="bg-muted/50 rounded-lg p-3">
@@ -494,12 +478,17 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
                       </p>
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setSelectedConversation({
+                          userId,
+                          userName: `${user?.first_name} ${user?.last_name}`,
+                          userEmail: user?.email || ''
+                        })}
+                      >
                         <MessageCircle className="h-4 w-4 mr-2" />
                         View Conversation
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        Reply
                       </Button>
                     </div>
                   </Card>
