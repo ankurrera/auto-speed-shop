@@ -198,8 +198,10 @@ export type Database = {
       orders: {
         Row: {
           billing_address: Json | null
+          convenience_fee: number | null
           created_at: string
           currency: string
+          delivery_charge: number | null
           delivered_at: string | null
           id: string
           notes: string | null
@@ -218,8 +220,10 @@ export type Database = {
         }
         Insert: {
           billing_address?: Json | null
+          convenience_fee?: number | null
           created_at?: string
           currency?: string
+          delivery_charge?: number | null
           delivered_at?: string | null
           id?: string
           notes?: string | null
@@ -238,8 +242,10 @@ export type Database = {
         }
         Update: {
           billing_address?: Json | null
+          convenience_fee?: number | null
           created_at?: string
           currency?: string
+          delivery_charge?: number | null
           delivered_at?: string | null
           id?: string
           notes?: string | null
@@ -321,6 +327,7 @@ export type Database = {
           id: string
           image_urls: string[] | null
           is_active: boolean
+          is_featured: boolean
           name: string
           part_number: string | null
           price: number
@@ -338,6 +345,7 @@ export type Database = {
           id?: string
           image_urls?: string[] | null
           is_active?: boolean
+          is_featured?: boolean
           name: string
           part_number?: string | null
           price: number
@@ -355,6 +363,7 @@ export type Database = {
           id?: string
           image_urls?: string[] | null
           is_active?: boolean
+          is_featured?: boolean
           name?: string
           part_number?: string | null
           price?: number

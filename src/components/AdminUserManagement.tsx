@@ -48,6 +48,7 @@ const AdminUserManagement = () => {
           `)
           .eq('is_admin', false)
           .eq('is_seller', false)
+          .eq('role', 'user')
           .order('created_at', { ascending: false });
         
         if (fallbackError) throw fallbackError;
@@ -155,7 +156,7 @@ const AdminUserManagement = () => {
   }
 
   return (
-    <Card className="bg-neutral-900/60 border-neutral-800">
+    <Card className="bg-card border-border">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <User className="h-5 w-5" />

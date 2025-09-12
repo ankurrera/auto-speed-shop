@@ -31,7 +31,7 @@ BEGIN
     FROM public.orders
     GROUP BY orders.user_id
   ) o ON p.user_id = o.user_id
-  WHERE p.is_admin = false AND p.is_seller = false
+  WHERE p.is_admin = false AND p.is_seller = false AND p.role = 'user'
   ORDER BY COALESCE(o.order_count, 0) DESC, p.created_at DESC;
 END;
 $$;

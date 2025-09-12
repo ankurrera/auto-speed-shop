@@ -14,9 +14,8 @@ const Cart = () => {
   const [promoCode, setPromoCode] = useState("");
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal > 275 ? 0 : 9.99;
   const tax = subtotal * TAX_RATE;
-  const total = subtotal + shipping + tax;
+  const total = subtotal + tax;
 
   if (cartItems.length === 0) {
     return (
@@ -104,10 +103,6 @@ const Cart = () => {
                   <span>${subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Shipping</span>
-                  <span>${shipping.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
                   <span>Tax (8%)</span>
                   <span>${tax.toFixed(2)}</span>
                 </div>
@@ -136,18 +131,8 @@ const Cart = () => {
 
             {/* Checkout Button */}
             <Button size="lg" className="w-full" asChild>
-              <Link to="/checkout">Proceed to Checkout</Link>
+              <Link to="/custom-checkout">Proceed to Checkout</Link>
             </Button>
-
-            {/* Shipping Info */}
-            <div className="text-center text-sm text-muted-foreground">
-              {subtotal < 75 && (
-                <p className="mb-2">
-                  Add ${(75 - subtotal).toFixed(2)} more for free shipping
-                </p>
-              )}
-              <p>Secure checkout with SSL encryption</p>
-            </div>
 
             {/* Continue Shopping */}
             <Button variant="outline" asChild className="w-full">
