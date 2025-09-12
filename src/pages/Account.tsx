@@ -272,11 +272,9 @@ const Account = () => {
 
       const [userCountResult, { count: orderItemsCount }, productRes, partRes, allOrdersRes] =
         await Promise.all([
-          // Count only regular users (is_admin = FALSE, is_seller = FALSE, role = user)
+          // Count users where is_admin = FALSE (excluding admin users only)
           supabase.from("profiles").select("*", { count: "exact", head: true })
-            .eq("is_admin", false)
-            .eq("is_seller", false)
-            .eq("role", "user"),
+            .eq("is_admin", false),
           // Count from order_items table instead of orders table
           supabase.from("order_items").select("*", { count: "exact", head: true }),
           supabase.from("products").select("id, price, stock_quantity, is_active"),
