@@ -39,21 +39,33 @@ const Home = () => {
   const makeSelectRef = useRef<HTMLDivElement>(null);
   const modelSelectRef = useRef<HTMLDivElement>(null);
 
-  // Fetch featured products from Supabase
+  // Fetch featured products and parts from Supabase
   // We use the new Product type to ensure the data is correctly structured
   const { data: featuredProducts = [] } = useQuery<Product[]>({
     queryKey: ['featured-products'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch featured products
+      const { data: products, error: productsError } = await supabase
         .from('products')
         .select('*')
         .eq('is_featured', true)
         .eq('is_active', true)
-        .limit(4);
+        .limit(2);
       
-      if (error) throw error;
+      if (productsError) throw productsError;
+
+      // Fetch featured parts
+      const { data: parts, error: partsError } = await supabase
+        .from('parts')
+        .select('*')
+        .eq('is_featured', true)
+        .eq('is_active', true)
+        .limit(2);
       
-      return data.map(product => ({
+      if (partsError) throw partsError;
+      
+      // Transform products data
+      const transformedProducts = (products || []).map(product => ({
         id: product.id,
         name: product.name,
         brand: product.brand || 'Unknown',
@@ -64,8 +76,26 @@ const Home = () => {
         reviews: Math.floor(Math.random() * 200) + 50,
         inStock: product.stock_quantity > 0,
         isOnSale: product.compare_at_price && Number(product.compare_at_price) > Number(product.price),
-        className: "hover:scale-105 transition-transform duration-300 animate-fade-in-up" // Add this line
+        className: "hover:scale-105 transition-transform duration-300 animate-fade-in-up"
       }));
+
+      // Transform parts data to match Product interface
+      const transformedParts = (parts || []).map(part => ({
+        id: part.id,
+        name: part.name,
+        brand: part.brand || 'Unknown',
+        price: Number(part.price),
+        originalPrice: undefined, // Parts don't have compare_at_price
+        image_urls: part.image_urls || [],
+        rating: 4.5,
+        reviews: Math.floor(Math.random() * 200) + 50,
+        inStock: part.stock_quantity > 0,
+        isOnSale: false, // Parts don't have sales in current schema
+        className: "hover:scale-105 transition-transform duration-300 animate-fade-in-up"
+      }));
+
+      // Combine and return up to 4 items
+      return [...transformedProducts, ...transformedParts].slice(0, 4);
     }
   });
 
@@ -324,8 +354,8 @@ const Home = () => {
             </div>
             
             <div className="text-center mt-16 animate-fade-in-up delay-400">
-              <Button size="lg" variant="default" className="text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
-                Explore All Products
+              <Button size="lg" variant="default" className="text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300" asChild>
+                <Link to="/shop">Explore All Products</Link>
               </Button>
             </div>
           </div>

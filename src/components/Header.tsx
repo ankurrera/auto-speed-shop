@@ -211,7 +211,7 @@ const Header = () => {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/account/analytics-dashboard">
+                        <Link to="/analytics">
                           <TrendingUp className="mr-2 h-4 w-4" />
                           Analytics Dashboard
                         </Link>
@@ -338,7 +338,7 @@ const Header = () => {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/account/analytics-dashboard">
+                        <Link to="/analytics">
                           <TrendingUp className="mr-2 h-4 w-4" />
                           Analytics Dashboard
                         </Link>

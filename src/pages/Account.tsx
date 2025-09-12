@@ -22,7 +22,9 @@ import {
   X,
   Plus,
   RefreshCcw,
-  Car
+  Car,
+  FileText,
+  Star
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +44,10 @@ import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
+import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
+import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
+import { EmailNotificationService } from "@/services/emailNotificationService";
+import { ORDER_STATUS } from "@/types/order";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -75,6 +81,13 @@ const categories = [
 ];
 
 const Account = () => {
+  // Helper function to check if user has admin access (shared access)
+  const hasAdminAccess = (userInfo: any) => {
+    return userInfo.is_admin && 
+           (userInfo.role === "admin" || 
+            (userInfo.is_seller && userInfo.role === "admin"));
+  };
+
   // Auth / profile
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [view, setView] = useState<"login" | "signup">("login");
@@ -82,6 +95,7 @@ const Account = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
+  const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -109,6 +123,14 @@ const Account = () => {
     phone: "",
     is_admin: false,
     is_seller: false,
+    role: "user",
+  });
+
+  // Email subscription state
+  const [emailSubscription, setEmailSubscription] = useState({
+    subscribed: false,
+    loading: false,
+    exists: false,
   });
 
   // Addresses
@@ -132,6 +154,9 @@ const Account = () => {
   // Orders (user personal)
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Form submission loading state
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Admin product management
   const [listingType, setListingType] = useState<"part" | "product">("part");
@@ -237,28 +262,39 @@ const Account = () => {
   // Admin metrics (totals)
   const { data: adminMetrics } = useQuery({
     queryKey: ["admin-metrics"],
-    enabled: userInfo.is_admin,
+    enabled: hasAdminAccess(userInfo),
     queryFn: async () => {
-      const [{ count: userCount }, { count: orderCount }, productRes, partRes, revenueRes] =
+      // Get current user for admin functions
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const [{ count: orderItemsCount }, productRes, partRes, allOrdersRes] =
         await Promise.all([
-          supabase.from("profiles").select("*", { count: "exact", head: true }),
-            supabase.from("orders").select("*", { count: "exact", head: true }),
-            supabase.from("products").select("id, price, stock_quantity, is_active"),
-            supabase.from("parts").select("id, price, stock_quantity, is_active"),
-            supabase.from("orders").select("total_amount")
+          // Count from order_items table instead of orders table
+          supabase.from("order_items").select("*", { count: "exact", head: true }),
+          supabase.from("products").select("id, price, stock_quantity, is_active"),
+          supabase.from("parts").select("id, price, stock_quantity, is_active"),
+          // Use admin function to get all orders for revenue calculation
+          supabase.rpc('get_all_orders_for_admin', {
+            requesting_user_id: user.id
+          })
         ]);
 
       let revenue = 0;
-      if (revenueRes.data) {
-        revenue = revenueRes.data.reduce(
-          (sum: number, row: { total_amount: number }) => sum + (row.total_amount || 0),
-          0
-        );
+      if (allOrdersRes.data) {
+        // Only include confirmed orders in revenue calculation
+        revenue = allOrdersRes.data
+          .filter((row: { status: string }) => row.status === 'confirmed')
+          .reduce(
+            (sum: number, row: { total_amount: number }) => sum + (row.total_amount || 0),
+            0
+          );
       }
 
       return {
-        users: userCount ?? 0,
-        orders: orderCount ?? 0,
+        orders: orderItemsCount ?? 0, // Now showing count from order_items table
         productsActive: [
           ...(productRes.data || []),
           ...(partRes.data || []),
@@ -304,7 +340,7 @@ const Account = () => {
   const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("first_name, last_name, email, phone, is_admin, is_seller")
+      .select("first_name, last_name, email, phone, is_admin, is_seller, role")
       .eq("user_id", userId)
       .single();
     
@@ -316,8 +352,34 @@ const Account = () => {
         phone: data.phone || "",
         is_admin: data.is_admin || false,
         is_seller: data.is_seller || false,
+        role: data.role || "user",
       });
       setSellerExistsForAdmin(data.is_seller || false);
+
+      // Fetch email subscription preferences
+      try {
+        const subscription = await EmailSubscriptionService.getUserSubscription(userId);
+        if (subscription) {
+          setEmailSubscription({
+            subscribed: subscription.subscribed_to_new_products,
+            loading: false,
+            exists: true,
+          });
+        } else {
+          setEmailSubscription({
+            subscribed: false,
+            loading: false,
+            exists: false,
+          });
+        }
+      } catch (subscriptionError) {
+        console.error("Error fetching email subscription:", subscriptionError);
+        setEmailSubscription({
+          subscribed: false,
+          loading: false,
+          exists: false,
+        });
+      }
     } else {
       console.error("Account: Error fetching profile or no data:", error, "User ID:", userId);
       
@@ -400,7 +462,54 @@ const Account = () => {
     if (!error) setIsEditing(false);
   };
 
-  // Auth listener
+  // Handle email subscription changes
+  const handleEmailSubscriptionChange = async (subscribed: boolean) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) return;
+
+    setEmailSubscription(prev => ({ ...prev, loading: true }));
+
+    try {
+      if (emailSubscription.exists) {
+        // Update existing subscription
+        await EmailSubscriptionService.updateSubscription(session.user.id, subscribed);
+      } else {
+        // Create new subscription
+        await EmailSubscriptionService.upsertSubscription(
+          session.user.id, 
+          userInfo.email, 
+          subscribed
+        );
+      }
+
+      setEmailSubscription({
+        subscribed,
+        loading: false,
+        exists: true,
+      });
+
+      // Show success message
+      toast({
+        title: "Preferences Updated",
+        description: subscribed 
+          ? "You will now receive email notifications about new products and parts!" 
+          : "You have been unsubscribed from email notifications.",
+      });
+
+    } catch (error) {
+      console.error("Error updating email subscription:", error);
+      setEmailSubscription(prev => ({ ...prev, loading: false }));
+      
+      toast({
+        title: "Error",
+        description: "Failed to update email preferences. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Auth listener
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -420,6 +529,7 @@ const Account = () => {
             phone: "",
             is_admin: false,
             is_seller: false,
+            role: "user",
           });
           setAddresses([]);
           setOrders([]);
@@ -798,203 +908,279 @@ const Account = () => {
   // Product/Part submission
   const handleProductSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      toast({
-        title: "Error",
-        description: "You must be logged in.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    let currentSellerId = sellerId;
-    if (!currentSellerId) {
-      const { data: sellerData, error: sellerError } = await supabase
-        .from("sellers")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .single();
-      if (sellerError) {
+    setIsSubmitting(true);
+    
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
         toast({
           title: "Error",
-          description: "Seller ID not found.",
+          description: "You must be logged in.",
           variant: "destructive",
         });
         return;
       }
-      currentSellerId = sellerData.id;
-      setSellerId(currentSellerId);
-    }
 
-    const uploadedImageUrls: string[] = [];
-    if (productFiles.length > 0) {
-      const bucketName =
-        listingType === "part" ? "part_images" : "products_images";
-      for (const f of productFiles) {
-        const ext = f.name.split(".").pop();
-        const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(filePath, f, { upsert: true });
-        if (uploadError) {
+      let currentSellerId = sellerId;
+      if (!currentSellerId) {
+        const { data: sellerData, error: sellerError } = await supabase
+          .from("sellers")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .single();
+        if (sellerError) {
           toast({
             title: "Error",
-            description: "Image upload failed.",
+            description: "Seller ID not found.",
             variant: "destructive",
           });
           return;
         }
-        const { data: publicUrlData } = supabase.storage
-          .from(bucketName)
-          .getPublicUrl(filePath);
-        uploadedImageUrls.push(publicUrlData.publicUrl);
+        currentSellerId = sellerData.id;
+        setSellerId(currentSellerId);
       }
-    }
 
-    const finalImageUrls = editingProductId
-      ? [...productInfo.image_urls, ...uploadedImageUrls]
-      : uploadedImageUrls;
+      // Show initial progress
+      toast({
+        title: "Processing...",
+        description: "Uploading images and saving your listing...",
+      });
 
-    // Vehicle compatibility (optional)
-    let vehicleId: string | null = null;
-    if (productInfo.year && productInfo.make && productInfo.model) {
-      try {
-        const makeId = vehicleMakes.find(
-          (m) => m.name === productInfo.make
-        )?.id;
-        if (!makeId) throw new Error("Make not found");
-        const { data: yearRow } = await supabase
-          .from("vehicle_years")
-          .select("id")
-          .eq("year", parseInt(productInfo.year, 10))
-          .single();
-        const { data: modelRow } = await supabase
-          .from("vehicle_models")
-          .select("id")
-          .eq("name", productInfo.model)
-          .eq("make_id", makeId)
-          .single();
-        const { data: existingVehicle, error: exErr } = await supabase
-          .from("vehicles_new")
-          .select("id")
-          .eq("make_id", makeId)
-          .eq("model_id", modelRow?.id)
-          .eq("year_id", yearRow?.id)
-          .maybeSingle();
-        if (exErr && exErr.code !== "PGRST116") throw exErr;
-        if (existingVehicle) {
-          vehicleId = existingVehicle.id;
-        } else {
-          const { data: newVehicle, error: vehicleInsertError } =
-            await supabase
-              .from("vehicles_new")
-              .insert({
-                make_id: makeId,
-                model_id: modelRow?.id,
-                year_id: yearRow?.id,
-              })
-              .select("id")
-              .single();
-          if (vehicleInsertError) throw vehicleInsertError;
-          vehicleId = newVehicle.id;
+      const uploadedImageUrls: string[] = [];
+      if (productFiles.length > 0) {
+        const bucketName =
+          listingType === "part" ? "part_images" : "products_images";
+        for (const f of productFiles) {
+          const ext = f.name.split(".").pop();
+          const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
+          const { error: uploadError } = await supabase.storage
+            .from(bucketName)
+            .upload(filePath, f, { upsert: true });
+          if (uploadError) {
+            toast({
+              title: "Error",
+              description: "Image upload failed.",
+              variant: "destructive",
+            });
+            return;
+          }
+          const { data: publicUrlData } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(filePath);
+          uploadedImageUrls.push(publicUrlData.publicUrl);
         }
-      } catch (err: any) {
+      }
+
+      const finalImageUrls = editingProductId
+        ? [...productInfo.image_urls, ...uploadedImageUrls]
+        : uploadedImageUrls;
+
+      // Vehicle compatibility (optional)
+      let vehicleId: string | null = null;
+      if (productInfo.year && productInfo.make && productInfo.model) {
+        try {
+          const makeId = vehicleMakes.find(
+            (m) => m.name === productInfo.make
+          )?.id;
+          if (!makeId) throw new Error("Make not found");
+          const { data: yearRow } = await supabase
+            .from("vehicle_years")
+            .select("id")
+            .eq("year", parseInt(productInfo.year, 10))
+            .single();
+          const { data: modelRow } = await supabase
+            .from("vehicle_models")
+            .select("id")
+            .eq("name", productInfo.model)
+            .eq("make_id", makeId)
+            .single();
+          const { data: existingVehicle, error: exErr } = await supabase
+            .from("vehicles_new")
+            .select("id")
+            .eq("make_id", makeId)
+            .eq("model_id", modelRow?.id)
+            .eq("year_id", yearRow?.id)
+            .maybeSingle();
+          if (exErr && exErr.code !== "PGRST116") throw exErr;
+          if (existingVehicle) {
+            vehicleId = existingVehicle.id;
+          } else {
+            const { data: newVehicle, error: vehicleInsertError } =
+              await supabase
+                .from("vehicles_new")
+                .insert({
+                  make_id: makeId,
+                  model_id: modelRow?.id,
+                  year_id: yearRow?.id,
+                })
+                .select("id")
+                .single();
+            if (vehicleInsertError) throw vehicleInsertError;
+            vehicleId = newVehicle.id;
+          }
+        } catch (err: any) {
+          toast({
+            title: "Error",
+            description:
+              "Vehicle compatibility failed: " + (err.message || "Unknown"),
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      const isPart = listingType === "part";
+      const priceValue = parseFloat(productInfo.price);
+      const stockValue = Number(productInfo.stock_quantity);
+      if (isNaN(priceValue) || isNaN(stockValue)) {
         toast({
           title: "Error",
-          description:
-            "Vehicle compatibility failed: " + (err.message || "Unknown"),
+          description: "Price / quantity invalid",
           variant: "destructive",
         });
         return;
       }
-    }
 
-    const isPart = listingType === "part";
-    const priceValue = parseFloat(productInfo.price);
-    const stockValue = Number(productInfo.stock_quantity);
-    if (isNaN(priceValue) || isNaN(stockValue)) {
-      toast({
-        title: "Error",
-        description: "Price / quantity invalid",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const specificationsPayload = {
-      category: productInfo.category,
-      make: productInfo.make,
-      model: productInfo.model,
-      year: productInfo.year,
-      vin: productInfo.vin,
-      additional: productInfo.specifications,
-    };
-
-    let payload: any;
-    if (isPart) {
-      payload = {
-        name: productInfo.name,
-        description: productInfo.description,
-        price: priceValue,
-        stock_quantity: stockValue,
-        brand: productInfo.make,
-        seller_id: currentSellerId,
-        specifications: specificationsPayload,
-        image_urls: finalImageUrls,
-        is_active: stockValue > 0,
-      };
-    } else {
-      payload = {
-        name: productInfo.name,
-        description: productInfo.description,
-        price: priceValue,
-        stock_quantity: stockValue,
-        seller_id: currentSellerId,
-        image_urls: finalImageUrls,
-        is_active: stockValue > 0,
-        is_featured: false,
+      const specificationsPayload = {
         category: productInfo.category,
-        product_type: "GENERIC",
+        make: productInfo.make,
+        model: productInfo.model,
+        year: productInfo.year,
+        vin: productInfo.vin,
+        additional: productInfo.specifications,
       };
-    }
 
-    const table = isPart ? "parts" : "products";
-    const { data: savedItem, error } = editingProductId
-      ? await supabase
-          .from(table)
-          .update(payload)
-          .eq("id", editingProductId)
-          .select()
-          .single()
-      : await supabase.from(table).insert([payload]).select().single();
+      let payload: any;
+      if (isPart) {
+        payload = {
+          name: productInfo.name,
+          description: productInfo.description,
+          price: priceValue,
+          stock_quantity: stockValue,
+          brand: productInfo.make,
+          seller_id: currentSellerId,
+          specifications: specificationsPayload,
+          image_urls: finalImageUrls,
+          is_active: stockValue > 0,
+          is_featured: false,
+        };
+      } else {
+        payload = {
+          name: productInfo.name,
+          description: productInfo.description,
+          price: priceValue,
+          stock_quantity: stockValue,
+          seller_id: currentSellerId,
+          image_urls: finalImageUrls,
+          is_active: stockValue > 0,
+          is_featured: false,
+          category: productInfo.category,
+          product_type: "GENERIC",
+        };
+      }
 
-    if (error) {
+      const table = isPart ? "parts" : "products";
+      const { data: savedItem, error } = editingProductId
+        ? await supabase
+            .from(table)
+            .update(payload)
+            .eq("id", editingProductId)
+            .select()
+            .single()
+        : await supabase.from(table).insert([payload]).select().single();
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (savedItem && vehicleId) {
+        const fitmentTable = isPart ? "part_fitments" : "product_fitments";
+        const fitmentPayload = isPart
+          ? { part_id: savedItem.id, vehicle_id: vehicleId }
+          : { product_id: savedItem.id, vehicle_id: vehicleId };
+        await supabase.from(fitmentTable).upsert([fitmentPayload]);
+      }
+
+      // Show success immediately
+      toast({
+        title: "Success",
+        description: `${isPart ? "Part" : "Product"} ${
+          editingProductId ? "updated" : "listed"
+        } successfully!`,
+      });
+
+      // Clean up form immediately for better UX
+      cleanupAndRefetch();
+
+      // Send email notifications asynchronously for new listings (not updates)
+      if (!editingProductId && savedItem) {
+        // Don't await this - let it run in background
+        sendNotificationsAsync(currentSellerId, isPart, priceValue, finalImageUrls);
+      }
+
+    } catch (error: any) {
+      console.error("Error in product submission:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    if (savedItem && vehicleId) {
-      const fitmentTable = isPart ? "part_fitments" : "product_fitments";
-      const fitmentPayload = isPart
-        ? { part_id: savedItem.id, vehicle_id: vehicleId }
-        : { product_id: savedItem.id, vehicle_id: vehicleId };
-      await supabase.from(fitmentTable).upsert([fitmentPayload]);
+  // Async function to handle email notifications without blocking UI
+  const sendNotificationsAsync = async (
+    currentSellerId: string, 
+    isPart: boolean, 
+    priceValue: number, 
+    finalImageUrls: string[]
+  ) => {
+    try {
+      // Get seller name for the notification
+      const { data: sellerData } = await supabase
+        .from("sellers")
+        .select("name")
+        .eq("id", currentSellerId)
+        .single();
+
+      const sellerName = sellerData?.name || "Unknown Seller";
+
+      // Send email notifications to subscribed users
+      const notificationResult = await EmailNotificationService.sendNewProductNotifications({
+        productName: productInfo.name,
+        productDescription: productInfo.description,
+        price: priceValue,
+        sellerName,
+        productType: isPart ? "part" : "product",
+        imageUrl: finalImageUrls[0], // Use first image if available
+        sellerId: currentSellerId,
+      });
+
+      // Show appropriate success message for notifications
+      if (notificationResult.notificationsSent > 0) {
+        toast({
+          title: "Notifications Sent",
+          description: `Email notifications have been sent to ${notificationResult.notificationsSent} subscribed users!`,
+        });
+      }
+    } catch (notificationError) {
+      console.error("Error sending notifications:", notificationError);
+      // Show a warning toast but don't fail the main action
+      toast({
+        title: "Notification Warning",
+        description: "Your product was listed successfully, but there was an issue sending email notifications.",
+        variant: "default",
+      });
     }
-
-    toast({
-      title: "Success",
-      description: `${isPart ? "Part" : "Product"} ${
-        editingProductId ? "updated" : "listed"
-      }.`,
-    });
-    cleanupAndRefetch();
   };
 
   const cleanupAndRefetch = () => {
@@ -1071,28 +1257,177 @@ const Account = () => {
   // Deletion / archive mutations
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the product belongs to this seller
+      const { data: productCheck, error: checkError } = await supabase
+        .from("products")
+        .select("seller_id")
+        .eq("id", productId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Product not found: ${checkError.message}`);
+      }
+      
+      if (productCheck.seller_id !== sellerId) {
+        throw new Error("You can only delete your own products.");
+      }
+      
+      // Delete related records first to avoid foreign key constraint errors
+      // Delete from cart_items where product_id references this product
+      const { error: cartError } = await supabase
+        .from("cart_items")
+        .delete()
+        .eq("product_id", productId);
+      if (cartError) throw cartError;
+      
+      // Delete from wishlist where product_id references this product
+      const { error: wishlistError } = await supabase
+        .from("wishlist")
+        .delete()
+        .eq("product_id", productId);
+      if (wishlistError) throw wishlistError;
+      
+      // Finally delete the product itself
       const { error } = await supabase
         .from("products")
         .delete()
         .eq("id", productId);
       if (error) throw error;
     },
+    onMutate: async (productId) => {
+      // Cancel any outgoing refetches to prevent optimistic updates from being overwritten
+      await queryClient.cancelQueries({ queryKey: ["seller-products"] });
+
+      // Snapshot the previous value
+      const previousProducts = queryClient.getQueryData(["seller-products"]);
+
+      // Optimistically remove the product from the list
+      queryClient.setQueryData(["seller-products"], (old: any) => {
+        if (!old) return old;
+        return old.filter((product: any) => product.id !== productId);
+      });
+
+      // Show immediate feedback
+      toast({ 
+        title: "Deleting...", 
+        description: "Removing product from your listings..." 
+      });
+
+      return { previousProducts };
+    },
     onSuccess: () => {
-      toast({ title: "Deleted", description: "Product removed." });
+      toast({ title: "Deleted", description: "Product removed successfully." });
+    },
+    onError: (error: any, productId, context) => {
+      // Rollback to previous data on error
+      if (context?.previousProducts) {
+        queryClient.setQueryData(["seller-products"], context.previousProducts);
+      }
+      toast({
+        title: "Error",
+        description: `Failed to delete product: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have the latest data
       queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     },
   });
 
   const deletePartMutation = useMutation({
     mutationFn: async (partId: string) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the part belongs to this seller
+      const { data: partCheck, error: checkError } = await supabase
+        .from("parts")
+        .select("seller_id")
+        .eq("id", partId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Part not found: ${checkError.message}`);
+      }
+      
+      if (partCheck.seller_id !== sellerId) {
+        throw new Error("You can only delete your own parts.");
+      }
+      
+      // Delete related records first to avoid foreign key constraint errors
+      // Delete from cart_items where part_id references this part
+      const { error: cartError } = await supabase
+        .from("cart_items")
+        .delete()
+        .eq("part_id", partId);
+      if (cartError) throw cartError;
+      
+      // Delete from wishlist where part_id references this part
+      const { error: wishlistError } = await supabase
+        .from("wishlist")
+        .delete()
+        .eq("part_id", partId);
+      if (wishlistError) throw wishlistError;
+      
+      // Delete from part_fitments where part_id references this part
+      const { error: fitmentError } = await supabase
+        .from("part_fitments")
+        .delete()
+        .eq("part_id", partId);
+      if (fitmentError) throw fitmentError;
+      
+      // Finally delete the part itself
       const { error } = await supabase
         .from("parts")
         .delete()
         .eq("id", partId);
       if (error) throw error;
     },
+    onMutate: async (partId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["seller-parts"] });
+
+      // Snapshot the previous value
+      const previousParts = queryClient.getQueryData(["seller-parts"]);
+
+      // Optimistically remove the part from the list
+      queryClient.setQueryData(["seller-parts"], (old: any) => {
+        if (!old) return old;
+        return old.filter((part: any) => part.id !== partId);
+      });
+
+      // Show immediate feedback
+      toast({ 
+        title: "Deleting...", 
+        description: "Removing part from your listings..." 
+      });
+
+      return { previousParts };
+    },
     onSuccess: () => {
-      toast({ title: "Deleted", description: "Part removed." });
+      toast({ title: "Deleted", description: "Part removed successfully." });
+    },
+    onError: (error: any, partId, context) => {
+      // Rollback to previous data on error
+      if (context?.previousParts) {
+        queryClient.setQueryData(["seller-parts"], context.previousParts);
+      }
+      toast({
+        title: "Error",
+        description: `Failed to delete part: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
     },
   });
@@ -1105,6 +1440,26 @@ const Account = () => {
       productId: string;
       is_active: boolean;
     }) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the product belongs to this seller
+      const { data: productCheck, error: checkError } = await supabase
+        .from("products")
+        .select("seller_id")
+        .eq("id", productId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Product not found: ${checkError.message}`);
+      }
+      
+      if (productCheck.seller_id !== sellerId) {
+        throw new Error("You can only modify your own products.");
+      }
+      
       const { error } = await supabase
         .from("products")
         .update({ is_active: !is_active })
@@ -1120,6 +1475,13 @@ const Account = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to archive/unarchive product: ${error.message}`,
+        variant: "destructive",
+      });
+    },
   });
 
   const archivePartMutation = useMutation({
@@ -1130,6 +1492,26 @@ const Account = () => {
       partId: string;
       is_active: boolean;
     }) => {
+      // Verify user has a sellerId
+      if (!sellerId) {
+        throw new Error("No seller ID found. Please contact support.");
+      }
+      
+      // First verify the part belongs to this seller
+      const { data: partCheck, error: checkError } = await supabase
+        .from("parts")
+        .select("seller_id")
+        .eq("id", partId)
+        .single();
+      
+      if (checkError) {
+        throw new Error(`Part not found: ${checkError.message}`);
+      }
+      
+      if (partCheck.seller_id !== sellerId) {
+        throw new Error("You can only modify your own parts.");
+      }
+      
       const { error } = await supabase
         .from("parts")
         .update({ is_active: !is_active })
@@ -1145,6 +1527,94 @@ const Account = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to archive/unarchive part: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Feature toggle mutations - admin only
+  const toggleProductFeatureMutation = useMutation({
+    mutationFn: async ({
+      productId,
+      is_featured,
+    }: {
+      productId: string;
+      is_featured: boolean;
+    }) => {
+      // Check if user is admin
+      if (!hasAdminAccess(userInfo)) {
+        throw new Error("Only administrators can feature/unfeature products.");
+      }
+      
+      const { data, error } = await supabase
+        .from("products")
+        .update({ is_featured })
+        .eq("id", productId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller-products"] });
+      queryClient.invalidateQueries({ queryKey: ["featured-products"] });
+      toast({
+        title: "Success",
+        description: "Product feature status updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update product feature status: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const togglePartFeatureMutation = useMutation({
+    mutationFn: async ({
+      partId,
+      is_featured,
+    }: {
+      partId: string;
+      is_featured: boolean;
+    }) => {
+      // Check if user is admin
+      if (!hasAdminAccess(userInfo)) {
+        throw new Error("Only administrators can feature/unfeature parts.");
+      }
+      
+      const { data, error } = await supabase
+        .from("parts")
+        .update({ is_featured })
+        .eq("id", partId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
+      queryClient.invalidateQueries({ queryKey: ["featured-products"] });
+      toast({
+        title: "Success",
+        description: "Part feature status updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update part feature status: ${error.message}`,
+        variant: "destructive",
+      });
+    },
   });
 
   const handleDeleteProduct = (id: string) => {
@@ -1157,6 +1627,10 @@ const Account = () => {
     archiveProductMutation.mutate({ productId: id, is_active: active });
   const handleArchivePart = (id: string, active: boolean) =>
     archivePartMutation.mutate({ partId: id, is_active: active });
+  const handleToggleProductFeature = (id: string, featured: boolean) =>
+    toggleProductFeatureMutation.mutate({ productId: id, is_featured: featured });
+  const handleTogglePartFeature = (id: string, featured: boolean) =>
+    togglePartFeatureMutation.mutate({ partId: id, is_featured: featured });
 
   // Image handling
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -1572,6 +2046,9 @@ const Account = () => {
     if (showOrderManagement) {
       return <AdminOrderManagement onBack={() => setShowOrderManagement(false)} />;
     }
+    if (showInvoiceManagement) {
+      return <AdminInvoiceManagement onBack={() => setShowInvoiceManagement(false)} />;
+    }
     switch (currentPath) {
       case "addresses":
         return renderAddressesContent();
@@ -1619,7 +2096,7 @@ const Account = () => {
                 <div>
                   <p className="font-medium">Administrator Status</p>
                   <p className="text-sm text-muted-foreground">
-                    User Role: {userInfo.is_admin ? "Administrator" : "User"}
+                    User Role: {hasAdminAccess(userInfo) ? "Administrator" : "User"}
                     {userInfo.is_seller ? " | Seller" : ""}
                   </p>
                 </div>
@@ -1630,17 +2107,7 @@ const Account = () => {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-10">
-                <StatCard
-                  title="Total Users"
-                  value={
-                    adminMetrics
-                      ? Intl.NumberFormat().format(adminMetrics.users)
-                      : "--"
-                  }
-                  subtitle="System users"
-                  icon={<Users className="h-5 w-5" />}
-                />
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-10">
                 <StatCard
                   title="Total Orders"
                   value={
@@ -1662,7 +2129,7 @@ const Account = () => {
                   icon={<Boxes className="h-5 w-5" />}
                 />
                 <StatCard
-                  title="Revenue"
+                  title="Total Revenue"
                   value={
                     adminMetrics
                       ? "$" +
@@ -1671,7 +2138,7 @@ const Account = () => {
                         )
                       : "--"
                   }
-                  subtitle="Total revenue"
+                  subtitle="Confirmed orders revenue"
                   icon={<TrendingUp className="h-5 w-5" />}
                 />
               </div>
@@ -1690,13 +2157,37 @@ const Account = () => {
                     title="Manage Products"
                     description="Add, edit, or remove products"
                     icon={<Boxes className="h-5 w-5" />}
-                    onClick={() => setShowManageProducts(true)}
+                    onClick={() => {
+                      if (!userInfo.is_seller) {
+                        toast({
+                          title: "Access Denied",
+                          description: "You need to be a seller to manage products.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      if (!sellerId) {
+                        toast({
+                          title: "Error",
+                          description: "Seller ID not found. Please contact support.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      setShowManageProducts(true);
+                    }}
                   />
                   <ActionCard
                     title="View Orders"
                     description="Monitor and process orders"
                     icon={<Package className="h-5 w-5" />}
                     onClick={() => setShowOrderManagement(true)}
+                  />
+                  <ActionCard
+                    title="Invoice Management"
+                    description="Create invoices and verify payments"
+                    icon={<FileText className="h-5 w-5" />}
+                    onClick={() => setShowInvoiceManagement(true)}
                   />
                 </div>
                 
@@ -1843,6 +2334,32 @@ const Account = () => {
             />
           </div>
         </div>
+        
+        {/* Email Preferences Section */}
+        <Separator />
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Email Preferences</h3>
+          <div className="flex items-start space-x-3">
+            <Checkbox
+              id="email-notifications"
+              checked={emailSubscription.subscribed}
+              disabled={emailSubscription.loading}
+              onCheckedChange={(checked) => handleEmailSubscriptionChange(!!checked)}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="email-notifications" className="text-sm font-medium cursor-pointer">
+                Notify me about new products and parts
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Get email notifications when sellers list new products and auto parts that might interest you.
+              </p>
+            </div>
+          </div>
+          {emailSubscription.loading && (
+            <p className="text-xs text-muted-foreground">Updating preferences...</p>
+          )}
+        </div>
+
         {isEditing && (
           <div className="flex space-x-4">
             <Button onClick={handleSaveProfile}>Save Changes</Button>
@@ -2090,6 +2607,14 @@ const Account = () => {
     </div>
   );
 
+  // Helper function to transform order status for user display
+  const getUserDisplayStatus = (status: string) => {
+    if (status === ORDER_STATUS.INVOICE_SENT) {
+      return "Invoice Received";
+    }
+    return status;
+  };
+
   // Orders
   const renderOrdersContent = () => (
     <Card>
@@ -2122,17 +2647,34 @@ const Account = () => {
                           : "bg-yellow-200 text-yellow-800"
                       }`}
                     >
-                      {order.status}
+                      {getUserDisplayStatus(order.status)}
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">${order.total.toFixed(2)}</p>
-                  <Button variant="outline" size="sm" className="mt-2" asChild>
-                    <Link to={`/orders/${order.id}/tracking`}>
-                      Track Order
-                    </Link>
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    {(order.status === ORDER_STATUS.INVOICE_SENT || 
+                      order.status === ORDER_STATUS.INVOICE_ACCEPTED ||
+                      order.status === ORDER_STATUS.PAYMENT_PENDING ||
+                      order.status === ORDER_STATUS.PAYMENT_SUBMITTED ||
+                      order.status === ORDER_STATUS.PAYMENT_VERIFIED ||
+                      order.status === ORDER_STATUS.CONFIRMED ||
+                      order.status === ORDER_STATUS.SHIPPED ||
+                      order.status === ORDER_STATUS.DELIVERED) && (
+                      <Button variant="default" size="sm" asChild>
+                        <Link to={`/order/${order.id}`}>
+                          <FileText className="h-3 w-3 mr-1" />
+                          Show Invoice
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/orders/${order.id}/tracking`}>
+                        Track Order
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -2178,7 +2720,7 @@ const Account = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {userInfo.is_admin && currentPath !== "admin-dashboard" && (
+            {hasAdminAccess(userInfo) && currentPath !== "admin-dashboard" && (
               <Button 
                 variant="outline" 
                 onClick={() => navigate("/account/admin-dashboard")}
@@ -2249,8 +2791,21 @@ const Account = () => {
             </div>
 
             <div className="p-6 space-y-10">
-              {/* Listing Form */}
-              <Card className="bg-card border-border">
+              {!sellerId ? (
+                <Card className="bg-card border-border">
+                  <CardContent className="p-6 text-center">
+                    <p className="text-muted-foreground">
+                      Loading seller information...
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      If this persists, please contact support.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {/* Listing Form */}
+                  <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     {editingProductId ? "Edit Listing" : "Create New Listing"}
@@ -2502,9 +3057,18 @@ const Account = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-3">
-                      <Button type="submit">
-                        {editingProductId ? "Update" : "List"}{" "}
-                        {listingType === "part" ? "Part" : "Product"}
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? (
+                          <>
+                            <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
+                            {editingProductId ? "Updating..." : "Listing..."}
+                          </>
+                        ) : (
+                          <>
+                            {editingProductId ? "Update" : "List"}{" "}
+                            {listingType === "part" ? "Part" : "Product"}
+                          </>
+                        )}
                       </Button>
                       {editingProductId && (
                         <Button
@@ -2562,11 +3126,15 @@ const Account = () => {
                         metaRight={`$${part.price}`}
                         quantity={part.stock_quantity}
                         active={part.is_active}
+                        featured={part.is_featured}
+                        disabled={!sellerId || deletePartMutation.isPending || archivePartMutation.isPending}
+                        isAdmin={hasAdminAccess(userInfo)}
                         onEdit={() => handleEditPart(part)}
                         onArchive={() =>
                           handleArchivePart(part.id, part.is_active)
                         }
                         onDelete={() => handleDeletePart(part.id)}
+                        onToggleFeature={() => handleTogglePartFeature(part.id, !part.is_featured)}
                       />
                     ))}
                     {filteredProducts.map((product) => (
@@ -2577,16 +3145,22 @@ const Account = () => {
                         metaRight={`$${product.price}`}
                         quantity={product.stock_quantity}
                         active={product.is_active}
+                        featured={product.is_featured}
+                        disabled={!sellerId || deleteProductMutation.isPending || archiveProductMutation.isPending}
+                        isAdmin={hasAdminAccess(userInfo)}
                         onEdit={() => handleEditProduct(product)}
                         onArchive={() =>
                           handleArchiveProduct(product.id, product.is_active)
                         }
                         onDelete={() => handleDeleteProduct(product.id)}
+                        onToggleFeature={() => handleToggleProductFeature(product.id, !product.is_featured)}
                       />
                     ))}
                   </div>
                 )}
               </div>
+            </>
+          )}
             </div>
           </div>
         </div>
@@ -2658,22 +3232,38 @@ const ListingRow = ({
   metaRight,
   quantity,
   active,
+  featured,
   onEdit,
   onArchive,
   onDelete,
+  onToggleFeature,
+  disabled = false,
+  isAdmin = false,
 }: {
   title: string;
   metaLeft?: string;
   metaRight?: string;
   quantity: number;
   active: boolean;
+  featured?: boolean;
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onToggleFeature?: () => void;
+  disabled?: boolean;
+  isAdmin?: boolean;
 }) => (
   <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 border border-border rounded-lg bg-card/40">
     <div className="flex-1 space-y-1">
-      <h5 className="font-semibold">{title}</h5>
+      <div className="flex items-center gap-2">
+        <h5 className="font-semibold">{title}</h5>
+        {featured && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-yellow-500/10 text-yellow-400 flex items-center gap-1">
+            <Star className="h-3 w-3 fill-current" />
+            Featured
+          </span>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         {metaLeft && <span>{metaLeft}</span>}
         {metaRight && <span>{metaRight}</span>}
@@ -2688,15 +3278,27 @@ const ListingRow = ({
       </div>
     </div>
     <div className="flex flex-wrap gap-2">
-      <Button variant="outline" size="sm" onClick={onEdit}>
+      <Button variant="outline" size="sm" onClick={onEdit} disabled={disabled}>
         <Edit className="h-4 w-4 mr-1" />
         Edit
       </Button>
-      <Button variant="ghost" size="sm" onClick={onArchive}>
+      {isAdmin && onToggleFeature && (
+        <Button 
+          variant={featured ? "default" : "outline"} 
+          size="sm" 
+          onClick={onToggleFeature} 
+          disabled={disabled}
+          className={featured ? "bg-yellow-500 hover:bg-yellow-600 text-black" : ""}
+        >
+          <Star className={`h-4 w-4 mr-1 ${featured ? "fill-current" : ""}`} />
+          {featured ? "Unfeature" : "Feature"}
+        </Button>
+      )}
+      <Button variant="ghost" size="sm" onClick={onArchive} disabled={disabled}>
         <Archive className="h-4 w-4 mr-1" />
         {active ? "Archive" : "Unarchive"}
       </Button>
-      <Button variant="destructive" size="sm" onClick={onDelete}>
+      <Button variant="destructive" size="sm" onClick={onDelete} disabled={disabled}>
         <Trash2 className="h-4 w-4 mr-1" />
         Delete
       </Button>
