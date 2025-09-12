@@ -126,25 +126,95 @@ const AdminUserManagement = () => {
     );
   };
 
+  // Fetch available coupons for sending
+  const { data: availableCoupons = [] } = useQuery({
+    queryKey: ['available-coupons'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Send coupon mutation
+  const sendCouponMutation = useMutation({
+    mutationFn: async ({ userId, couponId }: { userId: string, couponId: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data, error } = await supabase
+        .rpc('admin_send_coupon_to_user', {
+          requesting_user_id: user.id,
+          target_user_id: userId,
+          coupon_id: couponId
+        });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data && data.length > 0) {
+        const result = data[0];
+        if (result.success) {
+          toast({
+            title: "Success",
+            description: result.message,
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: result.message,
+            variant: "destructive",
+          });
+        }
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSendCoupon = (userId: string, userEmail: string, userName: string) => {
-    toast({
-      title: "Send Coupon",
-      description: `Send discount coupon to ${userName || userEmail}?`,
-      action: (
-        <Button
-          variant="default"
-          onClick={() => {
-            // Here you would implement the actual coupon sending logic
-            toast({
-              title: "Coupon Sent!",
-              description: `Discount coupon has been sent to ${userEmail}`,
-            });
-          }}
-        >
-          Send
-        </Button>
-      ),
-    });
+    if (availableCoupons.length === 0) {
+      toast({
+        title: "No Coupons Available",
+        description: "Please create some coupons first before sending them to users.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Show dialog with coupon selection
+    const selectCoupon = (couponId: string) => {
+      sendCouponMutation.mutate({ userId, couponId });
+    };
+
+    // For now, send the first available coupon
+    // In a real implementation, you'd show a modal to select which coupon to send
+    if (availableCoupons.length > 0) {
+      toast({
+        title: "Send Coupon",
+        description: `Send "${availableCoupons[0].name}" to ${userName || userEmail}?`,
+        action: (
+          <Button
+            variant="default"
+            onClick={() => selectCoupon(availableCoupons[0].id)}
+            disabled={sendCouponMutation.isPending}
+          >
+            Send
+          </Button>
+        ),
+      });
+    }
   };
 
   if (isLoading) {
