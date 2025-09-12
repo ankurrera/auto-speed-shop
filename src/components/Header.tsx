@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { SimpleThemeToggle } from "./SimpleThemeToggle";
+import NotificationCenter from "./NotificationCenter";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import CarWrenchLogo from "@/assets/car-wrench-logo.png";
@@ -182,6 +183,7 @@ const Header = () => {
                 )}
               </Link>
             </Button>
+            {userSession && <NotificationCenter />}
             {userSession ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -211,7 +213,7 @@ const Header = () => {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/account/analytics-dashboard">
+                        <Link to="/analytics">
                           <TrendingUp className="mr-2 h-4 w-4" />
                           Analytics Dashboard
                         </Link>
@@ -338,7 +340,7 @@ const Header = () => {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/account/analytics-dashboard">
+                        <Link to="/analytics">
                           <TrendingUp className="mr-2 h-4 w-4" />
                           Analytics Dashboard
                         </Link>

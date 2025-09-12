@@ -1,4 +1,8 @@
--- Fix the function to set proper search path for security
+-- Fix user count filters to only include regular users
+-- This migration ensures that user counts only include users with:
+-- is_admin = false AND is_seller = false AND role = 'user'
+
+-- Update the get_users_with_order_count function to include role filter
 CREATE OR REPLACE FUNCTION public.get_users_with_order_count()
 RETURNS TABLE(
   user_id uuid,
