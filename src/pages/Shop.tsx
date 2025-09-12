@@ -156,13 +156,19 @@ const Shop = () => {
 
 
   const fetchParts = async () => {
-    const { data, error } = await supabase.from("parts").select("*");
+    const { data, error } = await supabase
+      .from("parts")
+      .select("*")
+      .eq("is_active", true); // Only fetch active parts
     if (error) throw error;
     return data.map(item => ({ ...item, type: "part" })) as ShopItem[];
   };
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase.from("products").select("*");
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("is_active", true); // Only fetch active products
     if (error) throw error;
     return data.map(item => ({ ...item, type: "product" })) as ShopItem[];
   };

@@ -24,7 +24,8 @@ import {
   RefreshCcw,
   Car,
   FileText,
-  Star
+  Star,
+  DollarSign
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
 import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
+import AdminPaymentManagement from "@/components/AdminPaymentManagement";
+import AdminPayoutManagement from "@/components/AdminPayoutManagement";
+import AdminInventoryManagement from "@/components/AdminInventoryManagement";
+import AdminDiscountCouponManagement from "@/components/AdminDiscountCouponManagement";
+import AdminCustomerSupportTools from "@/components/AdminCustomerSupportTools";
+import UserSupportTickets from "@/components/UserSupportTickets";
+import UserCoupons from "@/components/UserCoupons";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 import { EmailNotificationService } from "@/services/emailNotificationService";
 import { ORDER_STATUS } from "@/types/order";
@@ -96,6 +104,11 @@ const Account = () => {
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
   const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
+  const [showPaymentManagement, setShowPaymentManagement] = useState(false);
+  const [showPayoutManagement, setShowPayoutManagement] = useState(false);
+  const [showInventoryManagement, setShowInventoryManagement] = useState(false);
+  const [showDiscountCouponManagement, setShowDiscountCouponManagement] = useState(false);
+  const [showCustomerSupportTools, setShowCustomerSupportTools] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -2049,11 +2062,30 @@ const Account = () => {
     if (showInvoiceManagement) {
       return <AdminInvoiceManagement onBack={() => setShowInvoiceManagement(false)} />;
     }
+    if (showPaymentManagement) {
+      return <AdminPaymentManagement onBack={() => setShowPaymentManagement(false)} />;
+    }
+    if (showPayoutManagement) {
+      return <AdminPayoutManagement onBack={() => setShowPayoutManagement(false)} />;
+    }
+    if (showInventoryManagement) {
+      return <AdminInventoryManagement onBack={() => setShowInventoryManagement(false)} />;
+    }
+    if (showDiscountCouponManagement) {
+      return <AdminDiscountCouponManagement onBack={() => setShowDiscountCouponManagement(false)} />;
+    }
+    if (showCustomerSupportTools) {
+      return <AdminCustomerSupportTools onBack={() => setShowCustomerSupportTools(false)} />;
+    }
     switch (currentPath) {
       case "addresses":
         return renderAddressesContent();
       case "orders":
         return renderOrdersContent();
+      case "support":
+        return renderSupportContent();
+      case "coupons":
+        return renderCouponsContent();
       case "admin-dashboard":
         return renderAdminDashboardContent();
       case "analytics-dashboard":
@@ -2185,22 +2217,48 @@ const Account = () => {
                   />
                   <ActionCard
                     title="Invoice Management"
-                    description="Create invoices and verify payments"
+                    description="Create and send invoices to customers"
                     icon={<FileText className="h-5 w-5" />}
                     onClick={() => setShowInvoiceManagement(true)}
                   />
+                  <ActionCard
+                    title="Payment Management"
+                    description="Review customer payment and verify payments"
+                    icon={<FileText className="h-5 w-5" />}
+                    onClick={() => setShowPaymentManagement(true)}
+                  />
+                  <ActionCard
+                    title="Inventory Management"
+                    description="Stock alerts and disable out-of-stock products"
+                    icon={<Package className="h-5 w-5" />}
+                    onClick={() => setShowInventoryManagement(true)}
+                  />
                 </div>
                 
-                {/* Seller Dashboard Link */}
+                {/* Seller Management Section */}
                 {userInfo.is_seller && (
-                  <div className="mt-6">
-                    <h4 className="text-md font-medium mb-3">Seller Management</h4>
-                    <ActionCard
-                      title="Seller Dashboard"
-                      description="Manage your seller profile and information"
-                      icon={<Car className="h-5 w-5" />}
-                      onClick={() => navigate("/seller-dashboard")}
-                    />
+                  <div className="mt-8">
+                    <h4 className="text-lg font-semibold mb-4">Seller Management</h4>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <ActionCard
+                        title="Seller Dashboard"
+                        description="Manage your seller profile and information"
+                        icon={<Car className="h-5 w-5" />}
+                        onClick={() => navigate("/seller-dashboard")}
+                      />
+                      <ActionCard
+                        title="Discount & Coupon Management"
+                        description="Create promo codes, seasonal discounts, referral rewards"
+                        icon={<Star className="h-5 w-5" />}
+                        onClick={() => setShowDiscountCouponManagement(true)}
+                      />
+                      <ActionCard
+                        title="Customer Support Tools"
+                        description="Support tickets and chat/message logs"
+                        icon={<Users className="h-5 w-5" />}
+                        onClick={() => setShowCustomerSupportTools(true)}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -2687,6 +2745,12 @@ const Account = () => {
       </CardContent>
     </Card>
   );
+
+  // User Coupons
+  const renderCouponsContent = () => <UserCoupons />;
+
+  // Support Tickets
+  const renderSupportContent = () => <UserSupportTickets />;
 
   // Filter & display inside Manage Products modal
   const lowercasedQuery = searchQuery.toLowerCase();

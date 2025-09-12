@@ -305,17 +305,19 @@ const Home = () => {
                   <p className="text-muted-foreground text-sm">All parts are backed by a comprehensive warranty.</p>
                 </CardContent>
               </Card>
-              <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-200">
-                <CardHeader className="p-0">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Wrench className="h-8 w-8 text-primary-foreground" />
-                  </div>
-                  <CardTitle className="font-semibold text-lg">Expert Support</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 pt-2">
-                  <p className="text-muted-foreground text-sm">Get professional advice from our experienced team.</p>
-                </CardContent>
-              </Card>
+              <Link to="/contact">
+                <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-200 cursor-pointer">
+                  <CardHeader className="p-0">
+                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Wrench className="h-8 w-8 text-primary-foreground" />
+                    </div>
+                    <CardTitle className="font-semibold text-lg">Expert Support</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0 pt-2">
+                    <p className="text-muted-foreground text-sm">Get professional advice from our experienced team.</p>
+                  </CardContent>
+                </Card>
+              </Link>
               <Link to="/new-arrivals">
                 <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-300">
                   <CardHeader className="p-0">
