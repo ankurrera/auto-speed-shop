@@ -32,33 +32,18 @@ import {
   Calendar,
   Users,
   CheckCircle,
-  XCircle
+  XCircle,
+  ArrowLeft
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
-interface Coupon {
-  id: string;
-  code: string;
-  description: string;
-  discount_type: 'percentage' | 'fixed';
-  discount_value: number;
-  min_order_amount: number | null;
-  max_discount_amount: number | null;
-  usage_limit: number | null;
-  used_count: number;
-  valid_from: string;
-  valid_until: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { CouponService, Coupon, UserCoupon } from "@/services/couponService";
 
 interface User {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
 }
 
 interface DiscountCouponManagementProps {
@@ -70,9 +55,18 @@ const DiscountCouponManagement = ({ onBack }: DiscountCouponManagementProps) => 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<string>("");
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
+  const [couponStats, setCouponStats] = useState({
+    total: 0,
+    active: 0,
+    expired: 0,
+    totalAssigned: 0,
+    totalUsed: 0,
+  });
   const { toast } = useToast();
 
   // Create coupon form state
@@ -84,57 +78,28 @@ const DiscountCouponManagement = ({ onBack }: DiscountCouponManagementProps) => 
     min_order_amount: '',
     max_discount_amount: '',
     usage_limit: '',
-    valid_from: '',
     valid_until: ''
   });
 
   const fetchCoupons = useCallback(async () => {
     try {
-      // For now, we'll use a simple table structure. In a real app, you'd create a coupons table
-      // This is a mock implementation to show the UI structure
-      const mockCoupons: Coupon[] = [
-        {
-          id: '1',
-          code: 'WELCOME10',
-          description: 'Welcome discount for new customers',
-          discount_type: 'percentage',
-          discount_value: 10,
-          min_order_amount: 50,
-          max_discount_amount: 100,
-          usage_limit: 100,
-          used_count: 25,
-          valid_from: new Date().toISOString(),
-          valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: '2',
-          code: 'SUMMER25',
-          description: 'Summer seasonal discount',
-          discount_type: 'percentage',
-          discount_value: 25,
-          min_order_amount: 100,
-          max_discount_amount: null,
-          usage_limit: null,
-          used_count: 150,
-          valid_from: new Date().toISOString(),
-          valid_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
-      setCoupons(mockCoupons);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to fetch coupons";
+      setLoading(true);
+      const [allCoupons, stats] = await Promise.all([
+        CouponService.getAllCoupons(),
+        CouponService.getCouponStats(),
+      ]);
+      
+      setCoupons(allCoupons);
+      setCouponStats(stats);
+    } catch (error) {
       console.error('Error fetching coupons:', error);
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to fetch coupons",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   }, [toast]);
 
@@ -169,26 +134,30 @@ const DiscountCouponManagement = ({ onBack }: DiscountCouponManagementProps) => 
 
   const handleCreateCoupon = async () => {
     try {
-      // In a real implementation, you would create the coupon in the database
-      const newCoupon: Coupon = {
-        id: Date.now().toString(),
-        code: couponForm.code.toUpperCase(),
-        description: couponForm.description,
+      if (!couponForm.code.trim() || couponForm.discount_value <= 0) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('Not authenticated');
+
+      const newCoupon = await CouponService.createCoupon({
+        code: couponForm.code.trim(),
+        description: couponForm.description.trim() || undefined,
         discount_type: couponForm.discount_type,
         discount_value: couponForm.discount_value,
-        min_order_amount: couponForm.min_order_amount ? parseFloat(couponForm.min_order_amount) : null,
-        max_discount_amount: couponForm.max_discount_amount ? parseFloat(couponForm.max_discount_amount) : null,
-        usage_limit: couponForm.usage_limit ? parseInt(couponForm.usage_limit) : null,
-        used_count: 0,
-        valid_from: couponForm.valid_from,
-        valid_until: couponForm.valid_until,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+        min_order_amount: couponForm.min_order_amount ? parseFloat(couponForm.min_order_amount) : undefined,
+        max_discount_amount: couponForm.max_discount_amount ? parseFloat(couponForm.max_discount_amount) : undefined,
+        usage_limit: couponForm.usage_limit ? parseInt(couponForm.usage_limit) : undefined,
+        valid_until: couponForm.valid_until || undefined,
+        created_by: session.user.id,
+      });
 
-      setCoupons(prev => [newCoupon, ...prev]);
-      
       toast({
         title: "Success",
         description: "Coupon created successfully"
@@ -203,18 +172,100 @@ const DiscountCouponManagement = ({ onBack }: DiscountCouponManagementProps) => 
         min_order_amount: '',
         max_discount_amount: '',
         usage_limit: '',
-        valid_from: '',
         valid_until: ''
       });
 
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to create coupon";
+      // Refresh coupons list
+      fetchCoupons();
+
+    } catch (error) {
+      console.error('Error creating coupon:', error);
       toast({
         title: "Error",
-        description: errorMessage,
+        description: error instanceof Error ? error.message : "Failed to create coupon",
         variant: "destructive"
       });
     }
+  };
+
+  const handleEditCoupon = async () => {
+    try {
+      if (!editingCoupon || !couponForm.code.trim() || couponForm.discount_value <= 0) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      await CouponService.updateCoupon(editingCoupon.id, {
+        code: couponForm.code.trim(),
+        description: couponForm.description.trim() || null,
+        discount_type: couponForm.discount_type,
+        discount_value: couponForm.discount_value,
+        min_order_amount: couponForm.min_order_amount ? parseFloat(couponForm.min_order_amount) : null,
+        max_discount_amount: couponForm.max_discount_amount ? parseFloat(couponForm.max_discount_amount) : null,
+        usage_limit: couponForm.usage_limit ? parseInt(couponForm.usage_limit) : null,
+        valid_until: couponForm.valid_until || null,
+      });
+
+      toast({
+        title: "Success",
+        description: "Coupon updated successfully"
+      });
+
+      setShowEditDialog(false);
+      setEditingCoupon(null);
+      
+      // Refresh coupons list
+      fetchCoupons();
+
+    } catch (error) {
+      console.error('Error updating coupon:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update coupon",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteCoupon = async (couponId: string) => {
+    try {
+      await CouponService.deleteCoupon(couponId);
+      
+      toast({
+        title: "Success",
+        description: "Coupon deleted successfully"
+      });
+
+      // Refresh coupons list
+      fetchCoupons();
+
+    } catch (error) {
+      console.error('Error deleting coupon:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete coupon",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openEditDialog = (coupon: Coupon) => {
+    setEditingCoupon(coupon);
+    setCouponForm({
+      code: coupon.code,
+      description: coupon.description || '',
+      discount_type: coupon.discount_type,
+      discount_value: coupon.discount_value,
+      min_order_amount: coupon.min_order_amount?.toString() || '',
+      max_discount_amount: coupon.max_discount_amount?.toString() || '',
+      usage_limit: coupon.usage_limit?.toString() || '',
+      valid_until: coupon.valid_until || ''
+    });
+    setShowEditDialog(true);
   };
 
   const handleSendCoupons = async () => {
@@ -228,25 +279,22 @@ const DiscountCouponManagement = ({ onBack }: DiscountCouponManagementProps) => 
         return;
       }
 
-      // In a real implementation, you would:
-      // 1. Create notifications in a notifications table
-      // 2. Send emails to users
-      // 3. Track coupon distributions
+      await CouponService.assignCouponToUsers(selectedCoupon, selectedUsers);
 
       toast({
         title: "Success",
-        description: `Coupon sent to ${selectedUsers.length} user(s)`
+        description: `Coupon assigned to ${selectedUsers.length} user(s) successfully`
       });
 
       setShowSendDialog(false);
       setSelectedUsers([]);
       setSelectedCoupon("");
 
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to send coupons";
+    } catch (error) {
+      console.error('Error assigning coupons:', error);
       toast({
         title: "Error",
-        description: errorMessage,
+        description: error instanceof Error ? error.message : "Failed to assign coupons",
         variant: "destructive"
       });
     }
@@ -254,41 +302,26 @@ const DiscountCouponManagement = ({ onBack }: DiscountCouponManagementProps) => 
 
   const toggleCouponStatus = async (couponId: string) => {
     try {
-      setCoupons(prev => prev.map(coupon => 
-        coupon.id === couponId 
-          ? { ...coupon, is_active: !coupon.is_active, updated_at: new Date().toISOString() }
-          : coupon
-      ));
+      const coupon = coupons.find(c => c.id === couponId);
+      if (!coupon) return;
+
+      const newStatus = coupon.status === 'active' ? 'inactive' : 'active';
+      
+      await CouponService.updateCoupon(couponId, { status: newStatus });
 
       toast({
         title: "Success",
         description: "Coupon status updated successfully"
       });
 
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to update coupon";
+      // Refresh coupons list
+      fetchCoupons();
+
+    } catch (error) {
+      console.error('Error updating coupon status:', error);
       toast({
         title: "Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const deleteCoupon = async (couponId: string) => {
-    try {
-      setCoupons(prev => prev.filter(coupon => coupon.id !== couponId));
-      
-      toast({
-        title: "Success",
-        description: "Coupon deleted successfully"
-      });
-
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to delete coupon";
-      toast({
-        title: "Error",
-        description: errorMessage,
+        description: error instanceof Error ? error.message : "Failed to update coupon status",
         variant: "destructive"
       });
     }
@@ -296,13 +329,13 @@ const DiscountCouponManagement = ({ onBack }: DiscountCouponManagementProps) => 
 
   const getStatusBadge = (coupon: Coupon) => {
     const now = new Date();
-    const validUntil = new Date(coupon.valid_until);
+    const validUntil = coupon.valid_until ? new Date(coupon.valid_until) : null;
     
-    if (!coupon.is_active) {
+    if (coupon.status !== 'active') {
       return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Inactive</Badge>;
     }
     
-    if (validUntil < now) {
+    if (validUntil && validUntil < now) {
       return <Badge variant="secondary">Expired</Badge>;
     }
     
@@ -489,7 +522,7 @@ const DiscountCouponManagement = ({ onBack }: DiscountCouponManagementProps) => 
                       <SelectValue placeholder="Choose a coupon" />
                     </SelectTrigger>
                     <SelectContent>
-                      {coupons.filter(c => c.is_active).map(coupon => (
+                      {coupons.filter(c => c.status === 'active').map(coupon => (
                         <SelectItem key={coupon.id} value={coupon.id}>
                           {coupon.code} - {getDiscountDisplay(coupon)} off
                         </SelectItem>
@@ -591,11 +624,15 @@ const DiscountCouponManagement = ({ onBack }: DiscountCouponManagementProps) => 
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
                           <DropdownMenuItem onClick={() => toggleCouponStatus(coupon.id)}>
-                            {coupon.is_active ? 'Deactivate' : 'Activate'}
+                            {coupon.status === 'active' ? 'Deactivate' : 'Activate'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditDialog(coupon)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-red-600" 
-                            onClick={() => deleteCoupon(coupon.id)}
+                            onClick={() => handleDeleteCoupon(coupon.id)}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete

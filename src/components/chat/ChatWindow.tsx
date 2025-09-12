@@ -12,16 +12,25 @@ interface ChatWindowProps {
   onClose: () => void;
 }
 
+interface User {
+  id: string;
+  profile?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+  };
+}
+
 const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingInfo, setTypingInfo] = useState<{ isAdmin: boolean; name: string } | null>(null);
   const { toast } = useToast();
   
   // Refs for managing subscriptions and cleanup
-  const subscriptionRef = useRef<any>(null);
-  const typingSubscriptionRef = useRef<any>(null);
+  const subscriptionRef = useRef<ReturnType<typeof ChatService.subscribeToInstantMessages> | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get current user
@@ -37,7 +46,7 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
           .single();
         
         setCurrentUser({
-          ...user,
+          id: user.id,
           profile: profile || {}
         });
       }
@@ -76,36 +85,22 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
   useEffect(() => {
     if (!currentUser || !isOpen) return;
 
-    // Subscribe to new messages
-    subscriptionRef.current = ChatService.subscribeToMessages(
+    // Subscribe to instant messages and typing indicators
+    subscriptionRef.current = ChatService.subscribeToInstantMessages(
       currentUser.id,
       (newMessage: ChatMessage) => {
         setMessages(prev => [...prev, newMessage]);
+      },
+      (isTypingNow: boolean, userInfo?: { isAdmin: boolean; name: string }) => {
+        setIsTyping(isTypingNow);
+        setTypingInfo(userInfo || null);
       }
     );
-
-    // Subscribe to typing indicators
-    typingSubscriptionRef.current = ChatService.subscribeToTypingIndicators(
-      currentUser.id,
-      (indicators) => {
-        const adminTyping = indicators.filter(ind => ind.is_admin && ind.user_id !== currentUser.id);
-        setTypingUsers(adminTyping.length > 0 ? ['Admin'] : []);
-      }
-    );
-
-    // Cleanup old typing indicators periodically
-    const cleanupInterval = setInterval(() => {
-      ChatService.cleanupTypingIndicators();
-    }, 10000);
 
     return () => {
       if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current.unsubscribe();
       }
-      if (typingSubscriptionRef.current) {
-        supabase.removeChannel(typingSubscriptionRef.current);
-      }
-      clearInterval(cleanupInterval);
     };
   }, [currentUser, isOpen]);
 
@@ -121,10 +116,7 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
       });
       
       // Remove typing indicator after sending
-      await ChatService.removeTypingIndicator({
-        userId: currentUser.id,
-        conversationUserId: currentUser.id
-      });
+      await ChatService.setTypingIndicator(currentUser.id, false);
     } catch (error) {
       console.error('Failed to send message:', error);
       toast({
@@ -140,11 +132,7 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
     if (!currentUser) return;
 
     try {
-      await ChatService.setTypingIndicator({
-        userId: currentUser.id,
-        conversationUserId: currentUser.id,
-        isAdmin: false
-      });
+      await ChatService.setTypingIndicator(currentUser.id, true);
 
       // Clear existing timeout
       if (typingTimeoutRef.current) {
@@ -154,10 +142,7 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
       // Set timeout to remove typing indicator after 3 seconds of inactivity
       typingTimeoutRef.current = setTimeout(async () => {
         try {
-          await ChatService.removeTypingIndicator({
-            userId: currentUser.id,
-            conversationUserId: currentUser.id
-          });
+          await ChatService.setTypingIndicator(currentUser.id, false);
         } catch (error) {
           console.error('Failed to remove typing indicator:', error);
         }
@@ -190,7 +175,8 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
               messages={messages}
               loading={loading}
               currentUserId={currentUser?.id}
-              typingUsers={typingUsers}
+              isTyping={isTyping}
+              typingInfo={typingInfo}
             />
           </div>
           <div className="border-t p-4">

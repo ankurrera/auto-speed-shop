@@ -32,52 +32,21 @@ import {
   MoreHorizontal,
   Plus,
   Search,
-  Filter
+  Filter,
+  ArrowLeft
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatService, ChatMessage } from "@/services/chatService";
+import { SupportTicketService, SupportTicket } from "@/services/supportTicketService";
 import AdminChatConversation from "./AdminChatConversation";
-
-interface Ticket {
-  id: string;
-  ticket_number: string;
-  subject: string;
-  description: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  category: string;
-  user_id: string;
-  assigned_to: string | null;
-  created_at: string;
-  updated_at: string;
-  user?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-}
-
-interface ChatMessage {
-  id: string;
-  user_id: string;
-  admin_id: string | null;
-  message: string;
-  is_from_admin: boolean;
-  created_at: string;
-  user?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-}
 
 interface CustomerSupportToolsProps {
   onBack: () => void;
 }
 
 const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("tickets");
@@ -85,84 +54,88 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [showTicketDialog, setShowTicketDialog] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<{
     userId: string;
     userName: string;
     userEmail: string;
   } | null>(null);
+  const [ticketStats, setTicketStats] = useState({
+    total: 0,
+    open: 0,
+    pending: 0,
+    resolved: 0,
+    closed: 0,
+    byPriority: { low: 0, medium: 0, high: 0, urgent: 0 },
+  });
   const { toast } = useToast();
 
   const fetchTickets = useCallback(async () => {
     try {
-      // Mock data for demonstration
-      const mockTickets: Ticket[] = [
-        {
-          id: '1',
-          ticket_number: 'TKT-001',
-          subject: 'Order Delivery Issue',
-          description: 'My order was supposed to arrive yesterday but I haven\'t received it yet.',
-          status: 'open',
-          priority: 'high',
-          category: 'Delivery',
-          user_id: 'user1',
-          assigned_to: null,
-          created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          user: {
-            first_name: 'John',
-            last_name: 'Doe',
-            email: 'john.doe@example.com'
-          }
-        },
-        {
-          id: '2',
-          ticket_number: 'TKT-002',
-          subject: 'Product Quality Concern',
-          description: 'The brake pads I received seem to have manufacturing defects.',
-          status: 'in_progress',
-          priority: 'urgent',
-          category: 'Product Quality',
-          user_id: 'user2',
-          assigned_to: 'admin1',
-          created_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          user: {
-            first_name: 'Jane',
-            last_name: 'Smith',
-            email: 'jane.smith@example.com'
-          }
-        },
-        {
-          id: '3',
-          ticket_number: 'TKT-003',
-          subject: 'Refund Request',
-          description: 'I would like to return the air filter as it doesn\'t fit my car model.',
-          status: 'resolved',
-          priority: 'medium',
-          category: 'Returns',
-          user_id: 'user3',
-          assigned_to: 'admin1',
-          created_at: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-          user: {
-            first_name: 'Mike',
-            last_name: 'Johnson',
-            email: 'mike.johnson@example.com'
-          }
-        }
-      ];
-      setTickets(mockTickets);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to fetch tickets";
+      setLoading(true);
+      const filters = {
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(priorityFilter !== 'all' && { priority: priorityFilter }),
+      };
+      
+      const [allTickets, stats] = await Promise.all([
+        SupportTicketService.getAllTickets(filters),
+        SupportTicketService.getTicketStats(),
+      ]);
+      
+      setTickets(allTickets);
+      setTicketStats(stats);
+    } catch (error) {
       console.error('Error fetching tickets:', error);
       toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to fetch support tickets',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter, priorityFilter, toast]);
+
+  const handleUpdateTicket = async (ticketId: string, updates: {
+    status?: string;
+    priority?: string;
+    admin_response?: string;
+  }) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('Not authenticated');
+
+      await SupportTicketService.updateTicket(ticketId, {
+        ...updates,
+        admin_id: session.user.id,
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Ticket updated successfully',
+      });
+
+      // Refresh tickets
+      fetchTickets();
+    } catch (error) {
+      console.error('Error updating ticket:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update ticket',
+        variant: 'destructive',
       });
     }
-  }, [toast]);
+  };
+
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesSearch = 
+      ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.ticket_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ticket.user?.first_name + ' ' + ticket.user?.last_name).toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesSearch;
+  });
 
   const fetchChatMessages = useCallback(async () => {
     try {
@@ -238,20 +211,6 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
     }
   };
 
-  const filterTickets = (tickets: Ticket[]) => {
-    return tickets.filter(ticket => {
-      const matchesSearch = !searchTerm || 
-        ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (ticket.user?.email && ticket.user.email.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
-      const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
-      
-      return matchesSearch && matchesStatus && matchesPriority;
-    });
-  };
-
   const groupMessagesByUser = (messages: ChatMessage[]) => {
     const grouped = messages.reduce((acc, message) => {
       const key = message.user_id;
@@ -286,7 +245,6 @@ const CustomerSupportTools = ({ onBack }: CustomerSupportToolsProps) => {
     );
   }
 
-  const filteredTickets = filterTickets(tickets);
   const groupedMessages = groupMessagesByUser(chatMessages);
 
   // If viewing a conversation, show that instead

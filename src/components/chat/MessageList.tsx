@@ -8,10 +8,11 @@ interface MessageListProps {
   messages: ChatMessage[];
   loading: boolean;
   currentUserId?: string;
-  typingUsers: string[];
+  isTyping?: boolean;
+  typingInfo?: { isAdmin: boolean; name: string } | null;
 }
 
-const MessageList = ({ messages, loading, currentUserId, typingUsers }: MessageListProps) => {
+const MessageList = ({ messages, loading, currentUserId, isTyping, typingInfo }: MessageListProps) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -20,7 +21,7 @@ const MessageList = ({ messages, loading, currentUserId, typingUsers }: MessageL
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, typingUsers]);
+  }, [messages, isTyping]);
 
   const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -137,17 +138,17 @@ const MessageList = ({ messages, loading, currentUserId, typingUsers }: MessageL
         )}
         
         {/* Typing indicators */}
-        {typingUsers.length > 0 && (
+        {isTyping && typingInfo && (
           <div className="flex items-end gap-2 justify-start">
             <Avatar className="w-8 h-8">
-              <AvatarFallback className="bg-blue-100 text-blue-600">
-                A
+              <AvatarFallback className={typingInfo.isAdmin ? "bg-blue-100 text-blue-600" : "bg-muted"}>
+                {typingInfo.isAdmin ? 'A' : typingInfo.name.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="bg-muted rounded-lg px-3 py-2">
               <div className="flex items-center gap-1">
                 <span className="text-sm text-muted-foreground">
-                  {typingUsers[0]} is typing
+                  {typingInfo.isAdmin ? 'Admin' : typingInfo.name} is typing
                 </span>
                 <div className="flex gap-1">
                   <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>

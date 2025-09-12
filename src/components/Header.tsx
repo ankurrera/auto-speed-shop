@@ -204,6 +204,12 @@ const Header = () => {
                     <Link to="/account/orders">Order History</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link to="/account/support">Support Tickets</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account/coupons">My Coupons</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to="/contact">Customer Care</Link>
                   </DropdownMenuItem>
                   
@@ -335,6 +341,12 @@ const Header = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/account/orders">Order History</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account/support">Support Tickets</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account/coupons">My Coupons</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/contact">Customer Care</Link>

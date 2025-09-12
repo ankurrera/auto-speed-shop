@@ -51,6 +51,8 @@ import AdminPayoutManagement from "@/components/AdminPayoutManagement";
 import AdminInventoryManagement from "@/components/AdminInventoryManagement";
 import AdminDiscountCouponManagement from "@/components/AdminDiscountCouponManagement";
 import AdminCustomerSupportTools from "@/components/AdminCustomerSupportTools";
+import UserSupportTickets from "@/components/UserSupportTickets";
+import UserCoupons from "@/components/UserCoupons";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 import { EmailNotificationService } from "@/services/emailNotificationService";
 import { ORDER_STATUS } from "@/types/order";
@@ -2080,6 +2082,10 @@ const Account = () => {
         return renderAddressesContent();
       case "orders":
         return renderOrdersContent();
+      case "support":
+        return renderSupportContent();
+      case "coupons":
+        return renderCouponsContent();
       case "admin-dashboard":
         return renderAdminDashboardContent();
       case "analytics-dashboard":
@@ -2739,6 +2745,12 @@ const Account = () => {
       </CardContent>
     </Card>
   );
+
+  // User Coupons
+  const renderCouponsContent = () => <UserCoupons />;
+
+  // Support Tickets
+  const renderSupportContent = () => <UserSupportTickets />;
 
   // Filter & display inside Manage Products modal
   const lowercasedQuery = searchQuery.toLowerCase();
