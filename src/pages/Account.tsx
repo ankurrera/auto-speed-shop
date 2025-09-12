@@ -24,8 +24,7 @@ import {
   RefreshCcw,
   Car,
   FileText,
-  Star,
-  MessageCircle
+  Star
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
 import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
-import AdminCustomerSupportTools from "@/components/AdminCustomerSupportTools";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 import { EmailNotificationService } from "@/services/emailNotificationService";
 import { ORDER_STATUS } from "@/types/order";
@@ -98,7 +96,6 @@ const Account = () => {
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
   const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
-  const [showCustomerSupport, setShowCustomerSupport] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -2052,9 +2049,6 @@ const Account = () => {
     if (showInvoiceManagement) {
       return <AdminInvoiceManagement onBack={() => setShowInvoiceManagement(false)} />;
     }
-    if (showCustomerSupport) {
-      return <AdminCustomerSupportTools onBack={() => setShowCustomerSupport(false)} />;
-    }
     switch (currentPath) {
       case "addresses":
         return renderAddressesContent();
@@ -2194,12 +2188,6 @@ const Account = () => {
                     description="Create invoices and verify payments"
                     icon={<FileText className="h-5 w-5" />}
                     onClick={() => setShowInvoiceManagement(true)}
-                  />
-                  <ActionCard
-                    title="Customer Support"
-                    description="Chat with customers and provide support"
-                    icon={<MessageCircle className="h-5 w-5" />}
-                    onClick={() => setShowCustomerSupport(true)}
                   />
                 </div>
                 

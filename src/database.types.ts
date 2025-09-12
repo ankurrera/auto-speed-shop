@@ -691,44 +691,6 @@ export type Database = {
         }
         Relationships: []
       }
-      chat_messages: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          message: string
-          user_id: string
-          conversation_id: string
-          is_admin: boolean
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          message: string
-          user_id: string
-          conversation_id: string
-          is_admin?: boolean
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          message?: string
-          user_id?: string
-          conversation_id?: string
-          is_admin?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
       wishlist: {
         Row: {
           created_at: string
