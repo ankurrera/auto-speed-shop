@@ -69,7 +69,7 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
   const queryClient = useQueryClient();
 
   // Fetch payments data
-  const { data: paymentsData, isLoading, refetch } = useQuery({
+  const { data: paymentsData, isLoading, refetch, error } = useQuery({
     queryKey: ['admin-payments', paymentFilter, searchTerm],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -77,46 +77,50 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
         throw new Error('User not authenticated');
       }
 
-      // Use admin function to get order data
-      const { data: orders, error } = await supabase
-        .rpc('get_invoice_orders_for_admin', {
+      console.log('Fetching payment data for user:', user.id);
+
+      // First try to get all orders for admin (broader query)
+      let { data: orders, error } = await supabase
+        .rpc('get_all_orders_for_admin', {
           requesting_user_id: user.id
         });
 
+      // If get_all_orders_for_admin fails, fall back to get_invoice_orders_for_admin
       if (error) {
+        console.log('get_all_orders_for_admin failed, trying get_invoice_orders_for_admin:', error);
+        const fallbackResult = await supabase
+          .rpc('get_invoice_orders_for_admin', {
+            requesting_user_id: user.id
+          });
+        orders = fallbackResult.data;
+        error = fallbackResult.error;
+      }
+
+      if (error) {
+        console.error('Supabase query error:', error);
         throw new Error(`Failed to fetch payments: ${error.message}`);
       }
 
-      // Transform orders into payment records and filter by payment status
-      const paymentRecords: PaymentRecord[] = orders
-        .filter((order: {
-          id: string;
-          status: string;
-          payment_status: string;
-          notes?: string;
-        }) => {
-          // Only include orders that have payment submissions
-          return order.status === ORDER_STATUS.PAYMENT_SUBMITTED || 
-                 order.status === ORDER_STATUS.PAYMENT_VERIFIED ||
-                 order.status === ORDER_STATUS.CONFIRMED ||
-                 (order.payment_status === PAYMENT_STATUS.VERIFIED) ||
-                 (order.payment_status === PAYMENT_STATUS.FAILED) ||
-                 (order.notes && order.notes.includes('transaction_id'));
+      console.log('Raw orders from Supabase:', orders);
+      console.log('Number of orders returned:', orders?.length || 0);
+
+      // Transform orders into payment records with very inclusive filtering
+      const paymentRecords: PaymentRecord[] = (orders || [])
+        .filter((order: any) => {
+          // Include any order that has payment-related data
+          const hasAmount = order.total_amount && order.total_amount > 0;
+          const hasPaymentStatus = order.payment_status && order.payment_status !== '';
+          const hasPaymentNotes = order.notes && order.notes !== '';
+          const hasOrderNumber = order.order_number && order.order_number !== '';
+          
+          // Be very inclusive - include any order with basic payment information
+          const includeOrder = hasAmount && hasOrderNumber;
+          
+          console.log(`Order ${order.id}: status=${order.status}, payment_status=${order.payment_status}, total_amount=${order.total_amount}, include=${includeOrder}`);
+          
+          return includeOrder;
         })
-        .map((order: {
-          id: string;
-          order_number: string;
-          user_id: string;
-          status: string;
-          payment_status: string;
-          total_amount: number;
-          created_at: string;
-          updated_at: string;
-          notes?: string;
-          customer_first_name?: string;
-          customer_last_name?: string;
-          customer_email?: string;
-        }) => {
+        .map((order: any) => {
           let paymentData = null;
           let rejectionReason = null;
 
@@ -142,9 +146,9 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
             id: order.id,
             order_number: order.order_number,
             user_id: order.user_id,
-            status: order.status,
-            payment_status: order.payment_status,
-            total_amount: order.total_amount,
+            status: order.status || '',
+            payment_status: order.payment_status || '',
+            total_amount: parseFloat(order.total_amount) || 0,
             created_at: order.created_at,
             updated_at: order.updated_at,
             notes: order.notes,
@@ -155,6 +159,9 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
             rejection_reason: rejectionReason
           };
         });
+
+      console.log('Transformed payment records:', paymentRecords);
+      console.log('Payment records count:', paymentRecords.length);
 
       return paymentRecords;
     },
@@ -175,6 +182,9 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
 
     return matchesFilter && matchesSearch;
   }) || [];
+
+  console.log('Filtered payments for display:', filteredPayments);
+  console.log('Filter criteria - paymentFilter:', paymentFilter, 'searchTerm:', searchTerm);
 
   // Filter payments by tab
   const getPaymentsByTab = (tab: string) => {
@@ -223,6 +233,31 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             <span className="ml-2">Loading payments...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Payment Management
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="text-red-600 mb-4">
+              <p className="font-semibold">Error loading payment data</p>
+              <p className="text-sm">{error.message}</p>
+            </div>
+            <Button onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -329,6 +364,26 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Debug info when no data */}
+        {paymentsData?.length === 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <span className="font-medium">Debug Info:</span>
+            </div>
+            <div className="mt-2 text-sm text-yellow-700">
+              <p>• Raw orders returned from database: {paymentsData?.length || 0}</p>
+              <p>• After filtering: {filteredPayments?.length || 0}</p>
+              <p>• This usually means either:</p>
+              <ul className="ml-4 mt-1">
+                <li>- No orders exist in the database with payment data</li>
+                <li>- User doesn't have admin privileges</li>
+                <li>- Database function is filtering too restrictively</li>
+                <li>- Orders exist but don't match expected status values</li>
+              </ul>
+            </div>
+          </div>
+        )}
 
         {/* Payment Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
