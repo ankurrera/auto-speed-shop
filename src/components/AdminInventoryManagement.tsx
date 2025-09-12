@@ -181,7 +181,7 @@ const InventoryManagement = ({ onBack }: InventoryManagementProps) => {
     return (
       <div className="space-y-4">
         {/* Stock Alerts Summary */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -204,7 +204,7 @@ const InventoryManagement = ({ onBack }: InventoryManagementProps) => {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="sm:col-span-2 lg:col-span-1">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -218,61 +218,51 @@ const InventoryManagement = ({ onBack }: InventoryManagementProps) => {
         </div>
 
         {/* Inventory Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                {!isProduct && <TableHead>Brand</TableHead>}
-                <TableHead>Stock</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
+                <TableHead className="min-w-[200px]">Name</TableHead>
+                {!isProduct && <TableHead className="min-w-[100px]">Brand</TableHead>}
+                <TableHead className="min-w-[80px]">Stock</TableHead>
+                <TableHead className="min-w-[100px]">Price</TableHead>
+                <TableHead className="min-w-[120px]">Last Updated</TableHead>
+                <TableHead className="text-center min-w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredItems.map((item) => {
                 const stockStatus = getStockStatus(item.stock_quantity);
-                const rowClasses = getStockRowClasses(item.stock_quantity);
                 
                 return (
-                  <TableRow key={item.id} className={rowClasses}>
+                  <TableRow key={item.id}>
                     <TableCell className="font-medium">
                       <div>
-                        <p>{item.name}</p>
+                        <p className="text-sm font-medium">{item.name}</p>
                         {item.part_number && (
                           <p className="text-xs text-muted-foreground">Part: {item.part_number}</p>
                         )}
                       </div>
                     </TableCell>
                     {!isProduct && (
-                      <TableCell>{item.brand || 'N/A'}</TableCell>
+                      <TableCell className="text-sm">{item.brand || 'N/A'}</TableCell>
                     )}
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className={`font-medium ${stockStatus.color}`}>
-                          {item.stock_quantity}
-                        </span>
-                        <Badge 
-                          variant={stockStatus.level === 'out-of-stock' ? 'destructive' : 
-                                 stockStatus.level === 'low-stock' ? 'secondary' : 'default'}
-                          className="text-xs"
-                        >
-                          {stockStatus.label}
-                        </Badge>
-                      </div>
+                      <span className={`font-semibold ${stockStatus.color}`}>
+                        {item.stock_quantity}
+                      </span>
                     </TableCell>
-                    <TableCell>${item.price.toFixed(2)}</TableCell>
-                    <TableCell>{new Date(item.updated_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-sm font-medium">${item.price.toFixed(2)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{new Date(item.updated_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-center">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => openRestockModal(item, isProduct)}
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-1 text-xs px-2 py-1"
                       >
-                        <Plus className="h-4 w-4" />
-                        Restock
+                        <Plus className="h-3 w-3" />
+                        <span className="hidden sm:inline">Restock</span>
                       </Button>
                     </TableCell>
                   </TableRow>
