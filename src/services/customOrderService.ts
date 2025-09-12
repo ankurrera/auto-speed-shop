@@ -251,7 +251,7 @@ export async function submitPayment(orderId: string, paymentData: PaymentSubmiss
   }
 }
 
-export async function verifyPayment(orderId: string, verified: boolean, rejectionReason?: string) {
+export async function verifyPayment(orderId: string, verified: boolean) {
   try {
     // Handle development mode with sample orders
     const isDevelopment = import.meta.env.DEV;
@@ -261,7 +261,7 @@ export async function verifyPayment(orderId: string, verified: boolean, rejectio
       // For sample orders in development mode, simulate successful payment verification
       const newStatus = verified ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PAYMENT_PENDING;
       const paymentStatus = verified ? PAYMENT_STATUS.VERIFIED : PAYMENT_STATUS.FAILED;
-      console.log(`[DEV MODE] Simulating payment verification for sample order: ${orderId}, verified: ${verified}, rejectionReason: ${rejectionReason || 'N/A'}`);
+      console.log(`[DEV MODE] Simulating payment verification for sample order: ${orderId}, verified: ${verified}`);
       return {
         id: orderId,
         status: newStatus,
@@ -276,57 +276,23 @@ export async function verifyPayment(orderId: string, verified: boolean, rejectio
       throw new Error('User not authenticated');
     }
 
-    // Use the appropriate function based on whether rejection reason is provided
-    let result;
-    if (!verified && rejectionReason && rejectionReason.trim()) {
-      // Use the 4-parameter function when rejecting with a reason
-      const { data: orders, error } = await supabase
-        .rpc('admin_verify_payment', {
-          requesting_user_id: user.id,
-          target_order_id: orderId,
-          verified: verified,
-          rejection_reason: rejectionReason.trim()
-        });
-      
-      if (error) {
-        throw new Error(`Failed to verify payment: ${error.message}`);
-      }
-      result = orders;
-    } else {
-      // Use the 3-parameter function for verification or rejection without specific reason
-      const { data: orders, error } = await supabase
-        .from('orders')
-        .select()
-        .eq('id', orderId)
-        .single();
-      
-      if (error) {
-        throw new Error(`Failed to find order: ${error.message}`);
-      }
-      
-      // Use direct RPC call with explicit type casting to avoid ambiguity
-      const { data: updatedOrders, error: updateError } = await supabase
-        .rpc('admin_verify_payment', {
-          requesting_user_id: user.id,
-          target_order_id: orderId,
-          verified: verified
-        } as {
-          requesting_user_id: string;
-          target_order_id: string;
-          verified: boolean;
-        });
-      
-      if (updateError) {
-        throw new Error(`Failed to verify payment: ${updateError.message}`);
-      }
-      result = updatedOrders;
+    // Use admin function to verify payment
+    const { data: orders, error } = await supabase
+      .rpc('admin_verify_payment', {
+        requesting_user_id: user.id,
+        target_order_id: orderId,
+        verified: verified
+      });
+
+    if (error) {
+      throw new Error(`Failed to verify payment: ${error.message}`);
     }
 
-    if (!result || result.length === 0) {
+    if (!orders || orders.length === 0) {
       throw new Error(`Order ${orderId} not found or could not be updated`);
     }
 
-    return result[0];
+    return orders[0];
   } catch (error) {
     console.error("Verify payment error:", error);
     throw error;
