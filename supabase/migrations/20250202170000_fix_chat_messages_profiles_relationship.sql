@@ -6,12 +6,13 @@ ALTER TABLE chat_messages DROP CONSTRAINT IF EXISTS fk_chat_messages_user_id;
 ALTER TABLE chat_messages DROP CONSTRAINT IF EXISTS fk_chat_messages_admin_id;
 
 -- Add new foreign key constraints that reference profiles.user_id
+-- Using the naming convention expected by the chatService queries
 ALTER TABLE chat_messages 
-ADD CONSTRAINT fk_chat_messages_user_id 
+ADD CONSTRAINT chat_messages_user_id_fkey 
 FOREIGN KEY (user_id) REFERENCES profiles(user_id) ON DELETE CASCADE;
 
 ALTER TABLE chat_messages 
-ADD CONSTRAINT fk_chat_messages_admin_id 
+ADD CONSTRAINT chat_messages_admin_id_fkey 
 FOREIGN KEY (admin_id) REFERENCES profiles(user_id) ON DELETE SET NULL;
 
 -- Update the RLS policies to ensure they still work with the new relationships
