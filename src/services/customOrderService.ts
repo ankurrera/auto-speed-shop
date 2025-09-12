@@ -281,8 +281,7 @@ export async function verifyPayment(orderId: string, verified: boolean, rejectio
       .rpc('admin_verify_payment', {
         requesting_user_id: user.id,
         target_order_id: orderId,
-        verified: verified,
-        rejection_reason: rejectionReason || null
+        verified: verified
       });
 
     if (error) {
