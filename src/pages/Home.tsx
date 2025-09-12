@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ProductCard from "@/components/ProductCard";
 import heroImage from "@/assets/McLaren_Home_Hero.jpg";
 import { supabase } from "@/integrations/supabase/client";
+import Car3DModel from "@/components/Car3DModel";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -197,20 +198,30 @@ const Home = () => {
           {/* Semi-transparent overlay for text contrast */}
           <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         </div>
-        <div className="relative container mx-auto px-4 text-center z-10">
-          <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight animate-fade-in-up">
-            <span className="text-white dark:text-white">Your Ultimate</span>
-            <br />
-            <span className="bg-gradient-primary bg-clip-text text-transparent">Auto Parts Destination</span>
-          </h1>
-          <p className="text-lg md:text-xl mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100 text-white">
-            Discover premium parts and accessories for a ride that reflects your style and performance needs.
-          </p>
-            
-          {/* Vehicle Search */}
-          <Card className="mt-12 w-full max-w-4xl mx-auto bg-card/70 backdrop-blur-md shadow-lg animate-fade-in-up delay-200">
+        <div className="relative container mx-auto px-4 z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center h-full">
+          {/* Left side - Text Content */}
+          <div className="text-center md:text-left">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-foreground leading-tight animate-fade-in-up">
+              <span className="text-white dark:text-white">Your Ultimate</span>
+              <br />
+              <span className="bg-gradient-primary bg-clip-text text-transparent">Auto Parts Destination</span>
+            </h1>
+            <p className="text-lg md:text-xl mt-4 max-w-2xl mx-auto md:mx-0 animate-fade-in-up delay-100 text-white">
+              Discover premium parts and accessories for a ride that reflects your style and performance needs.
+            </p>
+          </div>
+
+          {/* Right side - 3D Model */}
+          <div className="hidden md:block h-96 w-full animate-fade-in-up delay-300 bg-transparent">
+            <Car3DModel />
+          </div>
+        </div>
+
+        {/* Vehicle Search - Full width below hero content */}
+        <div className="absolute bottom-8 left-4 right-4 z-10">
+          <Card className="w-full max-w-4xl mx-auto bg-card/70 backdrop-blur-md shadow-lg animate-fade-in-up delay-200">
             <CardContent className="p-6">
-              <h3 className="text-xl font-bold text-foreground mb-4">
+              <h3 className="text-xl font-bold text-foreground mb-4 text-center">
                 Find the Perfect Fit
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
