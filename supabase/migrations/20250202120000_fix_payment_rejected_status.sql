@@ -124,7 +124,6 @@ BEGIN
     o.tax_amount,
     o.total_amount,
     o.convenience_fee,
-    o.convenience_fee,
     o.delivery_charge,
     o.currency,
     o.notes,
