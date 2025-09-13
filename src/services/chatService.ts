@@ -102,7 +102,8 @@ export class ChatService {
 
     // Group by user and get messages for each
     const userGroups = conversations.reduce((acc, msg) => {
-      if (!acc[msg.user_id]) {
+      // Only include conversations where user profile exists
+      if (!acc[msg.user_id] && msg.user) {
         acc[msg.user_id] = {
           userId: msg.user_id,
           user: msg.user,

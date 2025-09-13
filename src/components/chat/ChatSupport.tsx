@@ -7,12 +7,28 @@ import ChatWindow from './ChatWindow';
 const ChatSupport = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authError, setAuthError] = useState(false);
 
   // Check authentication status
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsLoggedIn(!!session);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.warn('Auth session error:', error.message);
+          setAuthError(true);
+          setIsLoggedIn(false);
+          return;
+        }
+        
+        setIsLoggedIn(!!session);
+        setAuthError(false);
+      } catch (error) {
+        console.error('Failed to check auth status:', error);
+        setAuthError(true);
+        setIsLoggedIn(false);
+      }
     };
 
     checkAuth();
@@ -20,6 +36,7 @@ const ChatSupport = () => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsLoggedIn(!!session);
+      setAuthError(false);
       
       // Close chat if user logs out
       if (!session) {
@@ -30,8 +47,8 @@ const ChatSupport = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Don't show chat if user is not logged in
-  if (!isLoggedIn) {
+  // Don't show chat if user is not logged in or has auth errors
+  if (!isLoggedIn || authError) {
     return null;
   }
 

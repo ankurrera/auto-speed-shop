@@ -51,13 +51,13 @@ const MessageList = ({ messages, loading, currentUserId, isTyping, typingInfo }:
   };
 
   const getUserInitials = (user?: ChatMessage['user']) => {
-    if (!user) return 'U';
+    if (!user || !user.first_name && !user.last_name) return 'U';
     return `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase() || 'U';
   };
 
   const getUserName = (message: ChatMessage) => {
     if (message.is_from_admin) return 'Admin';
-    if (message.user) {
+    if (message.user && (message.user.first_name || message.user.last_name)) {
       return `${message.user.first_name || ''} ${message.user.last_name || ''}`.trim() || 'User';
     }
     return 'User';

@@ -36,19 +36,38 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
   // Get current user
   useEffect(() => {
     const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // Also get user profile data
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, email')
-          .eq('user_id', user.id)
-          .single();
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        setCurrentUser({
-          id: user.id,
-          profile: profile || {}
-        });
+        if (userError) {
+          console.warn('Error getting current user:', userError.message);
+          return;
+        }
+        
+        if (user) {
+          // Also get user profile data
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (profileError) {
+            console.warn('Error getting user profile:', profileError.message);
+            // Still set user even if profile is missing
+            setCurrentUser({
+              id: user.id,
+              profile: {}
+            });
+          } else {
+            setCurrentUser({
+              id: user.id,
+              profile: profile || {}
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to get current user:', error);
       }
     };
 
