@@ -1187,7 +1187,7 @@ const Account = () => {
       // Show a warning toast but don't fail the main action
       toast({
         title: "Notification Warning",
-        description: "Your product was listed successfully, but there was an issue sending email notifications.",
+        description: "Your product was listed successfully, but there was an issue sending email notifications. Check the browser console for detailed error information.",
         variant: "default",
       });
     }
