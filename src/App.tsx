@@ -36,6 +36,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import { DevCartHelper } from "./components/DevCartHelper";
 import { Button } from "@/components/ui/button";
 import ChatSupport from "./components/chat/ChatSupport";
+import MockChatDemo from "./components/chat/MockChatDemo";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ const App = () => {
                     <Route path="/invoice-demo" element={<InvoiceDemo />} />
                     <Route path="/show-invoice-button-demo" element={<ShowInvoiceButtonDemo />} />
                     <Route path="/track-order-demo" element={<TrackOrderDemo />} />
+                    <Route path="/chat-demo" element={<MockChatDemo />} />
                     <Route path="/admin/view-payment/:orderId" element={<ViewPayment />} />
                     <Route path="/order/:orderId" element={<OrderDetails />} />
                     <Route path="/products/:id" element={<ProductDetails />} />

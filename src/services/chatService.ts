@@ -109,11 +109,11 @@ export class ChatService {
         };
       }
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, { userId: string; user: any }>);
 
     // Get messages for each user
     const conversationsWithMessages = await Promise.all(
-      Object.values(userGroups).map(async (group: any) => {
+      Object.values(userGroups).map(async (group: { userId: string; user: any }) => {
         const messages = await this.getMessages(group.userId);
         return {
           ...group,
