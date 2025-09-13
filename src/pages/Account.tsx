@@ -24,7 +24,9 @@ import {
   RefreshCcw,
   Car,
   FileText,
-  Star
+  Star,
+  DollarSign,
+  MessageCircle
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -45,9 +47,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
 import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
+import AdminPaymentManagement from "@/components/AdminPaymentManagement";
+import AdminPayoutManagement from "@/components/AdminPayoutManagement";
+import AdminInventoryManagement from "@/components/AdminInventoryManagement";
+import AdminCustomerSupport from "@/components/AdminCustomerSupport";
+import { ORDER_STATUS } from "@/types/order";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 import { EmailNotificationService } from "@/services/emailNotificationService";
-import { ORDER_STATUS } from "@/types/order";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -96,6 +102,10 @@ const Account = () => {
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
   const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
+  const [showPaymentManagement, setShowPaymentManagement] = useState(false);
+  const [showPayoutManagement, setShowPayoutManagement] = useState(false);
+  const [showInventoryManagement, setShowInventoryManagement] = useState(false);
+  const [showCustomerSupport, setShowCustomerSupport] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -2049,6 +2059,26 @@ const Account = () => {
     if (showInvoiceManagement) {
       return <AdminInvoiceManagement onBack={() => setShowInvoiceManagement(false)} />;
     }
+    if (showPaymentManagement) {
+      return <AdminPaymentManagement onBack={() => setShowPaymentManagement(false)} />;
+    }
+    if (showPayoutManagement) {
+      return <AdminPayoutManagement onBack={() => setShowPayoutManagement(false)} />;
+    }
+    if (showInventoryManagement) {
+      return <AdminInventoryManagement onBack={() => setShowInventoryManagement(false)} />;
+    }
+    if (showCustomerSupport) {
+      return (
+        <div className="space-y-4">
+          <Button variant="outline" onClick={() => setShowCustomerSupport(false)}>
+            <X className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          <AdminCustomerSupport />
+        </div>
+      );
+    }
     switch (currentPath) {
       case "addresses":
         return renderAddressesContent();
@@ -2185,22 +2215,42 @@ const Account = () => {
                   />
                   <ActionCard
                     title="Invoice Management"
-                    description="Create invoices and verify payments"
+                    description="Create and send invoices to customers"
                     icon={<FileText className="h-5 w-5" />}
                     onClick={() => setShowInvoiceManagement(true)}
                   />
+                  <ActionCard
+                    title="Payment Management"
+                    description="Review customer payment and verify payments"
+                    icon={<FileText className="h-5 w-5" />}
+                    onClick={() => setShowPaymentManagement(true)}
+                  />
+                  <ActionCard
+                    title="Inventory Management"
+                    description="Stock alerts and disable out-of-stock products"
+                    icon={<Package className="h-5 w-5" />}
+                    onClick={() => setShowInventoryManagement(true)}
+                  />
+                  <ActionCard
+                    title="Customer Support"
+                    description="Manage customer support messages and conversations"
+                    icon={<MessageCircle className="h-5 w-5" />}
+                    onClick={() => setShowCustomerSupport(true)}
+                  />
                 </div>
                 
-                {/* Seller Dashboard Link */}
+                {/* Seller Management Section */}
                 {userInfo.is_seller && (
-                  <div className="mt-6">
-                    <h4 className="text-md font-medium mb-3">Seller Management</h4>
-                    <ActionCard
-                      title="Seller Dashboard"
-                      description="Manage your seller profile and information"
-                      icon={<Car className="h-5 w-5" />}
-                      onClick={() => navigate("/seller-dashboard")}
-                    />
+                  <div className="mt-8">
+                    <h4 className="text-lg font-semibold mb-4">Seller Management</h4>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <ActionCard
+                        title="Seller Dashboard"
+                        description="Manage your seller profile and information"
+                        icon={<Car className="h-5 w-5" />}
+                        onClick={() => navigate("/seller-dashboard")}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
