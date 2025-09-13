@@ -176,12 +176,21 @@ export class ChatService {
    * Set typing indicator
    */
   static async setTypingIndicator(userId: string, isTyping: boolean, isAdmin = false): Promise<void> {
+    // Get current authenticated user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('Error setting typing indicator: User not authenticated');
+      return;
+    }
+
     if (isTyping) {
       const { error } = await supabase
         .from('typing_indicators')
         .upsert({
+          user_id: user.id,
           conversation_user_id: userId,
           is_typing: true,
+          is_admin: isAdmin,
           last_typed_at: new Date().toISOString(),
         });
       
@@ -192,7 +201,8 @@ export class ChatService {
       const { error } = await supabase
         .from('typing_indicators')
         .delete()
-        .eq('conversation_user_id', userId);
+        .eq('conversation_user_id', userId)
+        .eq('user_id', user.id);
       
       if (error) {
         console.error('Error removing typing indicator:', error);

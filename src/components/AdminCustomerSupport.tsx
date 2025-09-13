@@ -58,9 +58,12 @@ const AdminCustomerSupport = () => {
       try {
         const allConversations = await ChatService.getAllConversations();
         
+        // Filter out conversations with null user data
+        const validConversations = allConversations.filter(conv => conv.user != null);
+        
         // Calculate unread count for each conversation (messages from users that admins haven't responded to)
         const conversationsWithUnread = await Promise.all(
-          allConversations.map(async (conv) => {
+          validConversations.map(async (conv) => {
             const { data: unreadMessages } = await supabase
               .from('chat_messages')
               .select('id')
@@ -105,6 +108,11 @@ const AdminCustomerSupport = () => {
 
   // Filter conversations based on search query
   const filteredConversations = conversations.filter(conv => {
+    // Skip conversations with null user data
+    if (!conv.user) {
+      return false;
+    }
+    
     const searchLower = searchQuery.toLowerCase();
     const userName = `${conv.user.first_name || ''} ${conv.user.last_name || ''}`.toLowerCase().trim();
     const userEmail = conv.user.email?.toLowerCase() || '';
@@ -147,8 +155,8 @@ const AdminCustomerSupport = () => {
     return (
       <AdminChatConversation
         userId={selectedConversation.userId}
-        userName={`${selectedConversation.user.first_name} ${selectedConversation.user.last_name}`}
-        userEmail={selectedConversation.user.email}
+        userName={`${selectedConversation.user?.first_name || 'Unknown'} ${selectedConversation.user?.last_name || 'User'}`}
+        userEmail={selectedConversation.user?.email || 'No email available'}
         onBack={() => setSelectedConversation(null)}
       />
     );
@@ -218,7 +226,7 @@ const AdminCustomerSupport = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium truncate">
-                        {conversation.user.first_name} {conversation.user.last_name}
+                        {conversation.user?.first_name || 'Unknown'} {conversation.user?.last_name || 'User'}
                       </h4>
                       {conversation.unreadCount > 0 && (
                         <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
@@ -227,7 +235,7 @@ const AdminCustomerSupport = () => {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground truncate mb-1">
-                      {conversation.user.email}
+                      {conversation.user?.email || 'No email available'}
                     </p>
                     {conversation.lastMessage && (
                       <p className="text-sm text-muted-foreground truncate">
