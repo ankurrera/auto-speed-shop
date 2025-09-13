@@ -70,10 +70,43 @@ export class EmailNotificationService {
       if (response.ok) {
         const data = await response.json();
         console.log(`📊 Bulk email summary: ${data.summary.totalUsers} total, ${data.summary.successCount} sent, ${data.summary.failCount} failed`);
+        
+        // Log detailed error information if available
+        if (data.errors && data.errors.length > 0) {
+          console.error('❌ Detailed notification errors:');
+          data.errors.forEach((errorDetail: { email: string; error: { message: string; code?: string; response?: string; responseCode?: string } }, index: number) => {
+            console.error(`  ${index + 1}. Email: ${errorDetail.email}`);
+            console.error(`     Error: ${errorDetail.error.message}`);
+            if (errorDetail.error.code) {
+              console.error(`     Code: ${errorDetail.error.code}`);
+            }
+            if (errorDetail.error.response) {
+              console.error(`     SMTP Response: ${errorDetail.error.response}`);
+            }
+            if (errorDetail.error.responseCode) {
+              console.error(`     SMTP Response Code: ${errorDetail.error.responseCode}`);
+            }
+          });
+        }
+        
+        // Log success details if available
+        if (data.successDetails && data.successDetails.length > 0) {
+          console.log('✅ Successful notifications:');
+          data.successDetails.forEach((successDetail: { email: string; messageId: string }, index: number) => {
+            console.log(`  ${index + 1}. Email: ${successDetail.email} (MessageID: ${successDetail.messageId})`);
+          });
+        }
+        
         return data.summary;
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
         console.log(`❌ Failed to send bulk emails: ${errorData.message}`);
+        
+        // Log additional error details if available
+        if (errorData.error) {
+          console.error(`❌ Additional error details: ${errorData.error}`);
+        }
+        
         return {
           totalUsers: users.length,
           successCount: 0,
@@ -113,6 +146,7 @@ export class EmailNotificationService {
       }
 
       console.log(`📧 Found ${subscribedUsers.length} subscribed users to notify`);
+      console.log(`📧 Subscriber emails: ${subscribedUsers.map(u => u.email).join(', ')}`);
 
       // Use the bulk notification API for better efficiency
       const result = await this.sendBulkNotifications(subscribedUsers, notification);
@@ -126,7 +160,10 @@ export class EmailNotificationService {
       }
 
       if (result.failCount > 0) {
-        console.warn(`Some notifications failed: ${result.failCount} out of ${result.totalUsers}`);
+        console.warn(`⚠️ Some notifications failed: ${result.failCount} out of ${result.totalUsers}`);
+        console.warn(`⚠️ This usually indicates email configuration issues or invalid email addresses.`);
+        console.warn(`⚠️ Check the detailed error logs above for specific failure reasons.`);
+        console.warn(`⚠️ Common causes: missing GMAIL_USER/GMAIL_PASSWORD environment variables, Gmail authentication issues, or network problems.`);
       }
 
       return {
@@ -137,7 +174,16 @@ export class EmailNotificationService {
       };
 
     } catch (error) {
-      console.error('Error sending email notifications:', error);
+      console.error('❌ Error sending email notifications:', error);
+      console.error('❌ This error occurred in the notification sending process. Check the logs above for detailed error information.');
+      
+      // Log additional context about the error
+      if (error instanceof Error) {
+        console.error(`❌ Error name: ${error.name}`);
+        console.error(`❌ Error message: ${error.message}`);
+        console.error(`❌ Error stack: ${error.stack}`);
+      }
+      
       // Re-throw so the calling code can handle it appropriately
       throw error;
     }
