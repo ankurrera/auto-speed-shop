@@ -183,3 +183,6 @@ export class EmailNotificationService {
     console.log('ℹ️ No email subscribers found. Users can subscribe to notifications in their account settings.');
   }
 }
+
+// Also export as default for better compatibility
+export default EmailNotificationService;
