@@ -8,16 +8,65 @@ export class ServerEmailService {
   static transporter = null;
 
   /**
+   * Validate email service configuration
+   */
+  static validateConfiguration() {
+    const errors = [];
+    
+    if (!process.env.GMAIL_USER) {
+      errors.push('GMAIL_USER environment variable is missing');
+    }
+    
+    if (!process.env.GMAIL_PASSWORD) {
+      errors.push('GMAIL_PASSWORD environment variable is missing');
+    }
+    
+    if (errors.length > 0) {
+      console.error('❌ Email service configuration errors:');
+      errors.forEach(error => console.error(`   - ${error}`));
+      return false;
+    }
+    
+    console.log('✅ Email service configuration is valid');
+    return true;
+  }
+
+  /**
    * Get or create nodemailer transporter
    */
   static getTransporter() {
     if (!this.transporter) {
+      // Validate environment variables
+      if (!process.env.GMAIL_USER) {
+        throw new Error('GMAIL_USER environment variable is not set');
+      }
+      if (!process.env.GMAIL_PASSWORD) {
+        throw new Error('GMAIL_PASSWORD environment variable is not set');
+      }
+
+      console.log('🔧 Creating nodemailer transporter with Gmail service');
+      
       this.transporter = nodemailer.createTransporter({
         service: 'gmail',
         auth: {
           user: process.env.GMAIL_USER,
           pass: process.env.GMAIL_PASSWORD,
         },
+        // Add timeout and retry settings
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        socketTimeout: 30000,
+        connectionTimeout: 30000,
+      });
+
+      // Test the connection
+      this.transporter.verify((error, success) => {
+        if (error) {
+          console.error('❌ SMTP connection verification failed:', error.message);
+        } else {
+          console.log('✅ SMTP server is ready to take our messages');
+        }
       });
     }
     return this.transporter;
@@ -28,6 +77,8 @@ export class ServerEmailService {
    */
   static async sendNotification(to, subject, body) {
     try {
+      console.log(`📧 Attempting to send email to: ${to}`);
+      
       const transporter = this.getTransporter();
       
       const mailOptions = {
@@ -37,12 +88,24 @@ export class ServerEmailService {
         html: body,
       };
 
-      await transporter.sendMail(mailOptions);
-      console.log(`✅ Email notification sent to: ${to}`);
+      console.log(`📤 Sending email with subject: "${subject}"`);
+      
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`✅ Email notification sent to: ${to}, MessageID: ${info.messageId}`);
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.log(`❌ Failed to send email to: ${to}, ${errorMessage}`);
+      console.error(`❌ Failed to send email to: ${to}`);
+      console.error(`❌ Error details: ${errorMessage}`);
+      
+      // Log specific error types for better debugging
+      if (error.code) {
+        console.error(`❌ Error code: ${error.code}`);
+      }
+      if (error.response) {
+        console.error(`❌ SMTP response: ${error.response}`);
+      }
+      
       return false;
     }
   }
@@ -51,12 +114,26 @@ export class ServerEmailService {
    * Send bulk email notifications to multiple users
    */
   static async sendBulkNotifications(users, productInfo) {
+    console.log(`📊 Starting bulk email process for ${users.length} users`);
+    
+    // Validate configuration first
+    if (!this.validateConfiguration()) {
+      console.error('❌ Email configuration invalid, aborting bulk send');
+      return {
+        totalUsers: users.length,
+        successCount: 0,
+        failCount: users.length
+      };
+    }
+
     const totalUsers = users.length;
     let successCount = 0;
     let failCount = 0;
 
     const subject = `New Product Launched: ${productInfo.productName}`;
     const body = this.createEnhancedEmailTemplate(productInfo);
+
+    console.log(`📧 Sending emails with subject: "${subject}"`);
 
     // Send emails sequentially to avoid overwhelming the SMTP server
     for (const user of users) {
@@ -66,9 +143,14 @@ export class ServerEmailService {
       } else {
         failCount++;
       }
+      
+      // Add a small delay between emails to be respectful to the SMTP server
+      if (users.length > 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
-    console.log(`📊 Email Summary: ${totalUsers} total, ${successCount} sent, ${failCount} failed`);
+    console.log(`📊 Bulk email summary: ${totalUsers} total, ${successCount} sent, ${failCount} failed`);
 
     return {
       totalUsers,
