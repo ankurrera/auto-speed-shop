@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CheckCircle, XCircle, Download, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { verifyPayment } from "@/services/customOrderService";
-import { jsPDF } from 'jspdf';
+import jsPDF from 'jspdf';
 
 interface PaymentData {
   transaction_id: string;
