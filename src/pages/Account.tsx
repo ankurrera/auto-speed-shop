@@ -25,7 +25,8 @@ import {
   Car,
   FileText,
   Star,
-  DollarSign
+  DollarSign,
+  MessageCircle
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ import AdminPayoutManagement from "@/components/AdminPayoutManagement";
 import AdminInventoryManagement from "@/components/AdminInventoryManagement";
 import AdminCustomerSupport from "@/components/AdminCustomerSupport";
 import { ORDER_STATUS } from "@/types/order";
+import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
