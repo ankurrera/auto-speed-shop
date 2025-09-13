@@ -19,9 +19,9 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [currentAdmin, setCurrentAdmin] = useState<any>(null);
+  const [currentAdmin, setCurrentAdmin] = useState<{id: string} | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const subscriptionRef = useRef<any>(null);
+  const subscriptionRef = useRef<ReturnType<typeof ChatService.subscribeToMessages> | null>(null);
   const { toast } = useToast();
 
   // Get current admin user
@@ -68,7 +68,7 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
 
     return () => {
       if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current.unsubscribe();
       }
     };
   }, [userId]);
