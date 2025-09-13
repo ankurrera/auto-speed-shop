@@ -53,6 +53,7 @@ import AdminInventoryManagement from "@/components/AdminInventoryManagement";
 import AdminCustomerSupport from "@/components/AdminCustomerSupport";
 import { ORDER_STATUS } from "@/types/order";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
+import { EmailNotificationService } from "@/services/emailNotificationService";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
