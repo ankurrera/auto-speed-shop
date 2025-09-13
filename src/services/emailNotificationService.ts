@@ -191,57 +191,182 @@ export class EmailNotificationService {
 
   /**
    * Create HTML email template for new product notifications
+   * Uses the specified placeholder format: ${productName}, ${productDescription}, ${price}, ${sellerName}, ${imageUrl}, ${baseUrl}, ${unsubscribeUrl}
    */
   private static createEmailTemplate(notification: NewProductNotification): string {
-    const unsubscribeUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/account?unsubscribe=true`;
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const unsubscribeUrl = `${baseUrl}/account?unsubscribe=true`;
+    
+    // Use the specified placeholder format for the template
+    const templateData = {
+      productName: notification.productName || 'New Product',
+      productDescription: notification.productDescription || `Check out our latest addition: ${notification.productName || 'New Product'}!`,
+      price: notification.price || 'Contact us for pricing',
+      sellerName: notification.sellerName || 'AutoParts Pro',
+      imageUrl: notification.imageUrl || '',
+      baseUrl: baseUrl,
+      unsubscribeUrl: unsubscribeUrl
+    };
     
     return `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New ${notification.productType} Available</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>NEW ARRIVALS JUST FOR YOU - ${templateData.productName}</title>
+  <style>
+    /* Reset styles */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { border: 0; display: block; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+    
+    /* Responsive styles */
+    @media only screen and (max-width: 600px) {
+      .container { width: 100% !important; max-width: 100% !important; }
+      .content { padding: 20px !important; }
+      .hero-text { font-size: 28px !important; line-height: 32px !important; }
+      .product-image { max-width: 280px !important; }
+      .cta-button { padding: 15px 25px !important; font-size: 16px !important; }
+      .contact-info { font-size: 12px !important; }
+    }
+    
+    @media only screen and (max-width: 480px) {
+      .hero-text { font-size: 24px !important; line-height: 28px !important; }
+      .product-image { max-width: 240px !important; }
+      .overlay-text { font-size: 14px !important; padding: 8px 12px !important; }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+<body style="margin: 0; padding: 0; background-color: #000000; font-family: Arial, sans-serif; line-height: 1.6;">
   
-  <table style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; padding: 30px;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #000000;">
     <tr>
-      <td>
-        <h1 style="color: #333; margin-bottom: 20px;">New ${notification.productType} Available!</h1>
+      <td align="center" style="padding: 20px 10px;">
         
-        <h2 style="color: #0066cc; margin-bottom: 15px;">${notification.productName}</h2>
+        <!-- Main Container -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="container" style="max-width: 600px; background-color: #000000; border-radius: 12px; overflow: hidden;">
+          
+          <!-- Hero Section -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 40px 30px; text-align: center;">
+              <div class="content">
+                <h1 style="color: #ffffff; font-size: 36px; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;" class="hero-text">
+                  NEW ARRIVALS JUST FOR YOU
+                </h1>
+                <p style="color: #fecaca; font-size: 16px; margin: 0; font-weight: 300;">
+                  Premium Auto Parts &amp; Accessories
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Product Section -->
+          <tr>
+            <td style="background-color: #111111; padding: 30px;">
+              <div class="content">
+                
+                <!-- Product Name -->
+                <h2 style="color: #ffffff; font-size: 24px; font-weight: bold; margin: 0 0 15px 0; text-align: center;">
+                  ${templateData.productName}
+                </h2>
+                
+                <!-- Product Image with Overlay -->
+                ${templateData.imageUrl ? `
+                <div style="position: relative; text-align: center; margin: 20px 0;">
+                  <img src="${templateData.imageUrl}" alt="${templateData.productName}" 
+                       style="max-width: 350px; width: 100%; height: auto; border-radius: 8px; border: 2px solid #dc2626;" 
+                       class="product-image">
+                  <div style="position: absolute; top: 15px; left: 15px; background: rgba(220, 38, 38, 0.95); color: #ffffff; padding: 10px 15px; border-radius: 6px; font-weight: bold; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px;" class="overlay-text">
+                    NEW ARRIVAL
+                  </div>
+                </div>
+                ` : ''}
+                
+                <!-- Product Description -->
+                <div style="background: linear-gradient(135deg, #1f1f1f 0%, #0f0f0f 100%); padding: 25px; border-radius: 8px; margin: 20px 0; border: 1px solid #333333;">
+                  <p style="color: #e5e5e5; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">
+                    ${templateData.productDescription}
+                  </p>
+                  
+                  <!-- Product Details -->
+                  <div style="background-color: #dc2626; padding: 20px; border-radius: 6px; text-align: center;">
+                    <p style="color: #ffffff; font-size: 28px; font-weight: bold; margin: 0 0 8px 0;">
+                      $${templateData.price}
+                    </p>
+                    <p style="color: #fecaca; font-size: 14px; margin: 0; font-weight: 500;">
+                      Seller: ${templateData.sellerName}
+                    </p>
+                  </div>
+                </div>
+                
+                <!-- Call to Action -->
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${templateData.baseUrl}/products" 
+                     style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 8px; font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; display: inline-block; border: 2px solid #dc2626; transition: all 0.3s ease;"
+                     class="cta-button">
+                    🛒 SHOP NOW
+                  </a>
+                </div>
+                
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Contact Info & Footer -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #1f1f1f 0%, #0f0f0f 100%); padding: 30px; border-top: 2px solid #dc2626;">
+              <div class="content">
+                
+                <!-- Contact Information -->
+                <div style="text-align: center; margin-bottom: 25px;">
+                  <h3 style="color: #dc2626; font-size: 18px; font-weight: bold; margin: 0 0 15px 0; text-transform: uppercase;">
+                    Contact Us
+                  </h3>
+                  <div style="color: #cccccc; font-size: 14px; line-height: 1.8;" class="contact-info">
+                    <p style="margin: 5px 0;">📞 <strong>Phone:</strong> +91 9874139807</p>
+                    <p style="margin: 5px 0;">✉️ <strong>Email:</strong> sunvisiontech@gmail.com</p>
+                    <p style="margin: 5px 0;">📍 <strong>Address:</strong> EN-9, SALTLAKE, SECTOR-5 KOLKATA-700091</p>
+                    <p style="margin: 5px 0;">🕒 <strong>Hours:</strong> Mon-Fri 8AM-6PM, Sat 9AM-4PM</p>
+                  </div>
+                </div>
+                
+                <!-- Social Media Links -->
+                <div style="text-align: center; margin: 20px 0;">
+                  <a href="https://www.facebook.com/share/1HWqypCZvo/" style="display: inline-block; margin: 0 10px; color: #dc2626; text-decoration: none; font-size: 14px;">Facebook</a>
+                  <a href="https://www.instagram.com/digital_indian16?igsh=cDZ3NWliNGZyZDRp" style="display: inline-block; margin: 0 10px; color: #dc2626; text-decoration: none; font-size: 14px;">Instagram</a>
+                  <a href="https://youtube.com/@digitalindianbusinesssolut108?si=pBt6rFSYOWIU4jEt" style="display: inline-block; margin: 0 10px; color: #dc2626; text-decoration: none; font-size: 14px;">YouTube</a>
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid #333333; margin: 25px 0;">
+                
+                <!-- Unsubscribe Section -->
+                <div style="text-align: center;">
+                  <p style="color: #888888; font-size: 12px; margin: 0 0 10px 0;">
+                    You're receiving this email because you subscribed to new product notifications.
+                  </p>
+                  <p style="color: #888888; font-size: 12px; margin: 0;">
+                    <a href="${templateData.unsubscribeUrl}" style="color: #dc2626; text-decoration: underline;">Unsubscribe</a> | 
+                    <a href="${templateData.baseUrl}/privacy" style="color: #dc2626; text-decoration: underline;">Privacy Policy</a> | 
+                    <a href="${templateData.baseUrl}/contact" style="color: #dc2626; text-decoration: underline;">Contact Support</a>
+                  </p>
+                </div>
+                
+                <!-- Copyright -->
+                <div style="text-align: center; margin-top: 20px;">
+                  <p style="color: #666666; font-size: 11px; margin: 0;">
+                    © 2024 AutoParts Pro. All rights reserved.
+                  </p>
+                </div>
+                
+              </div>
+            </td>
+          </tr>
+          
+        </table>
         
-        <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
-          ${notification.productDescription}
-        </p>
-        
-        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-          <p style="margin: 5px 0;"><strong>Price:</strong> $${notification.price}</p>
-          <p style="margin: 5px 0;"><strong>Seller:</strong> ${notification.sellerName}</p>
-          <p style="margin: 5px 0;"><strong>Type:</strong> ${notification.productType}</p>
-        </div>
-        
-        ${notification.imageUrl ? `
-        <div style="text-align: center; margin-bottom: 20px;">
-          <img src="${notification.imageUrl}" alt="${notification.productName}" style="max-width: 300px; height: auto; border-radius: 5px;">
-        </div>
-        ` : ''}
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${typeof window !== 'undefined' ? window.location.origin : ''}/products" 
-             style="background-color: #0066cc; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            View All Products
-          </a>
-        </div>
-        
-        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-        
-        <p style="color: #999; font-size: 12px; text-align: center;">
-          You're receiving this email because you subscribed to new product notifications.
-          <br>
-          <a href="${unsubscribeUrl}">Unsubscribe</a>
-        </p>
       </td>
     </tr>
   </table>
