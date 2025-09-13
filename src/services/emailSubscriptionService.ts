@@ -32,12 +32,16 @@ export class EmailSubscriptionService {
     email: string, 
     subscribed: boolean
   ): Promise<EmailSubscription> {
+    const subscriptionData: EmailSubscriptionInsert = {
+      user_id: userId,
+      email,
+      subscribed_to_new_products: subscribed,
+    };
+
     const { data, error } = await supabase
       .from('email_subscriptions')
-      .upsert({
-        user_id: userId,
-        email: email,
-        subscribed_to_new_products: subscribed,
+      .upsert(subscriptionData, { 
+        onConflict: 'user_id' 
       })
       .select()
       .single();
