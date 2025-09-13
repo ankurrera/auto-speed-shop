@@ -46,7 +46,7 @@ export class ServerEmailService {
 
       console.log('🔧 Creating nodemailer transporter with Gmail service');
       
-      this.transporter = nodemailer.createTransporter({
+      this.transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
           user: process.env.GMAIL_USER,
