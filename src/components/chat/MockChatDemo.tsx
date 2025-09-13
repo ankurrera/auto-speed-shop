@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageCircle, User, UserCog } from 'lucide-react';
-import ChatWindow from './ChatWindow';
-import AdminCustomerSupport from '../AdminCustomerSupport';
+import { MockChatWindow, MockAdminDashboard } from './MockChatComponents';
 
 /**
  * MockChatDemo - A demonstration component that shows both user and admin chat interfaces
- * without requiring database connectivity. This allows testing the UI functionality.
+ * with working mock functionality for testing without database connectivity.
  */
 const MockChatDemo = () => {
   const [demoMode, setDemoMode] = useState<'user' | 'admin' | null>(null);
   const [userChatOpen, setUserChatOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   if (demoMode === 'user') {
     return (
@@ -31,9 +31,29 @@ const MockChatDemo = () => {
           <CardContent>
             <div className="text-center space-y-4">
               <p className="text-muted-foreground">
-                This demonstrates the user chat interface. In a real environment, 
-                users would see a floating chat button when logged in.
+                This demonstrates the user chat interface. Test both logged-in and logged-out states.
               </p>
+              
+              <div className="flex gap-4 justify-center">
+                <Button 
+                  variant={isLoggedIn ? "default" : "outline"}
+                  onClick={() => setIsLoggedIn(true)}
+                >
+                  Simulate Login
+                </Button>
+                <Button 
+                  variant={!isLoggedIn ? "default" : "outline"}
+                  onClick={() => setIsLoggedIn(false)}
+                >
+                  Simulate Logout
+                </Button>
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-950/50 p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Current State:</strong> {isLoggedIn ? 'Logged In - Can send/receive messages' : 'Logged Out - Must sign in to chat'}
+                </p>
+              </div>
               
               {/* Simulated chat button */}
               {!userChatOpen && (
@@ -51,17 +71,12 @@ const MockChatDemo = () => {
               </p>
             </div>
             
-            {/* Chat window overlay */}
-            {userChatOpen && (
-              <div className="fixed inset-0 bg-black/20 z-50 flex items-center justify-center">
-                <div className="bg-background rounded-lg shadow-2xl w-96 h-[500px]">
-                  <ChatWindow 
-                    isOpen={userChatOpen} 
-                    onClose={() => setUserChatOpen(false)} 
-                  />
-                </div>
-              </div>
-            )}
+            {/* Chat window */}
+            <MockChatWindow 
+              isOpen={userChatOpen} 
+              onClose={() => setUserChatOpen(false)}
+              isLoggedIn={isLoggedIn}
+            />
           </CardContent>
         </Card>
       </div>
@@ -85,7 +100,7 @@ const MockChatDemo = () => {
           </CardHeader>
           <CardContent className="h-full">
             <div className="h-full">
-              <AdminCustomerSupport />
+              <MockAdminDashboard onBack={() => setDemoMode(null)} />
             </div>
           </CardContent>
         </Card>
@@ -129,6 +144,7 @@ const MockChatDemo = () => {
                   <li>• Message history display</li>
                   <li>• Typing indicators</li>
                   <li>• User-friendly message input</li>
+                  <li>• Authentication state handling</li>
                 </ul>
                 <Button className="w-full mt-4">
                   Try User Interface
@@ -154,6 +170,7 @@ const MockChatDemo = () => {
                   <li>• Individual chat interfaces</li>
                   <li>• Unread message indicators</li>
                   <li>• Real-time message notifications</li>
+                  <li>• Mock conversation data</li>
                 </ul>
                 <Button className="w-full mt-4" variant="outline">
                   Try Admin Interface
@@ -171,6 +188,7 @@ const MockChatDemo = () => {
                   <li>• Always available chat support</li>
                   <li>• Instant message delivery</li>
                   <li>• Professional support experience</li>
+                  <li>• Authentication integration</li>
                 </ul>
               </div>
               <div>
@@ -179,9 +197,25 @@ const MockChatDemo = () => {
                   <li>• Centralized customer support</li>
                   <li>• Multiple conversation management</li>
                   <li>• Real-time customer assistance</li>
+                  <li>• Search and filtering capabilities</li>
                 </ul>
               </div>
             </div>
+          </div>
+
+          <div className="bg-green-50 dark:bg-green-950/50 p-4 rounded-lg">
+            <h4 className="font-semibold mb-2">Demo Features:</h4>
+            <p className="text-sm text-muted-foreground">
+              This demonstration includes mock data and simulated real-time functionality to showcase 
+              how the chat system works without requiring database connectivity. Features include:
+            </p>
+            <ul className="text-sm text-muted-foreground mt-2 space-y-1">
+              <li>• Working message sending and receiving</li>
+              <li>• Simulated typing indicators</li>
+              <li>• Multiple conversation threads</li>
+              <li>• Authentication state simulation</li>
+              <li>• Responsive design for all screen sizes</li>
+            </ul>
           </div>
         </CardContent>
       </Card>
