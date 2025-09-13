@@ -10,3 +10,6 @@ npm-debug.log*
 # Temporary test files
 test_parts_deletion.js
 validate_migrations.sh
+
+# Backup files
+*.backup
