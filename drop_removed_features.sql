@@ -16,10 +16,6 @@ DROP TABLE IF EXISTS public.support_tickets CASCADE;
 -- Drop email_subscriptions table
 DROP TABLE IF EXISTS public.email_subscriptions CASCADE;
 
--- Drop customer support / chat tables
-DROP TABLE IF EXISTS public.chat_messages CASCADE;
-DROP TABLE IF EXISTS public.typing_indicators CASCADE;
-
 -- Drop functions related to coupons
 DROP FUNCTION IF EXISTS increment_coupon_usage(UUID);
 DROP FUNCTION IF EXISTS expire_old_coupons();
@@ -42,8 +38,6 @@ DROP TRIGGER IF EXISTS update_email_subscriptions_updated_at_trigger ON public.e
 -- 2. coupons - Discount/coupon definitions
 -- 3. user_coupons - User-assigned coupons
 -- 4. email_subscriptions - Email notification preferences
--- 5. chat_messages - Customer support chat messages
--- 6. typing_indicators - Chat typing indicators
--- 7. Related functions and triggers
+-- 5. Related functions and triggers
 
 COMMIT;

@@ -50,7 +50,7 @@ import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
 import AdminPaymentManagement from "@/components/AdminPaymentManagement";
 import AdminPayoutManagement from "@/components/AdminPayoutManagement";
 import AdminInventoryManagement from "@/components/AdminInventoryManagement";
-
+import AdminCustomerSupport from "@/components/AdminCustomerSupport";
 import { ORDER_STATUS } from "@/types/order";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 
@@ -104,7 +104,7 @@ const Account = () => {
   const [showPaymentManagement, setShowPaymentManagement] = useState(false);
   const [showPayoutManagement, setShowPayoutManagement] = useState(false);
   const [showInventoryManagement, setShowInventoryManagement] = useState(false);
-
+  const [showCustomerSupport, setShowCustomerSupport] = useState(false);
 
   // Auth form
   const [email, setEmail] = useState("");
@@ -2067,7 +2067,17 @@ const Account = () => {
     if (showInventoryManagement) {
       return <AdminInventoryManagement onBack={() => setShowInventoryManagement(false)} />;
     }
-
+    if (showCustomerSupport) {
+      return (
+        <div className="space-y-4">
+          <Button variant="outline" onClick={() => setShowCustomerSupport(false)}>
+            <X className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          <AdminCustomerSupport />
+        </div>
+      );
+    }
     switch (currentPath) {
       case "addresses":
         return renderAddressesContent();
@@ -2220,7 +2230,12 @@ const Account = () => {
                     icon={<Package className="h-5 w-5" />}
                     onClick={() => setShowInventoryManagement(true)}
                   />
-
+                  <ActionCard
+                    title="Customer Support"
+                    description="Manage customer support messages and conversations"
+                    icon={<MessageCircle className="h-5 w-5" />}
+                    onClick={() => setShowCustomerSupport(true)}
+                  />
                 </div>
                 
                 {/* Seller Management Section */}
