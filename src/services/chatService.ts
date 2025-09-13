@@ -181,9 +181,11 @@ export class ChatService {
       const { error } = await supabase
         .from('typing_indicators')
         .upsert({
+          user_id: userId,
           conversation_user_id: userId,
           is_typing: true,
           last_typed_at: new Date().toISOString(),
+          is_admin: isAdmin,
         });
       
       if (error) {
@@ -193,6 +195,7 @@ export class ChatService {
       const { error } = await supabase
         .from('typing_indicators')
         .delete()
+        .eq('user_id', userId)
         .eq('conversation_user_id', userId);
       
       if (error) {
