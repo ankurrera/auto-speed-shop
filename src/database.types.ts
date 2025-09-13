@@ -144,6 +144,33 @@ export type Database = {
           },
         ]
       }
+      email_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          email: string
+          subscribed_to_new_products: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email: string
+          subscribed_to_new_products?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email?: string
+          subscribed_to_new_products?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           admin_id: string | null
@@ -715,6 +742,8 @@ export type Database = {
           created_at: string
           id: string
           is_admin: boolean
+          is_typing: boolean
+          last_typed_at: string
           user_id: string
         }
         Insert: {
@@ -722,6 +751,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_admin?: boolean
+          is_typing?: boolean
+          last_typed_at?: string
           user_id: string
         }
         Update: {
@@ -729,6 +760,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_admin?: boolean
+          is_typing?: boolean
+          last_typed_at?: string
           user_id?: string
         }
         Relationships: []
