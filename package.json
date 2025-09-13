@@ -9,7 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:email": "node test_email_setup.js"
+    "test:email": "node test_email_setup.js",
+    "test:email-direct": "node test_email_direct.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
