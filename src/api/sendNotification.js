@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import { ServerEmailService } from '../services/serverEmailService.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -11,24 +11,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'Missing required fields: to, subject, html' });
   }
 
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASSWORD,
-    },
-  });
-
-  const mailOptions = {
-    from: process.env.GMAIL_USER,
-    to: to,
-    subject: subject,
-    html: html,
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: 'Email sent successfully!' });
+    const success = await ServerEmailService.sendNotification(to, subject, html);
+    if (success) {
+      res.status(200).json({ message: 'Email sent successfully!' });
+    } else {
+      res.status(500).json({ message: 'Failed to send email.' });
+    }
   } catch (error) {
     console.error('Error sending email:', error);
     res.status(500).json({ message: 'Failed to send email.' });

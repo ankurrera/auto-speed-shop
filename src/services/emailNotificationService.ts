@@ -20,6 +20,78 @@ export interface NotificationResult {
 
 export class EmailNotificationService {
   /**
+   * Send a single email notification using the API endpoint
+   */
+  static async sendNotification(to: string, subject: string, body: string): Promise<boolean> {
+    try {
+      const response = await fetch('/api/sendNotification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          to: to, 
+          subject: subject, 
+          html: body 
+        }),
+      });
+
+      if (response.ok) {
+        console.log(`✅ Email notification sent to: ${to}`);
+        return true;
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.log(`❌ Failed to send email to: ${to}, ${errorData.message}`);
+        return false;
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log(`❌ Failed to send email to: ${to}, ${errorMessage}`);
+      return false;
+    }
+  }
+
+  /**
+   * Send bulk email notifications to multiple users
+   */
+  static async sendBulkNotifications(users: Array<{email: string}>, productInfo: NewProductNotification): Promise<{
+    totalUsers: number;
+    successCount: number;
+    failCount: number;
+  }> {
+    try {
+      const response = await fetch('/api/sendBulkNotifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          users: users,
+          productInfo: productInfo
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`📊 Bulk email summary: ${data.summary.totalUsers} total, ${data.summary.successCount} sent, ${data.summary.failCount} failed`);
+        return data.summary;
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.log(`❌ Failed to send bulk emails: ${errorData.message}`);
+        return {
+          totalUsers: users.length,
+          successCount: 0,
+          failCount: users.length
+        };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log(`❌ Failed to send bulk emails: ${errorMessage}`);
+      return {
+        totalUsers: users.length,
+        successCount: 0,
+        failCount: users.length
+      };
+    }
+  }
+
+  /**
    * Send email notifications to all subscribed users about new products/parts
    */
   static async sendNewProductNotifications(notification: NewProductNotification): Promise<NotificationResult> {
@@ -42,57 +114,26 @@ export class EmailNotificationService {
 
       console.log(`📧 Found ${subscribedUsers.length} subscribed users to notify`);
 
-      let successCount = 0;
-      let failureCount = 0;
-      const errors: string[] = [];
-
-      // Process each subscriber
-      for (const user of subscribedUsers) {
-        try {
-          // Create email content
-          const subject = `New ${notification.productType} available: ${notification.productName}`;
-          const emailContent = this.createEmailTemplate(notification);
-
-          // In a real implementation, this would send actual emails
-          // For now, we'll simulate the email sending process
-          console.log(`📧 Email notification sent to: ${user.email}`);
-          
-          // Here you would typically make an API call to send the email
-          // await fetch('/api/sendNotification', {
-          //   method: 'POST',
-          //   headers: { 'Content-Type': 'application/json' },
-          //   body: JSON.stringify({ 
-          //     to: user.email, 
-          //     subject, 
-          //     html: emailContent 
-          //   }),
-          // });
-
-          successCount++;
-        } catch (error) {
-          failureCount++;
-          const errorMsg = `Error sending email to ${user.email}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          errors.push(errorMsg);
-          console.error(errorMsg);
-        }
+      // Use the bulk notification API for better efficiency
+      const result = await this.sendBulkNotifications(subscribedUsers, notification);
+      
+      // Log results  
+      console.log(`✅ Notifications processed: ${result.successCount} sent, ${result.failCount} failed`);
+      
+      if (result.successCount > 0) {
+        console.log(`📧 Notifications sent to ${result.successCount} users`);
+        this.showNotificationSuccess(result.successCount, result.failCount);
       }
 
-      // Log results
-      console.log(`✅ Notifications processed: ${successCount} sent, ${failureCount} failed`);
-      if (successCount > 0) {
-        console.log(`📧 Notifications sent to ${successCount} users`);
-        this.showNotificationSuccess(successCount, failureCount);
-      }
-
-      if (errors.length > 0) {
-        console.warn('Some notifications failed:', errors);
+      if (result.failCount > 0) {
+        console.warn(`Some notifications failed: ${result.failCount} out of ${result.totalUsers}`);
       }
 
       return {
         success: true,
-        notificationsSent: successCount,
-        notificationsFailed: failureCount,
-        message: `Processed ${subscribedUsers.length} notifications: ${successCount} sent, ${failureCount} failed`
+        notificationsSent: result.successCount,
+        notificationsFailed: result.failCount,
+        message: `Processed ${result.totalUsers} notifications: ${result.successCount} sent, ${result.failCount} failed`
       };
 
     } catch (error) {
