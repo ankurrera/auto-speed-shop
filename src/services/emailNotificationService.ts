@@ -68,6 +68,16 @@ export class EmailNotificationService {
           if (response.ok) {
             successCount++;
             console.log(`📧 Email notification sent to: ${user.email}`);
+            
+            // Log the response for debugging if available
+            try {
+              const responseData = await response.json();
+              if (responseData.messageId) {
+                console.log(`   📨 Message ID: ${responseData.messageId}`);
+              }
+            } catch (e) {
+              // Ignore JSON parsing errors for response logging
+            }
           } else {
             failureCount++;
             let errorMsg = `Failed to send email to ${user.email}`;
@@ -108,6 +118,15 @@ export class EmailNotificationService {
 
       if (errors.length > 0) {
         console.warn('Some notifications failed:', errors);
+        
+        // If all notifications failed, suggest configuration check
+        if (successCount === 0 && failureCount > 0) {
+          console.warn('🔧 All email notifications failed. This usually indicates:');
+          console.warn('   • Missing or incorrect email configuration (GMAIL_USER, GMAIL_PASSWORD)');
+          console.warn('   • Gmail App Password not set up correctly');
+          console.warn('   • SMTP connection issues');
+          console.warn('📖 See EMAIL_SETUP_GUIDE.md for setup instructions');
+        }
       }
 
       return {
