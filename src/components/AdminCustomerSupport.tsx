@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MessageCircle, Search, Users, Clock } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatService } from '@/services/chatService';
 import AdminChatConversation from './AdminChatConversation';
@@ -106,8 +106,8 @@ const AdminCustomerSupport = () => {
   // Filter conversations based on search query
   const filteredConversations = conversations.filter(conv => {
     const searchLower = searchQuery.toLowerCase();
-    const userName = `${conv.user.first_name} ${conv.user.last_name}`.toLowerCase();
-    const userEmail = conv.user.email.toLowerCase();
+    const userName = `${conv.user.first_name || ''} ${conv.user.last_name || ''}`.toLowerCase().trim();
+    const userEmail = conv.user.email?.toLowerCase() || '';
     const lastMessage = conv.lastMessage?.message.toLowerCase() || '';
     
     return userName.includes(searchLower) || 
