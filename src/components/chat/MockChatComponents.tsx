@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, ArrowLeft, MessageCircle, Clock, Users, Search } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MockMessage {
   id: string;
@@ -122,6 +123,7 @@ const MockChatWindow = ({ isOpen, onClose, isLoggedIn = false }: MockChatWindowP
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   // Simulate loading messages when component mounts
   useEffect(() => {
@@ -194,7 +196,11 @@ const MockChatWindow = ({ isOpen, onClose, isLoggedIn = false }: MockChatWindowP
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 h-[500px] z-50 shadow-2xl">
+    <div className={`fixed z-50 shadow-2xl ${
+      isMobile 
+        ? 'inset-0 p-4' 
+        : 'bottom-4 right-4 w-96 h-[500px]'
+    }`}>
       <Card className="h-full flex flex-col">
         <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
