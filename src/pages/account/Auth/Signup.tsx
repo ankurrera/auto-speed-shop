@@ -88,6 +88,7 @@ export const Signup = ({ onSignup, onSwitchToLogin, adminExists }: SignupProps) 
                 phone: phone || "",
                 is_admin: loginMode === "admin",
                 is_seller: false,
+                role: loginMode === "admin" ? "admin" : "user",
               },
               { onConflict: "user_id" }
             );

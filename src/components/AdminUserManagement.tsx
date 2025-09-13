@@ -73,7 +73,10 @@ const AdminUserManagement = () => {
     mutationFn: async ({ userId, isAdmin }: { userId: string, isAdmin: boolean }) => {
       const { error } = await supabase
         .from('profiles')
-        .update({ is_admin: isAdmin }) // Use boolean directly
+        .update({ 
+          is_admin: isAdmin,
+          role: isAdmin ? 'admin' : 'user'
+        })
         .eq('user_id', userId);
       if (error) throw error;
     },
