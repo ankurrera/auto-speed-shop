@@ -12,7 +12,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Cart from "./pages/Cart";
 import Wishlist from "./pages/Wishlist";
-import Account from "./pages/Account";
+import Account from "./pages/account";
 import ResetPassword from "./pages/ResetPassword";
 import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
