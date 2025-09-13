@@ -36,10 +36,28 @@ export default async function handler(req, res) {
     
     const statusCode = result.failCount > 0 ? 207 : 200; // 207 = Multi-Status for partial success
     
-    res.status(statusCode).json({
+    // Include detailed error information in the response
+    const responseData = {
       message: responseMessage,
-      summary: result
-    });
+      summary: {
+        totalUsers: result.totalUsers,
+        successCount: result.successCount,
+        failCount: result.failCount
+      }
+    };
+
+    // Add error details if there were failures
+    if (result.failCount > 0 && result.errors) {
+      responseData.errors = result.errors;
+      console.error('❌ Notification errors being returned to client:', result.errors);
+    }
+
+    // Add success details for debugging
+    if (result.successCount > 0 && result.successDetails) {
+      responseData.successDetails = result.successDetails;
+    }
+    
+    res.status(statusCode).json(responseData);
   } catch (error) {
     console.error('Error sending bulk emails:', error);
     res.status(500).json({ 

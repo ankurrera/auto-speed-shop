@@ -92,7 +92,7 @@ export class ServerEmailService {
       
       const info = await transporter.sendMail(mailOptions);
       console.log(`✅ Email notification sent to: ${to}, MessageID: ${info.messageId}`);
-      return true;
+      return { success: true, messageId: info.messageId };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`❌ Failed to send email to: ${to}`);
@@ -105,8 +105,19 @@ export class ServerEmailService {
       if (error.response) {
         console.error(`❌ SMTP response: ${error.response}`);
       }
+      if (error.responseCode) {
+        console.error(`❌ SMTP response code: ${error.responseCode}`);
+      }
       
-      return false;
+      return { 
+        success: false, 
+        error: {
+          message: errorMessage,
+          code: error.code,
+          response: error.response,
+          responseCode: error.responseCode
+        }
+      };
     }
   }
 
@@ -122,13 +133,16 @@ export class ServerEmailService {
       return {
         totalUsers: users.length,
         successCount: 0,
-        failCount: users.length
+        failCount: users.length,
+        errors: [{ error: 'Email configuration invalid - missing GMAIL_USER or GMAIL_PASSWORD environment variables' }]
       };
     }
 
     const totalUsers = users.length;
     let successCount = 0;
     let failCount = 0;
+    const errors = [];
+    const successDetails = [];
 
     const subject = `New Product Launched: ${productInfo.productName}`;
     const body = this.createEnhancedEmailTemplate(productInfo);
@@ -137,11 +151,24 @@ export class ServerEmailService {
 
     // Send emails sequentially to avoid overwhelming the SMTP server
     for (const user of users) {
-      const success = await this.sendNotification(user.email, subject, body);
-      if (success) {
+      console.log(`📧 Processing email for user: ${user.email}`);
+      const result = await this.sendNotification(user.email, subject, body);
+      
+      if (result.success) {
         successCount++;
+        successDetails.push({
+          email: user.email,
+          messageId: result.messageId
+        });
+        console.log(`✅ Email sent successfully to: ${user.email}`);
       } else {
         failCount++;
+        const errorDetail = {
+          email: user.email,
+          error: result.error
+        };
+        errors.push(errorDetail);
+        console.error(`❌ Email failed for: ${user.email}`, result.error);
       }
       
       // Add a small delay between emails to be respectful to the SMTP server
@@ -151,11 +178,17 @@ export class ServerEmailService {
     }
 
     console.log(`📊 Bulk email summary: ${totalUsers} total, ${successCount} sent, ${failCount} failed`);
+    
+    if (failCount > 0) {
+      console.error(`❌ Failed notifications details:`, errors);
+    }
 
     return {
       totalUsers,
       successCount,
-      failCount
+      failCount,
+      errors,
+      successDetails
     };
   }
 
