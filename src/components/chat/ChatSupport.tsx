@@ -49,10 +49,7 @@ const ChatSupport = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Don't show chat if user is not logged in or has auth errors
-  if (!isLoggedIn || authError) {
-    return null;
-  }
+  // Always show chat, but pass authentication state to ChatWindow
 
   return (
     <>
@@ -74,7 +71,8 @@ const ChatSupport = () => {
       {/* Chat window */}
       <ChatWindow 
         isOpen={isOpen} 
-        onClose={() => setIsOpen(false)} 
+        onClose={() => setIsOpen(false)}
+        isAuthenticated={isLoggedIn && !authError}
       />
     </>
   );
