@@ -90,18 +90,33 @@ const AdminCustomerSupport = () => {
 
     loadConversations();
 
-    // Set up real-time subscription for new messages
-    const subscription = ChatService.subscribeToAllMessages((newMessage) => {
-      // Refresh conversations when new messages arrive
-      loadConversations();
-    });
+    // Set up real-time subscription for new messages from all users using enhanced admin dashboard subscription
+    const subscription = ChatService.subscribeToAdminDashboard(
+      (newMessage) => {
+        // Log new message for debugging
+        console.log('Admin dashboard received new message:', newMessage);
+        
+        // Refresh conversations when new messages arrive
+        loadConversations();
+        
+        // Update selected conversation if it matches the new message
+        if (selectedConversation && selectedConversation.userId === newMessage.user_id) {
+          // Force refresh of the selected conversation to show new messages
+          setSelectedConversation(prev => prev ? { ...prev } : null);
+        }
+      },
+      () => {
+        // Callback for conversation updates
+        loadConversations();
+      }
+    );
 
     return () => {
       if (subscription) {
         supabase.removeChannel(subscription);
       }
     };
-  }, [isAdmin, toast]);
+  }, [isAdmin, toast, selectedConversation]);
 
   // Filter conversations based on search query
   const filteredConversations = conversations.filter(conv => {

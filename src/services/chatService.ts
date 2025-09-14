@@ -174,10 +174,11 @@ export class ChatService {
   }
 
   /**
-   * Set typing indicator
+   * Set typing indicator using proper UPSERT logic
    */
   static async setTypingIndicator(userId: string, isTyping: boolean, isAdmin = false): Promise<void> {
     if (isTyping) {
+      // Use UPSERT to avoid duplicate key constraint errors
       const { error } = await supabase
         .from('typing_indicators')
         .upsert({
@@ -186,12 +187,15 @@ export class ChatService {
           is_typing: true,
           last_typed_at: new Date().toISOString(),
           is_admin: isAdmin,
+        }, {
+          onConflict: 'user_id,conversation_user_id'
         });
       
       if (error) {
         console.error('Error setting typing indicator:', error);
       }
     } else {
+      // Remove typing indicator when not typing
       const { error } = await supabase
         .from('typing_indicators')
         .delete()
@@ -251,6 +255,7 @@ export class ChatService {
 
   /**
    * Enhanced real-time message subscription with instant delivery
+   * This handles both user-to-admin and admin-to-user message broadcasting
    */
   static subscribeToInstantMessages(
     userId: string,
@@ -259,7 +264,7 @@ export class ChatService {
   ) {
     const channel = supabase.channel(`instant_chat:${userId}`);
 
-    // Subscribe to new messages
+    // Subscribe to messages for this specific user (both incoming and outgoing)
     channel.on(
       'postgres_changes',
       {
@@ -302,12 +307,12 @@ export class ChatService {
         async (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const typingData = payload.new as TypingIndicator;
-            if (typingData.is_typing) {
-              // Get user info
+            if (typingData.is_typing && typingData.user_id !== userId) {
+              // Only show typing indicator for other users (not self)
               const { data: profile } = await supabase
                 .from('profiles')
                 .select('first_name, last_name, is_admin')
-                .eq('user_id', userId)
+                .eq('user_id', typingData.user_id)
                 .single();
               
               if (profile) {
@@ -328,11 +333,11 @@ export class ChatService {
   }
 
   /**
-   * Subscribe to all new messages (admin view)
+   * Subscribe to all new messages (admin view) - Enhanced to handle real-time updates
    */
   static subscribeToAllMessages(onMessage: (message: ChatMessage) => void) {
     return supabase
-      .channel('chat_messages:all')
+      .channel('chat_messages:all_admin')
       .on(
         'postgres_changes',
         {
@@ -361,5 +366,46 @@ export class ChatService {
         }
       )
       .subscribe();
+  }
+
+  /**
+   * Subscribe to all conversations for admin dashboard updates
+   */
+  static subscribeToAdminDashboard(onNewMessage: (message: ChatMessage) => void, onConversationUpdate?: () => void) {
+    const channel = supabase.channel('admin_dashboard:all_messages');
+
+    // Listen for all new messages to update conversations
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+      },
+      async (payload) => {
+        // Fetch the complete message with user data
+        const { data: message, error } = await supabase
+          .from('chat_messages')
+          .select(`
+            *,
+            user:profiles!chat_messages_user_id_fkey(
+              first_name,
+              last_name,
+              email
+            )
+          `)
+          .eq('id', payload.new.id)
+          .single();
+
+        if (!error && message) {
+          onNewMessage(message as ChatMessage);
+          if (onConversationUpdate) {
+            onConversationUpdate();
+          }
+        }
+      }
+    );
+
+    return channel.subscribe();
   }
 }
