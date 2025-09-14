@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatService, ChatMessage } from '@/services/chatService';
 import MessageList from './MessageList';
@@ -28,6 +29,7 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
   const [isTyping, setIsTyping] = useState(false);
   const [typingInfo, setTypingInfo] = useState<{ isAdmin: boolean; name: string } | null>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   // Refs for managing subscriptions and cleanup
   const subscriptionRef = useRef<ReturnType<typeof ChatService.subscribeToInstantMessages> | null>(null);
@@ -174,7 +176,11 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 h-[500px] z-50 shadow-2xl">
+    <div className={`fixed z-50 shadow-2xl ${
+      isMobile 
+        ? 'inset-0 p-4' 
+        : 'bottom-4 right-4 w-96 h-[500px]'
+    }`}>
       <Card className="h-full flex flex-col">
         <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-lg flex items-center gap-2">

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageCircle, User, UserCog } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { MockChatWindow, MockAdminDashboard } from './MockChatComponents';
 
 /**
@@ -12,6 +13,7 @@ const MockChatDemo = () => {
   const [demoMode, setDemoMode] = useState<'user' | 'admin' | null>(null);
   const [userChatOpen, setUserChatOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isMobile = useIsMobile();
 
   if (demoMode === 'user') {
     return (
@@ -59,10 +61,14 @@ const MockChatDemo = () => {
               {!userChatOpen && (
                 <Button
                   onClick={() => setUserChatOpen(true)}
-                  className="h-14 w-14 rounded-full shadow-lg hover:scale-105 transition-transform"
+                  className={`shadow-lg hover:scale-105 transition-transform ${
+                    isMobile 
+                      ? 'h-16 w-16 rounded-full' 
+                      : 'h-14 w-14 rounded-full'
+                  }`}
                   size="icon"
                 >
-                  <MessageCircle className="h-6 w-6" />
+                  <MessageCircle className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6'}`} />
                 </Button>
               )}
               
