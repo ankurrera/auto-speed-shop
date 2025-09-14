@@ -116,6 +116,12 @@ const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProp
     subscriptionRef.current = ChatService.subscribeToInstantMessages(
       currentUser.id,
       (newMessage: ChatMessage) => {
+        console.log('[ChatWindow] User received new message:', {
+          messageId: newMessage.id,
+          isFromAdmin: newMessage.is_from_admin,
+          messagePreview: newMessage.message.substring(0, 50) + (newMessage.message.length > 50 ? '...' : ''),
+          userProfile: newMessage.user
+        });
         setMessages(prev => [...prev, newMessage]);
       },
       (isTypingNow: boolean, userInfo?: { isAdmin: boolean; name: string }) => {
@@ -135,6 +141,12 @@ const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProp
   const handleSendMessage = useCallback(async (message: string) => {
     if (!currentUser || !message.trim()) return;
 
+    console.log('[ChatWindow] User sending message:', {
+      userId: currentUser.id,
+      messagePreview: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+      isFromAdmin: false
+    });
+
     try {
       await ChatService.sendMessage({
         userId: currentUser.id,
@@ -142,10 +154,12 @@ const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProp
         isFromAdmin: false
       });
       
+      console.log('[ChatWindow] User message sent successfully');
+      
       // Remove typing indicator after sending
       await ChatService.setTypingIndicator(currentUser.id, false);
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('[ChatWindow] Failed to send user message:', error);
       toast({
         title: 'Error',
         description: 'Failed to send message',

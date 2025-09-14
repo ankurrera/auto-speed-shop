@@ -94,18 +94,26 @@ const AdminCustomerSupport = () => {
     const subscription = ChatService.subscribeToAdminDashboard(
       (newMessage) => {
         // Log new message for debugging
-        console.log('Admin dashboard received new message:', newMessage);
+        console.log('[AdminCustomerSupport] Admin dashboard received new message:', {
+          messageId: newMessage.id,
+          userId: newMessage.user_id,
+          isFromAdmin: newMessage.is_from_admin,
+          messagePreview: newMessage.message.substring(0, 50) + (newMessage.message.length > 50 ? '...' : ''),
+          userProfile: newMessage.user
+        });
         
         // Refresh conversations when new messages arrive
         loadConversations();
         
         // Update selected conversation if it matches the new message
         if (selectedConversation && selectedConversation.userId === newMessage.user_id) {
+          console.log('[AdminCustomerSupport] Updating selected conversation for new message');
           // Force refresh of the selected conversation to show new messages
           setSelectedConversation(prev => prev ? { ...prev } : null);
         }
       },
       () => {
+        console.log('[AdminCustomerSupport] Conversation update callback triggered');
         // Callback for conversation updates
         loadConversations();
       }

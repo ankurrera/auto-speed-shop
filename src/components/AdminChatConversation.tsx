@@ -65,6 +65,12 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
     subscriptionRef.current = ChatService.subscribeToInstantMessages(
       userId,
       (newMessage: ChatMessage) => {
+        console.log('[AdminChatConversation] Received new message:', {
+          messageId: newMessage.id,
+          isFromAdmin: newMessage.is_from_admin,
+          messagePreview: newMessage.message.substring(0, 50) + (newMessage.message.length > 50 ? '...' : ''),
+          userProfile: newMessage.user
+        });
         setMessages(prev => [...prev, newMessage]);
       }
     );
