@@ -300,7 +300,8 @@ export class ChatService {
     onTypingChange?: (isTyping: boolean, userInfo?: { isAdmin: boolean; name: string }) => void
   ) {
     console.log('[ChatService] Setting up instant messages subscription for user:', userId);
-    const channel = supabase.channel(`instant_chat:${userId}`);
+    const channelName = `instant_chat:${userId}:${Date.now()}`;
+    const channel = supabase.channel(channelName);
 
     // Subscribe to messages for this specific user (both incoming and outgoing)
     channel.on(
@@ -339,7 +340,7 @@ export class ChatService {
             messageId: message.id,
             isFromAdmin: message.is_from_admin,
             senderType: message.sender_type,
-            userProfile: message.user
+            userProfile: message.user ? 'present' : 'missing'
           });
           onMessage(message as ChatMessage);
         } else {
@@ -383,6 +384,7 @@ export class ChatService {
       );
     }
 
+    console.log('[ChatService] Starting subscription for channel:', channelName);
     return channel.subscribe();
   }
 
@@ -429,7 +431,8 @@ export class ChatService {
    */
   static subscribeToAdminDashboard(onNewMessage: (message: ChatMessage) => void, onConversationUpdate?: () => void) {
     console.log('[ChatService] Setting up admin dashboard subscription for ALL message types');
-    const channel = supabase.channel('admin_dashboard:all_messages');
+    const channelName = `admin_dashboard:all_messages:${Date.now()}`;
+    const channel = supabase.channel(channelName);
 
     // Listen for all new messages to update conversations
     // IMPORTANT: No filtering by sender_type - accepts both 'user' and 'admin' messages
@@ -444,7 +447,8 @@ export class ChatService {
       async (payload) => {
         console.log('[ChatService] Admin dashboard received message:', {
           messageId: payload.new.id,
-          senderType: payload.new.sender_type
+          senderType: payload.new.sender_type,
+          userId: payload.new.user_id
         });
 
         // Fetch the complete message with user data
@@ -462,7 +466,7 @@ export class ChatService {
           .single();
 
         if (!error && message) {
-          console.log('[ChatService] Admin dashboard processing:', message.sender_type, 'message');
+          console.log('[ChatService] Admin dashboard processing:', message.sender_type, 'message for user:', message.user_id);
           // Call the callback with the message - NO FILTERING by sender_type
           onNewMessage(message as ChatMessage);
           if (onConversationUpdate) {
@@ -474,6 +478,7 @@ export class ChatService {
       }
     );
 
+    console.log('[ChatService] Starting admin dashboard subscription:', channelName);
     return channel.subscribe();
   }
 }
