@@ -40,7 +40,7 @@ const MinimalistHomePage = () => {
         return [];
       }
 
-      return (products || []).map((product: any) => ({
+      return (products || []).map((product: Record<string, any>) => ({
         id: product.id,
         name: product.name || 'Unknown Product',
         brand: product.brand || 'Generic',

@@ -19,7 +19,9 @@ A modern e-commerce platform for automotive parts and accessories, built with Re
 - **Seller Dashboard**: Vendor management interface
 
 ### 🎨 Modern UI/UX
+- **Minimalist Homepage**: Clean, high-contrast design with modular components
 - **Responsive Design**: Mobile-first design with Tailwind CSS
+- **Accent Color System**: Strategic use of #b22222 for CTAs and highlights
 - **Dark/Light Mode**: Theme switching with system preference detection
 - **Component Library**: Consistent UI with Shadcn/ui components
 - **Accessibility**: ARIA labels and keyboard navigation support
@@ -79,11 +81,19 @@ src/
 ├── components/                 # Reusable UI components
 │   ├── ui/                    # Shadcn/ui components
 │   ├── dashboard/             # Dashboard-specific components
+│   ├── homepage/              # Minimalist homepage components
+│   │   ├── Hero.tsx           # Main hero section
+│   │   ├── VehicleSearch.tsx  # Vehicle finder module
+│   │   ├── Features.tsx       # Features section with icons
+│   │   ├── Categories.tsx     # Category grid
+│   │   ├── ProductGrid.tsx    # Product display grid
+│   │   ├── MinimalistHeader.tsx # Clean header with search
+│   │   └── MinimalistFooter.tsx # Organized footer
 │   ├── Header.tsx             # Main navigation header
 │   ├── Footer.tsx             # Site footer
 │   └── ProductCard.tsx        # Product display component
 ├── pages/                     # Route components
-│   ├── Home.tsx              # Landing page
+│   ├── Home.tsx              # Minimalist landing page
 │   ├── Shop.tsx              # Product catalog
 │   ├── Dashboard.tsx         # Vehicle dashboard
 │   ├── Cart.tsx              # Shopping cart
@@ -98,6 +108,23 @@ src/
 ├── data/                      # Static data and constants
 └── styles/                    # Custom CSS files
 ```
+
+## Design System
+
+### Minimalist Homepage
+The homepage features a clean, minimalist design inspired by modern automotive industry aesthetics:
+
+- **Color Palette**: High-contrast black (#171717), white, and gray scheme
+- **Accent Color**: Strategic use of #b22222 for CTAs, icons, and interactive elements
+- **Typography**: Modern sans-serif with strong weight contrast
+- **Layout**: Modular grid system with ample white space
+- **Components**: Reusable, accessible components with consistent styling
+
+### Key Design Principles
+- **Minimalism**: Clean lines and uncluttered layouts
+- **Accessibility**: Keyboard navigation and screen reader support
+- **Responsiveness**: Mobile-first design with proper breakpoints
+- **Performance**: Optimized images and lazy loading
 
 ## Development
 
