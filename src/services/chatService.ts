@@ -174,10 +174,11 @@ export class ChatService {
   }
 
   /**
-   * Set typing indicator
+   * Set typing indicator using proper UPSERT logic
    */
   static async setTypingIndicator(userId: string, isTyping: boolean, isAdmin = false): Promise<void> {
     if (isTyping) {
+      // Use UPSERT to avoid duplicate key constraint errors
       const { error } = await supabase
         .from('typing_indicators')
         .upsert({
@@ -186,12 +187,15 @@ export class ChatService {
           is_typing: true,
           last_typed_at: new Date().toISOString(),
           is_admin: isAdmin,
+        }, {
+          onConflict: 'user_id,conversation_user_id'
         });
       
       if (error) {
         console.error('Error setting typing indicator:', error);
       }
     } else {
+      // Remove typing indicator when not typing
       const { error } = await supabase
         .from('typing_indicators')
         .delete()
@@ -251,6 +255,7 @@ export class ChatService {
 
   /**
    * Enhanced real-time message subscription with instant delivery
+   * This handles both user-to-admin and admin-to-user message broadcasting
    */
   static subscribeToInstantMessages(
     userId: string,
@@ -259,7 +264,7 @@ export class ChatService {
   ) {
     const channel = supabase.channel(`instant_chat:${userId}`);
 
-    // Subscribe to new messages
+    // Subscribe to messages for this specific user (both incoming and outgoing)
     channel.on(
       'postgres_changes',
       {
@@ -302,12 +307,12 @@ export class ChatService {
         async (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const typingData = payload.new as TypingIndicator;
-            if (typingData.is_typing) {
-              // Get user info
+            if (typingData.is_typing && typingData.user_id !== userId) {
+              // Only show typing indicator for other users (not self)
               const { data: profile } = await supabase
                 .from('profiles')
                 .select('first_name, last_name, is_admin')
-                .eq('user_id', userId)
+                .eq('user_id', typingData.user_id)
                 .single();
               
               if (profile) {

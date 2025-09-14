@@ -2,6 +2,7 @@ import { useState, useRef, KeyboardEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send } from 'lucide-react';
+import { useThrottle } from '@/hooks/use-debounce';
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
@@ -13,6 +14,9 @@ const MessageInput = ({ onSendMessage, onTyping, disabled }: MessageInputProps) 
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Throttle typing indicator calls to prevent database spam
+  const throttledTyping = useThrottle(onTyping, 1000);
 
   const handleSend = async () => {
     if (!message.trim() || isSending || disabled) return;
@@ -41,8 +45,8 @@ const MessageInput = ({ onSendMessage, onTyping, disabled }: MessageInputProps) 
       return;
     }
 
-    // Handle typing indicator
-    onTyping();
+    // Handle typing indicator with throttling
+    throttledTyping();
   };
 
   const handleInputChange = (value: string) => {
@@ -54,9 +58,9 @@ const MessageInput = ({ onSendMessage, onTyping, disabled }: MessageInputProps) 
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
     
-    // Trigger typing indicator
+    // Trigger typing indicator with throttling when user is typing
     if (value.trim()) {
-      onTyping();
+      throttledTyping();
     }
   };
 

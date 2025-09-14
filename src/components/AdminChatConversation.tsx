@@ -57,9 +57,12 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
     loadMessages();
   }, [userId, toast]);
 
-  // Set up real-time subscription
+  // Set up real-time subscription using the enhanced instant messages
   useEffect(() => {
-    subscriptionRef.current = ChatService.subscribeToMessages(
+    if (!currentAdmin) return;
+
+    // Use the enhanced subscription that handles both user and admin messages
+    subscriptionRef.current = ChatService.subscribeToInstantMessages(
       userId,
       (newMessage: ChatMessage) => {
         setMessages(prev => [...prev, newMessage]);
@@ -71,7 +74,7 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
         subscriptionRef.current.unsubscribe();
       }
     };
-  }, [userId]);
+  }, [userId, currentAdmin]);
 
   // Auto-scroll to bottom
   useEffect(() => {

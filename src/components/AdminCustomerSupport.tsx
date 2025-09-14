@@ -90,10 +90,16 @@ const AdminCustomerSupport = () => {
 
     loadConversations();
 
-    // Set up real-time subscription for new messages
+    // Set up real-time subscription for new messages from all users
     const subscription = ChatService.subscribeToAllMessages((newMessage) => {
       // Refresh conversations when new messages arrive
       loadConversations();
+      
+      // Update selected conversation if it matches the new message
+      if (selectedConversation && selectedConversation.userId === newMessage.user_id) {
+        // Force refresh of the selected conversation to show new messages
+        setSelectedConversation(prev => prev ? { ...prev } : null);
+      }
     });
 
     return () => {
@@ -101,7 +107,7 @@ const AdminCustomerSupport = () => {
         supabase.removeChannel(subscription);
       }
     };
-  }, [isAdmin, toast]);
+  }, [isAdmin, toast, selectedConversation]);
 
   // Filter conversations based on search query
   const filteredConversations = conversations.filter(conv => {

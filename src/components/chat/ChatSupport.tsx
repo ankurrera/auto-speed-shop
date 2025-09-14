@@ -108,7 +108,7 @@ const ChatSupport = () => {
       {!isOpen && (
         <Button
           onClick={handleOpenChat}
-          className={`fixed shadow-lg z-40 hover:scale-105 transition-transform relative ${
+          className={`fixed shadow-lg z-40 hover:scale-105 transition-transform flex items-center justify-center ${
             isMobile 
               ? 'bottom-6 right-6 h-16 w-16 rounded-full' 
               : 'bottom-4 right-4 h-14 w-14 rounded-full'
