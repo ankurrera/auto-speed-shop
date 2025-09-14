@@ -25,6 +25,7 @@ export class ChatService {
     console.log('[ChatService] Sending message:', {
       userId: data.userId,
       isFromAdmin: data.isFromAdmin,
+      senderType: data.isFromAdmin ? 'admin' : 'user',
       messagePreview: data.message.substring(0, 50) + (data.message.length > 50 ? '...' : ''),
       adminId: data.adminId
     });
@@ -33,6 +34,7 @@ export class ChatService {
       user_id: data.userId,
       message: data.message,
       is_from_admin: data.isFromAdmin,
+      sender_type: data.isFromAdmin ? 'admin' : 'user',
       admin_id: data.adminId || null,
     };
 
@@ -57,6 +59,7 @@ export class ChatService {
     console.log('[ChatService] Message sent successfully:', {
       messageId: message.id,
       isFromAdmin: message.is_from_admin,
+      senderType: message.sender_type,
       timestamp: message.created_at
     });
 
@@ -293,6 +296,7 @@ export class ChatService {
           messageId: payload.new.id,
           userId: payload.new.user_id,
           isFromAdmin: payload.new.is_from_admin,
+          senderType: payload.new.sender_type,
           timestamp: payload.new.created_at
         });
 
@@ -314,6 +318,7 @@ export class ChatService {
           console.log('[ChatService] Instant messages calling onMessage with complete message:', {
             messageId: message.id,
             isFromAdmin: message.is_from_admin,
+            senderType: message.sender_type,
             userProfile: message.user
           });
           onMessage(message as ChatMessage);
@@ -417,6 +422,7 @@ export class ChatService {
           messageId: payload.new.id,
           userId: payload.new.user_id,
           isFromAdmin: payload.new.is_from_admin,
+          senderType: payload.new.sender_type,
           timestamp: payload.new.created_at
         });
 
@@ -438,6 +444,7 @@ export class ChatService {
           console.log('[ChatService] Admin dashboard calling onNewMessage with complete message:', {
             messageId: message.id,
             isFromAdmin: message.is_from_admin,
+            senderType: message.sender_type,
             userProfile: message.user
           });
           onNewMessage(message as ChatMessage);

@@ -119,6 +119,7 @@ const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProp
         console.log('[ChatWindow] User received new message:', {
           messageId: newMessage.id,
           isFromAdmin: newMessage.is_from_admin,
+          senderType: newMessage.sender_type,
           messagePreview: newMessage.message.substring(0, 50) + (newMessage.message.length > 50 ? '...' : ''),
           userProfile: newMessage.user
         });
@@ -144,7 +145,8 @@ const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProp
     console.log('[ChatWindow] User sending message:', {
       userId: currentUser.id,
       messagePreview: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
-      isFromAdmin: false
+      isFromAdmin: false,
+      senderType: 'user'
     });
 
     try {

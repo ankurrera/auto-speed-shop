@@ -98,6 +98,7 @@ const AdminCustomerSupport = () => {
           messageId: newMessage.id,
           userId: newMessage.user_id,
           isFromAdmin: newMessage.is_from_admin,
+          senderType: newMessage.sender_type,
           messagePreview: newMessage.message.substring(0, 50) + (newMessage.message.length > 50 ? '...' : ''),
           userProfile: newMessage.user
         });
