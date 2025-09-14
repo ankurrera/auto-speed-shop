@@ -11,6 +11,7 @@ import MessageInput from './MessageInput';
 interface ChatWindowProps {
   isOpen: boolean;
   onClose: () => void;
+  isAuthenticated?: boolean;
 }
 
 interface User {
@@ -22,7 +23,7 @@ interface User {
   };
 }
 
-const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
+const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -35,9 +36,14 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
   const subscriptionRef = useRef<ReturnType<typeof ChatService.subscribeToInstantMessages> | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Get current user
+  // Get current user only if authenticated
   useEffect(() => {
     const getCurrentUser = async () => {
+      if (!isAuthenticated) {
+        setCurrentUser(null);
+        return;
+      }
+
       try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
@@ -76,7 +82,7 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
     if (isOpen) {
       getCurrentUser();
     }
-  }, [isOpen]);
+  }, [isOpen, isAuthenticated]);
 
   // Load messages when chat opens
   useEffect(() => {
@@ -208,7 +214,7 @@ const ChatWindow = ({ isOpen, onClose }: ChatWindowProps) => {
             <MessageInput 
               onSendMessage={handleSendMessage}
               onTyping={handleTyping}
-              disabled={!currentUser}
+              disabled={!isAuthenticated || !currentUser}
             />
           </div>
         </CardContent>
