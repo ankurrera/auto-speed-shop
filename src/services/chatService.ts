@@ -333,11 +333,11 @@ export class ChatService {
   }
 
   /**
-   * Subscribe to all new messages (admin view)
+   * Subscribe to all new messages (admin view) - Enhanced to handle real-time updates
    */
   static subscribeToAllMessages(onMessage: (message: ChatMessage) => void) {
     return supabase
-      .channel('chat_messages:all')
+      .channel('chat_messages:all_admin')
       .on(
         'postgres_changes',
         {
@@ -366,5 +366,46 @@ export class ChatService {
         }
       )
       .subscribe();
+  }
+
+  /**
+   * Subscribe to all conversations for admin dashboard updates
+   */
+  static subscribeToAdminDashboard(onNewMessage: (message: ChatMessage) => void, onConversationUpdate?: () => void) {
+    const channel = supabase.channel('admin_dashboard:all_messages');
+
+    // Listen for all new messages to update conversations
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+      },
+      async (payload) => {
+        // Fetch the complete message with user data
+        const { data: message, error } = await supabase
+          .from('chat_messages')
+          .select(`
+            *,
+            user:profiles!chat_messages_user_id_fkey(
+              first_name,
+              last_name,
+              email
+            )
+          `)
+          .eq('id', payload.new.id)
+          .single();
+
+        if (!error && message) {
+          onNewMessage(message as ChatMessage);
+          if (onConversationUpdate) {
+            onConversationUpdate();
+          }
+        }
+      }
+    );
+
+    return channel.subscribe();
   }
 }
