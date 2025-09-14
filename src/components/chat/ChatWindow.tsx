@@ -181,6 +181,55 @@ const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProp
 
   if (!isOpen) return null;
 
+  // Show authentication prompt for unauthenticated users
+  if (!isAuthenticated) {
+    return (
+      <div className={`fixed z-50 shadow-2xl ${
+        isMobile 
+          ? 'inset-0 p-4' 
+          : 'bottom-4 right-4 w-96 h-[400px]'
+      }`}>
+        <Card className="h-full flex flex-col">
+          <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Support Chat
+            </CardTitle>
+            <button
+              onClick={onClose}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ✕
+            </button>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col p-4">
+            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4 p-4">
+              <MessageCircle className="h-16 w-16 text-muted-foreground" />
+              <div className="space-y-2 max-w-sm">
+                <h3 className="text-lg font-semibold">Welcome to Customer Support</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Sign in to your account to start a conversation with our support team.
+                  We're here to help with any questions about your orders, products, or account.
+                </p>
+              </div>
+              <div className="space-y-3 w-full max-w-xs">
+                <button
+                  onClick={() => window.location.href = '/account'}
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md transition-colors font-medium"
+                >
+                  Sign In to Chat
+                </button>
+                <p className="text-xs text-muted-foreground">
+                  Don't have an account? <a href="/account" className="text-primary hover:underline font-medium">Sign up here</a>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className={`fixed z-50 shadow-2xl ${
       isMobile 
@@ -195,7 +244,8 @@ const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProp
           </CardTitle>
           <button
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors text-xl leading-none p-1"
+            aria-label="Close chat"
           >
             ✕
           </button>
