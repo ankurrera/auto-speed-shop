@@ -22,10 +22,17 @@ export class ChatService {
     isFromAdmin: boolean;
     adminId?: string;
   }): Promise<ChatMessage> {
+    console.log('[ChatService] Sending message:', {
+      userId: data.userId,
+      senderType: data.isFromAdmin ? 'admin' : 'user',
+      messagePreview: data.message.substring(0, 50) + (data.message.length > 50 ? '...' : '')
+    });
+
     const messageData: ChatMessageInsert = {
       user_id: data.userId,
       message: data.message,
       is_from_admin: data.isFromAdmin,
+      sender_type: data.isFromAdmin ? 'admin' : 'user',
       admin_id: data.adminId || null,
     };
 
@@ -43,8 +50,14 @@ export class ChatService {
       .single();
 
     if (error) {
+      console.error('[ChatService] Failed to send message:', error);
       throw new Error(`Failed to send message: ${error.message}`);
     }
+
+    console.log('[ChatService] Message sent successfully:', {
+      messageId: message.id,
+      senderType: message.sender_type
+    });
 
     return message as ChatMessage;
   }
@@ -262,6 +275,7 @@ export class ChatService {
     onMessage: (message: ChatMessage) => void,
     onTypingChange?: (isTyping: boolean, userInfo?: { isAdmin: boolean; name: string }) => void
   ) {
+    console.log('[ChatService] Setting up instant messages subscription for user:', userId);
     const channel = supabase.channel(`instant_chat:${userId}`);
 
     // Subscribe to messages for this specific user (both incoming and outgoing)
@@ -274,6 +288,14 @@ export class ChatService {
         filter: `user_id=eq.${userId}`,
       },
       async (payload) => {
+        console.log('[ChatService] Instant messages received new message payload:', {
+          messageId: payload.new.id,
+          userId: payload.new.user_id,
+          isFromAdmin: payload.new.is_from_admin,
+          senderType: payload.new.sender_type,
+          timestamp: payload.new.created_at
+        });
+
         // Fetch the complete message with user data immediately
         const { data: message, error } = await supabase
           .from('chat_messages')
@@ -289,7 +311,15 @@ export class ChatService {
           .single();
 
         if (!error && message) {
+          console.log('[ChatService] Instant messages calling onMessage with complete message:', {
+            messageId: message.id,
+            isFromAdmin: message.is_from_admin,
+            senderType: message.sender_type,
+            userProfile: message.user
+          });
           onMessage(message as ChatMessage);
+        } else {
+          console.error('[ChatService] Error fetching complete message for instant messages:', error);
         }
       }
     );
@@ -370,19 +400,29 @@ export class ChatService {
 
   /**
    * Subscribe to all conversations for admin dashboard updates
+   * This method listens for ALL message types (both user and admin messages)
+   * addressing the requirement to NOT filter messages only by sender_type = 'admin'
    */
   static subscribeToAdminDashboard(onNewMessage: (message: ChatMessage) => void, onConversationUpdate?: () => void) {
+    console.log('[ChatService] Setting up admin dashboard subscription for ALL message types');
     const channel = supabase.channel('admin_dashboard:all_messages');
 
     // Listen for all new messages to update conversations
+    // IMPORTANT: No filtering by sender_type - accepts both 'user' and 'admin' messages
     channel.on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
         table: 'chat_messages',
+        // NO FILTER HERE - this receives ALL messages regardless of sender_type
       },
       async (payload) => {
+        console.log('[ChatService] Admin dashboard received message:', {
+          messageId: payload.new.id,
+          senderType: payload.new.sender_type
+        });
+
         // Fetch the complete message with user data
         const { data: message, error } = await supabase
           .from('chat_messages')
@@ -398,10 +438,14 @@ export class ChatService {
           .single();
 
         if (!error && message) {
+          console.log('[ChatService] Admin dashboard processing:', message.sender_type, 'message');
+          // Call the callback with the message - NO FILTERING by sender_type
           onNewMessage(message as ChatMessage);
           if (onConversationUpdate) {
             onConversationUpdate();
           }
+        } else {
+          console.error('[ChatService] Error fetching complete message for admin dashboard:', error);
         }
       }
     );

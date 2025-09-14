@@ -90,22 +90,33 @@ const AdminCustomerSupport = () => {
 
     loadConversations();
 
-    // Set up real-time subscription for new messages from all users using enhanced admin dashboard subscription
+    // Set up real-time subscription for new messages from ALL users AND admins
+    // This listens to all INSERT events on chat_messages table regardless of sender_type
+    // addressing the requirement to "listen for 'newMessage' events regardless of whether the sender is admin or user"
     const subscription = ChatService.subscribeToAdminDashboard(
       (newMessage) => {
-        // Log new message for debugging
-        console.log('Admin dashboard received new message:', newMessage);
+        // Log new message for debugging - accepting ALL message types
+        console.log('[AdminCustomerSupport] Received:', newMessage.sender_type, 'message from user', newMessage.user_id);
         
-        // Refresh conversations when new messages arrive
+        // Ensure we process both user and admin messages equally
+        if (newMessage.sender_type === 'user') {
+          console.log('[AdminCustomerSupport] Processing USER message');
+        } else if (newMessage.sender_type === 'admin') {
+          console.log('[AdminCustomerSupport] Processing ADMIN message');
+        }
+        
+        // Refresh conversations when new messages arrive (for all message types)
         loadConversations();
         
         // Update selected conversation if it matches the new message
         if (selectedConversation && selectedConversation.userId === newMessage.user_id) {
+          console.log('[AdminCustomerSupport] Updating selected conversation for new message');
           // Force refresh of the selected conversation to show new messages
           setSelectedConversation(prev => prev ? { ...prev } : null);
         }
       },
       () => {
+        console.log('[AdminCustomerSupport] Conversation update callback triggered');
         // Callback for conversation updates
         loadConversations();
       }
