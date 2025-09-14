@@ -60,13 +60,18 @@ const ChatSupport = () => {
 
   // Set up notification system for logged in users
   useEffect(() => {
-    if (!isLoggedIn || !currentUserId || isOpen) {
-      // Clear unread indicator when chat is open or user is not logged in
+    if (!isLoggedIn || !currentUserId) {
+      // Clear unread indicator when user is not logged in
       setHasUnreadMessages(false);
       return;
     }
 
-    // Subscribe to new messages to show notification badge
+    // Clear unread indicator when chat is open
+    if (isOpen) {
+      setHasUnreadMessages(false);
+    }
+
+    // Subscribe to new messages to show notification badge and auto-open for admin messages
     subscriptionRef.current = ChatService.subscribeToInstantMessages(
       currentUserId,
       (newMessage) => {
@@ -74,8 +79,11 @@ const ChatSupport = () => {
         if (newMessage.is_from_admin && !isOpen) {
           setHasUnreadMessages(true);
           
-          // Optional: Auto-open chat for admin messages
-          // setIsOpen(true);
+          // Auto-open chat for admin messages after a short delay
+          setTimeout(() => {
+            setIsOpen(true);
+            setHasUnreadMessages(false);
+          }, 1000);
         }
       }
     );
@@ -111,8 +119,8 @@ const ChatSupport = () => {
           
           {/* Notification badge */}
           {hasUnreadMessages && (
-            <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center">
-              <span className="h-2 w-2 bg-white rounded-full animate-pulse"></span>
+            <span className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center border-2 border-white dark:border-background">
+              <span className="h-3 w-3 bg-white rounded-full animate-pulse"></span>
             </span>
           )}
         </Button>
