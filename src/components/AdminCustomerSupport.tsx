@@ -96,20 +96,13 @@ const AdminCustomerSupport = () => {
     const subscription = ChatService.subscribeToAdminDashboard(
       (newMessage) => {
         // Log new message for debugging - accepting ALL message types
-        console.log('[AdminCustomerSupport] Admin dashboard received new message (all types):', {
-          messageId: newMessage.id,
-          userId: newMessage.user_id,
-          isFromAdmin: newMessage.is_from_admin,
-          senderType: newMessage.sender_type,
-          messagePreview: newMessage.message.substring(0, 50) + (newMessage.message.length > 50 ? '...' : ''),
-          userProfile: newMessage.user
-        });
+        console.log('[AdminCustomerSupport] Received:', newMessage.sender_type, 'message from user', newMessage.user_id);
         
         // Ensure we process both user and admin messages equally
         if (newMessage.sender_type === 'user') {
-          console.log('[AdminCustomerSupport] Processing USER message in admin dashboard');
+          console.log('[AdminCustomerSupport] Processing USER message');
         } else if (newMessage.sender_type === 'admin') {
-          console.log('[AdminCustomerSupport] Processing ADMIN message in admin dashboard');
+          console.log('[AdminCustomerSupport] Processing ADMIN message');
         }
         
         // Refresh conversations when new messages arrive (for all message types)

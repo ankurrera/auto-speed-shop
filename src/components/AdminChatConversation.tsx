@@ -66,20 +66,10 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
     subscriptionRef.current = ChatService.subscribeToInstantMessages(
       userId,
       (newMessage: ChatMessage) => {
-        console.log('[AdminChatConversation] Received new message (accepting all types):', {
-          messageId: newMessage.id,
-          isFromAdmin: newMessage.is_from_admin,
-          senderType: newMessage.sender_type,
-          messagePreview: newMessage.message.substring(0, 50) + (newMessage.message.length > 50 ? '...' : ''),
-          userProfile: newMessage.user
-        });
+        console.log('[AdminChatConversation] Received', newMessage.sender_type, 'message');
 
         // Explicitly log the message type being processed
-        if (newMessage.sender_type === 'user') {
-          console.log('[AdminChatConversation] Adding USER message to conversation');
-        } else if (newMessage.sender_type === 'admin') {
-          console.log('[AdminChatConversation] Adding ADMIN message to conversation');
-        }
+        console.log('[AdminChatConversation] Adding', newMessage.sender_type, 'message to conversation');
 
         // Add the message to the conversation - NO FILTERING by sender type
         setMessages(prev => [...prev, newMessage]);

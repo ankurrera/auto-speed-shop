@@ -24,10 +24,8 @@ export class ChatService {
   }): Promise<ChatMessage> {
     console.log('[ChatService] Sending message:', {
       userId: data.userId,
-      isFromAdmin: data.isFromAdmin,
       senderType: data.isFromAdmin ? 'admin' : 'user',
-      messagePreview: data.message.substring(0, 50) + (data.message.length > 50 ? '...' : ''),
-      adminId: data.adminId
+      messagePreview: data.message.substring(0, 50) + (data.message.length > 50 ? '...' : '')
     });
 
     const messageData: ChatMessageInsert = {
@@ -58,9 +56,7 @@ export class ChatService {
 
     console.log('[ChatService] Message sent successfully:', {
       messageId: message.id,
-      isFromAdmin: message.is_from_admin,
-      senderType: message.sender_type,
-      timestamp: message.created_at
+      senderType: message.sender_type
     });
 
     return message as ChatMessage;
@@ -422,12 +418,9 @@ export class ChatService {
         // NO FILTER HERE - this receives ALL messages regardless of sender_type
       },
       async (payload) => {
-        console.log('[ChatService] Admin dashboard received new message payload (all types):', {
+        console.log('[ChatService] Admin dashboard received message:', {
           messageId: payload.new.id,
-          userId: payload.new.user_id,
-          isFromAdmin: payload.new.is_from_admin,
-          senderType: payload.new.sender_type,
-          timestamp: payload.new.created_at
+          senderType: payload.new.sender_type
         });
 
         // Fetch the complete message with user data
@@ -445,12 +438,7 @@ export class ChatService {
           .single();
 
         if (!error && message) {
-          console.log('[ChatService] Admin dashboard calling onNewMessage with complete message (all types):', {
-            messageId: message.id,
-            isFromAdmin: message.is_from_admin,
-            senderType: message.sender_type,
-            userProfile: message.user
-          });
+          console.log('[ChatService] Admin dashboard processing:', message.sender_type, 'message');
           // Call the callback with the message - NO FILTERING by sender_type
           onNewMessage(message as ChatMessage);
           if (onConversationUpdate) {
