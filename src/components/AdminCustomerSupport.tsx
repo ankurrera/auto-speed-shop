@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,14 @@ const AdminCustomerSupport = () => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
+  
+  // Ref to store the latest selectedConversation for use in subscription callbacks
+  const selectedConversationRef = useRef<Conversation | null>(null);
+  
+  // Update ref whenever selectedConversation changes
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
 
   // Check if current user is admin
   useEffect(() => {
@@ -49,51 +57,65 @@ const AdminCustomerSupport = () => {
     checkAdminStatus();
   }, []);
 
-  // Load conversations
+  // Create a stable loadConversations function using useCallback
+  const loadConversations = useCallback(async () => {
+    console.log('[AdminCustomerSupport] Loading conversations...');
+    setLoading(true);
+    try {
+      const allConversations = await ChatService.getAllConversations();
+      console.log('[AdminCustomerSupport] Loaded', allConversations.length, 'conversations');
+      
+      // Calculate unread count for each conversation (messages from users that admins haven't responded to)
+      const conversationsWithUnread = await Promise.all(
+        allConversations.map(async (conv) => {
+          // Get the last admin message timestamp for this conversation
+          const { data: lastAdminMessage } = await supabase
+            .from('chat_messages')
+            .select('created_at')
+            .eq('user_id', conv.userId)
+            .eq('is_from_admin', true)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          // Count user messages newer than the last admin response (or all user messages if no admin response yet)
+          const lastAdminTimestamp = lastAdminMessage?.created_at || '1970-01-01';
+          const { data: unreadMessages } = await supabase
+            .from('chat_messages')
+            .select('id')
+            .eq('user_id', conv.userId)
+            .eq('is_from_admin', false)
+            .gt('created_at', lastAdminTimestamp);
+          
+          const unreadCount = unreadMessages?.length || 0;
+          console.log('[AdminCustomerSupport] User', conv.userId, 'has', unreadCount, 'unread messages (after last admin response at', lastAdminTimestamp, ')');
+          
+          return {
+            ...conv,
+            unreadCount
+          };
+        })
+      );
+
+      setConversations(conversationsWithUnread);
+      console.log('[AdminCustomerSupport] Set conversations with unread counts');
+    } catch (error) {
+      console.error('[AdminCustomerSupport] Failed to load conversations:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load customer conversations',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  // Load conversations and set up real-time subscription
   useEffect(() => {
     if (!isAdmin) return;
 
-    const loadConversations = async () => {
-      console.log('[AdminCustomerSupport] Loading conversations...');
-      setLoading(true);
-      try {
-        const allConversations = await ChatService.getAllConversations();
-        console.log('[AdminCustomerSupport] Loaded', allConversations.length, 'conversations');
-        
-        // Calculate unread count for each conversation (messages from users that admins haven't responded to)
-        const conversationsWithUnread = await Promise.all(
-          allConversations.map(async (conv) => {
-            const { data: unreadMessages } = await supabase
-              .from('chat_messages')
-              .select('id')
-              .eq('user_id', conv.userId)
-              .eq('is_from_admin', false)
-              .gt('created_at', conv.lastMessage?.created_at || '1970-01-01');
-            
-            const unreadCount = unreadMessages?.length || 0;
-            console.log('[AdminCustomerSupport] User', conv.userId, 'has', unreadCount, 'unread messages');
-            
-            return {
-              ...conv,
-              unreadCount
-            };
-          })
-        );
-
-        setConversations(conversationsWithUnread);
-        console.log('[AdminCustomerSupport] Set conversations with unread counts');
-      } catch (error) {
-        console.error('[AdminCustomerSupport] Failed to load conversations:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load customer conversations',
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    // Load initial conversations
     loadConversations();
 
     // Set up real-time subscription for new messages from ALL users AND admins
@@ -121,7 +143,9 @@ const AdminCustomerSupport = () => {
         loadConversations();
         
         // Update selected conversation if it matches the new message
-        if (selectedConversation && selectedConversation.userId === newMessage.user_id) {
+        // Use ref to get current value without causing subscription recreation
+        const currentSelectedConversation = selectedConversationRef.current;
+        if (currentSelectedConversation && currentSelectedConversation.userId === newMessage.user_id) {
           console.log('[AdminCustomerSupport] Updating selected conversation for new message');
           // Force refresh of the selected conversation to show new messages
           setSelectedConversation(prev => prev ? { ...prev } : null);
@@ -139,7 +163,7 @@ const AdminCustomerSupport = () => {
         supabase.removeChannel(subscription);
       }
     };
-  }, [isAdmin, toast, selectedConversation]);
+  }, [isAdmin, loadConversations]);
 
   // Filter conversations based on search query
   const filteredConversations = conversations.filter(conv => {
