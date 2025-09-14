@@ -96,54 +96,78 @@ export class ChatService {
     messages: ChatMessage[];
     lastMessage: ChatMessage;
   }[]> {
-    // First get all users who have sent messages
-    const { data: conversations, error } = await supabase
+    console.log('[ChatService] Getting all conversations for admin view');
+
+    // Get all distinct user_ids who have participated in chat
+    const { data: distinctUsers, error: usersError } = await supabase
       .from('chat_messages')
-      .select(`
-        user_id,
-        user:profiles!chat_messages_user_id_fkey(
-          first_name,
-          last_name,
-          email
-        )
-      `)
+      .select('user_id')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      throw new Error(`Failed to fetch conversations: ${error.message}`);
+    if (usersError) {
+      console.error('[ChatService] Error fetching distinct users:', usersError);
+      throw new Error(`Failed to fetch conversations: ${usersError.message}`);
     }
 
-    // Group by user and get messages for each
-    const userGroups = conversations.reduce((acc, msg) => {
-      // Only include conversations where user profile exists
-      if (!acc[msg.user_id] && msg.user) {
-        acc[msg.user_id] = {
-          userId: msg.user_id,
-          user: msg.user,
-        };
-      }
-      return acc;
-    }, {} as Record<string, { userId: string; user: { first_name: string; last_name: string; email: string } }>);
+    // Get unique user IDs
+    const uniqueUserIds = [...new Set(distinctUsers.map(item => item.user_id))];
+    console.log('[ChatService] Found conversations for users:', uniqueUserIds);
 
-    // Get messages for each user
+    // Get user profiles for each conversation
     const conversationsWithMessages = await Promise.all(
-      Object.values(userGroups).map(async (group: { userId: string; user: { first_name: string; last_name: string; email: string } }) => {
-        const messages = await this.getMessages(group.userId);
-        return {
-          ...group,
-          messages,
-          lastMessage: messages[messages.length - 1],
-        };
+      uniqueUserIds.map(async (userId: string) => {
+        try {
+          // Get user profile
+          const { data: userProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('user_id', userId)
+            .single();
+
+          if (profileError) {
+            console.warn('[ChatService] No profile found for user:', userId, profileError);
+            return null;
+          }
+
+          // Get messages for this user
+          const messages = await this.getMessages(userId);
+          
+          if (messages.length === 0) {
+            console.warn('[ChatService] No messages found for user:', userId);
+            return null;
+          }
+
+          const lastMessage = messages[messages.length - 1];
+          
+          console.log('[ChatService] Conversation for user:', userId, {
+            messageCount: messages.length,
+            lastMessageType: lastMessage.sender_type,
+            lastMessageTime: lastMessage.created_at
+          });
+
+          return {
+            userId,
+            user: userProfile,
+            messages,
+            lastMessage,
+          };
+        } catch (error) {
+          console.error('[ChatService] Error processing conversation for user:', userId, error);
+          return null;
+        }
       })
     );
 
-    // Sort by last message timestamp
-    return conversationsWithMessages
-      .filter(conv => conv.lastMessage)
+    // Filter out null results and sort by last message timestamp
+    const validConversations = conversationsWithMessages
+      .filter((conv): conv is NonNullable<typeof conv> => conv !== null)
       .sort((a, b) => 
         new Date(b.lastMessage.created_at).getTime() - 
         new Date(a.lastMessage.created_at).getTime()
       );
+
+    console.log('[ChatService] Returning', validConversations.length, 'valid conversations');
+    return validConversations;
   }
 
   /**

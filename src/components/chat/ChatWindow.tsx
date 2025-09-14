@@ -123,7 +123,18 @@ const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProp
           messagePreview: newMessage.message.substring(0, 50) + (newMessage.message.length > 50 ? '...' : ''),
           userProfile: newMessage.user
         });
-        setMessages(prev => [...prev, newMessage]);
+        
+        // Check for duplicate messages to avoid showing the same message twice
+        setMessages(prev => {
+          const isDuplicate = prev.some(msg => msg.id === newMessage.id);
+          if (isDuplicate) {
+            console.log('[ChatWindow] Skipping duplicate message:', newMessage.id);
+            return prev;
+          }
+          
+          console.log('[ChatWindow] Adding new', newMessage.sender_type, 'message');
+          return [...prev, newMessage];
+        });
       },
       (isTypingNow: boolean, userInfo?: { isAdmin: boolean; name: string }) => {
         setIsTyping(isTypingNow);
