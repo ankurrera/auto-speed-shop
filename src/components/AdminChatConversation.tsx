@@ -61,23 +61,37 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
   useEffect(() => {
     if (!currentAdmin) return;
 
+    console.log('[AdminChatConversation] Setting up real-time subscription for user:', userId);
+
     // Use the enhanced subscription that handles both user and admin messages
     // This addresses the requirement to listen for 'newMessage' events regardless of sender type
     subscriptionRef.current = ChatService.subscribeToInstantMessages(
       userId,
       (newMessage: ChatMessage) => {
-        console.log('[AdminChatConversation] Received', newMessage.sender_type, 'message');
+        console.log('[AdminChatConversation] Received', newMessage.sender_type, 'message:', {
+          messageId: newMessage.id,
+          isFromAdmin: newMessage.is_from_admin,
+          senderType: newMessage.sender_type,
+          messagePreview: newMessage.message.substring(0, 50)
+        });
 
-        // Explicitly log the message type being processed
-        console.log('[AdminChatConversation] Adding', newMessage.sender_type, 'message to conversation');
-
-        // Add the message to the conversation - NO FILTERING by sender type
-        setMessages(prev => [...prev, newMessage]);
+        // Check for duplicate messages to avoid showing the same message twice
+        setMessages(prev => {
+          const isDuplicate = prev.some(msg => msg.id === newMessage.id);
+          if (isDuplicate) {
+            console.log('[AdminChatConversation] Skipping duplicate message:', newMessage.id);
+            return prev;
+          }
+          
+          console.log('[AdminChatConversation] Adding new', newMessage.sender_type, 'message to conversation');
+          return [...prev, newMessage];
+        });
       }
     );
 
     return () => {
       if (subscriptionRef.current) {
+        console.log('[AdminChatConversation] Cleaning up subscription for user:', userId);
         subscriptionRef.current.unsubscribe();
       }
     };
@@ -93,21 +107,32 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
   const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || sending || !currentAdmin) return;
 
+    console.log('[AdminChatConversation] Admin sending message:', {
+      userId: userId,
+      adminId: currentAdmin.id,
+      messagePreview: newMessage.trim().substring(0, 50)
+    });
+
     setSending(true);
     try {
-      await ChatService.sendMessage({
+      const sentMessage = await ChatService.sendMessage({
         userId: userId,
         message: newMessage.trim(),
         isFromAdmin: true,
         adminId: currentAdmin.id
       });
       
+      console.log('[AdminChatConversation] Admin message sent successfully:', {
+        messageId: sentMessage.id,
+        senderType: sentMessage.sender_type
+      });
+      
       setNewMessage('');
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('[AdminChatConversation] Failed to send admin message:', error);
       toast({
         title: 'Error',
-        description: 'Failed to send message',
+        description: 'Failed to send message. Please try again.',
         variant: 'destructive'
       });
     } finally {

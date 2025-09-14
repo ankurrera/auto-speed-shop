@@ -54,9 +54,11 @@ const AdminCustomerSupport = () => {
     if (!isAdmin) return;
 
     const loadConversations = async () => {
+      console.log('[AdminCustomerSupport] Loading conversations...');
       setLoading(true);
       try {
         const allConversations = await ChatService.getAllConversations();
+        console.log('[AdminCustomerSupport] Loaded', allConversations.length, 'conversations');
         
         // Calculate unread count for each conversation (messages from users that admins haven't responded to)
         const conversationsWithUnread = await Promise.all(
@@ -68,16 +70,20 @@ const AdminCustomerSupport = () => {
               .eq('is_from_admin', false)
               .gt('created_at', conv.lastMessage?.created_at || '1970-01-01');
             
+            const unreadCount = unreadMessages?.length || 0;
+            console.log('[AdminCustomerSupport] User', conv.userId, 'has', unreadCount, 'unread messages');
+            
             return {
               ...conv,
-              unreadCount: unreadMessages?.length || 0
+              unreadCount
             };
           })
         );
 
         setConversations(conversationsWithUnread);
+        console.log('[AdminCustomerSupport] Set conversations with unread counts');
       } catch (error) {
-        console.error('Failed to load conversations:', error);
+        console.error('[AdminCustomerSupport] Failed to load conversations:', error);
         toast({
           title: 'Error',
           description: 'Failed to load customer conversations',
@@ -96,13 +102,19 @@ const AdminCustomerSupport = () => {
     const subscription = ChatService.subscribeToAdminDashboard(
       (newMessage) => {
         // Log new message for debugging - accepting ALL message types
-        console.log('[AdminCustomerSupport] Received:', newMessage.sender_type, 'message from user', newMessage.user_id);
+        console.log('[AdminCustomerSupport] Received new message:', {
+          messageId: newMessage.id,
+          senderType: newMessage.sender_type,
+          userId: newMessage.user_id,
+          isFromAdmin: newMessage.is_from_admin,
+          messagePreview: newMessage.message.substring(0, 50)
+        });
         
         // Ensure we process both user and admin messages equally
         if (newMessage.sender_type === 'user') {
-          console.log('[AdminCustomerSupport] Processing USER message');
+          console.log('[AdminCustomerSupport] Processing USER message - will refresh conversations');
         } else if (newMessage.sender_type === 'admin') {
-          console.log('[AdminCustomerSupport] Processing ADMIN message');
+          console.log('[AdminCustomerSupport] Processing ADMIN message - will refresh conversations');
         }
         
         // Refresh conversations when new messages arrive (for all message types)
@@ -116,7 +128,7 @@ const AdminCustomerSupport = () => {
         }
       },
       () => {
-        console.log('[AdminCustomerSupport] Conversation update callback triggered');
+        console.log('[AdminCustomerSupport] Conversation update callback triggered - refreshing conversations');
         // Callback for conversation updates
         loadConversations();
       }
