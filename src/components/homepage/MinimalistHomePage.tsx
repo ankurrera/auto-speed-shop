@@ -2,11 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 // Import new minimalist components
+import MinimalistHeader from "@/components/homepage/MinimalistHeader";
 import Hero from "@/components/homepage/Hero";
 import VehicleSearch from "@/components/homepage/VehicleSearch";
 import Features from "@/components/homepage/Features";
 import Categories from "@/components/homepage/Categories";
 import ProductGrid from "@/components/homepage/ProductGrid";
+import MinimalistFooter from "@/components/homepage/MinimalistFooter";
 
 // Define the type for a product object to ensure type safety
 interface Product {
@@ -22,7 +24,7 @@ interface Product {
   isOnSale?: boolean;
 }
 
-const Home = () => {
+const MinimalistHomePage = () => {
   // Fetch featured products from Supabase
   const { data: featuredProducts = [] } = useQuery<Product[]>({
     queryKey: ['featured-products'],
@@ -30,8 +32,7 @@ const Home = () => {
       const { data: products, error: productsError } = await supabase
         .from('products')
         .select('*')
-        .eq('is_featured', true)
-        .eq('is_active', true)
+        .eq('featured', true)
         .limit(8);
 
       if (productsError) {
@@ -43,13 +44,13 @@ const Home = () => {
         id: product.id,
         name: product.name || 'Unknown Product',
         brand: product.brand || 'Generic',
-        price: Number(product.price) || 0,
-        originalPrice: product.compare_at_price ? Number(product.compare_at_price) : undefined,
-        image_urls: product.image_urls || ['/api/placeholder/300/200'],
-        rating: 4.5,
-        reviews: Math.floor(Math.random() * 200) + 50,
-        inStock: product.stock_quantity > 0,
-        isOnSale: product.compare_at_price && Number(product.compare_at_price) > Number(product.price)
+        price: product.price || 0,
+        originalPrice: product.original_price || undefined,
+        image: product.image_urls?.[0] || '/api/placeholder/300/200',
+        rating: product.rating || 4.5,
+        reviewCount: product.reviews || 0,
+        inStock: product.in_stock ?? true,
+        isOnSale: product.original_price && product.original_price > product.price
       }));
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -71,43 +72,52 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <Hero
-        title="Premium Auto Parts"
-        subtitle="for Every Drive"
-        description="Discover high-quality automotive parts and accessories designed for performance, reliability, and style. From everyday maintenance to performance upgrades."
-        ctaText="Shop Now"
-        ctaLink="/shop"
-        imageSrc="/api/placeholder/600/400"
-        imageAlt="Premium automotive part"
-      />
+      {/* Header */}
+      <MinimalistHeader />
 
-      {/* Vehicle Search */}
-      <VehicleSearch />
+      {/* Main Content */}
+      <main>
+        {/* Hero Section */}
+        <Hero
+          title="Premium Auto Parts"
+          subtitle="for Every Drive"
+          description="Discover high-quality automotive parts and accessories designed for performance, reliability, and style. From everyday maintenance to performance upgrades."
+          ctaText="Shop Now"
+          ctaLink="/shop"
+          imageSrc="/api/placeholder/600/400"
+          imageAlt="Premium automotive part"
+        />
 
-      {/* Features Section */}
-      <Features
-        imageSrc="/api/placeholder/600/400"
-        imageAlt="High-quality automotive part detail"
-      />
+        {/* Vehicle Search */}
+        <VehicleSearch />
 
-      {/* Categories */}
-      <Categories
-        title="Top Categories"
-        subtitle="Browse our most popular automotive categories"
-      />
+        {/* Features Section */}
+        <Features
+          imageSrc="/api/placeholder/600/400"
+          imageAlt="High-quality automotive part detail"
+        />
 
-      {/* Featured Products */}
-      <ProductGrid
-        products={transformedProducts}
-        title="Featured Products"
-        subtitle="Top-rated parts chosen by our experts for your car's best performance"
-        showViewAll={true}
-        viewAllLink="/shop"
-        maxProducts={8}
-      />
+        {/* Categories */}
+        <Categories
+          title="Top Categories"
+          subtitle="Browse our most popular automotive categories"
+        />
+
+        {/* Featured Products */}
+        <ProductGrid
+          products={transformedProducts}
+          title="Featured Products"
+          subtitle="Top-rated parts chosen by our experts for your car's best performance"
+          showViewAll={true}
+          viewAllLink="/shop"
+          maxProducts={8}
+        />
+      </main>
+
+      {/* Footer */}
+      <MinimalistFooter />
     </div>
   );
 };
 
-export default Home;
+export default MinimalistHomePage;
