@@ -404,21 +404,25 @@ export class ChatService {
 
   /**
    * Subscribe to all conversations for admin dashboard updates
+   * This method listens for ALL message types (both user and admin messages)
+   * addressing the requirement to NOT filter messages only by sender_type = 'admin'
    */
   static subscribeToAdminDashboard(onNewMessage: (message: ChatMessage) => void, onConversationUpdate?: () => void) {
-    console.log('[ChatService] Setting up admin dashboard subscription');
+    console.log('[ChatService] Setting up admin dashboard subscription for ALL message types');
     const channel = supabase.channel('admin_dashboard:all_messages');
 
     // Listen for all new messages to update conversations
+    // IMPORTANT: No filtering by sender_type - accepts both 'user' and 'admin' messages
     channel.on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
         table: 'chat_messages',
+        // NO FILTER HERE - this receives ALL messages regardless of sender_type
       },
       async (payload) => {
-        console.log('[ChatService] Admin dashboard received new message payload:', {
+        console.log('[ChatService] Admin dashboard received new message payload (all types):', {
           messageId: payload.new.id,
           userId: payload.new.user_id,
           isFromAdmin: payload.new.is_from_admin,
@@ -441,12 +445,13 @@ export class ChatService {
           .single();
 
         if (!error && message) {
-          console.log('[ChatService] Admin dashboard calling onNewMessage with complete message:', {
+          console.log('[ChatService] Admin dashboard calling onNewMessage with complete message (all types):', {
             messageId: message.id,
             isFromAdmin: message.is_from_admin,
             senderType: message.sender_type,
             userProfile: message.user
           });
+          // Call the callback with the message - NO FILTERING by sender_type
           onNewMessage(message as ChatMessage);
           if (onConversationUpdate) {
             onConversationUpdate();

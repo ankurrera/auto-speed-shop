@@ -62,16 +62,26 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
     if (!currentAdmin) return;
 
     // Use the enhanced subscription that handles both user and admin messages
+    // This addresses the requirement to listen for 'newMessage' events regardless of sender type
     subscriptionRef.current = ChatService.subscribeToInstantMessages(
       userId,
       (newMessage: ChatMessage) => {
-        console.log('[AdminChatConversation] Received new message:', {
+        console.log('[AdminChatConversation] Received new message (accepting all types):', {
           messageId: newMessage.id,
           isFromAdmin: newMessage.is_from_admin,
           senderType: newMessage.sender_type,
           messagePreview: newMessage.message.substring(0, 50) + (newMessage.message.length > 50 ? '...' : ''),
           userProfile: newMessage.user
         });
+
+        // Explicitly log the message type being processed
+        if (newMessage.sender_type === 'user') {
+          console.log('[AdminChatConversation] Adding USER message to conversation');
+        } else if (newMessage.sender_type === 'admin') {
+          console.log('[AdminChatConversation] Adding ADMIN message to conversation');
+        }
+
+        // Add the message to the conversation - NO FILTERING by sender type
         setMessages(prev => [...prev, newMessage]);
       }
     );
@@ -155,27 +165,32 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
               <p>No messages in this conversation yet.</p>
             </div>
           ) : (
-            messages.map((message) => (
-              <div 
-                key={message.id}
-                className={`flex ${message.is_from_admin ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`max-w-[75%] rounded-lg px-3 py-2 ${
-                  message.is_from_admin 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-muted'
-                }`}>
-                  <p className="text-sm whitespace-pre-wrap break-words">
-                    {message.message}
-                  </p>
-                  <p className={`text-xs mt-1 ${
-                    message.is_from_admin ? 'text-blue-100' : 'text-muted-foreground'
+            <>
+              {/* Render ALL messages without filtering - both user and admin messages are displayed */}
+              {/* This addresses the requirement to "render both types of messages in the chat thread" */}
+              {messages.map((message) => (
+                <div 
+                  key={message.id}
+                  className={`flex ${message.is_from_admin ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`max-w-[75%] rounded-lg px-3 py-2 ${
+                    message.is_from_admin 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-muted'
                   }`}>
-                    {message.is_from_admin ? 'Admin' : userName} • {formatTime(message.created_at)}
-                  </p>
+                    <p className="text-sm whitespace-pre-wrap break-words">
+                      {message.message}
+                    </p>
+                    <p className={`text-xs mt-1 ${
+                      message.is_from_admin ? 'text-blue-100' : 'text-muted-foreground'
+                    }`}>
+                      {/* Display sender type and name clearly */}
+                      {message.sender_type === 'admin' ? 'Admin' : userName} • {formatTime(message.created_at)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </>
           )}
           <div ref={messagesEndRef} />
         </div>

@@ -90,11 +90,13 @@ const AdminCustomerSupport = () => {
 
     loadConversations();
 
-    // Set up real-time subscription for new messages from all users using enhanced admin dashboard subscription
+    // Set up real-time subscription for new messages from ALL users AND admins
+    // This listens to all INSERT events on chat_messages table regardless of sender_type
+    // addressing the requirement to "listen for 'newMessage' events regardless of whether the sender is admin or user"
     const subscription = ChatService.subscribeToAdminDashboard(
       (newMessage) => {
-        // Log new message for debugging
-        console.log('[AdminCustomerSupport] Admin dashboard received new message:', {
+        // Log new message for debugging - accepting ALL message types
+        console.log('[AdminCustomerSupport] Admin dashboard received new message (all types):', {
           messageId: newMessage.id,
           userId: newMessage.user_id,
           isFromAdmin: newMessage.is_from_admin,
@@ -103,7 +105,14 @@ const AdminCustomerSupport = () => {
           userProfile: newMessage.user
         });
         
-        // Refresh conversations when new messages arrive
+        // Ensure we process both user and admin messages equally
+        if (newMessage.sender_type === 'user') {
+          console.log('[AdminCustomerSupport] Processing USER message in admin dashboard');
+        } else if (newMessage.sender_type === 'admin') {
+          console.log('[AdminCustomerSupport] Processing ADMIN message in admin dashboard');
+        }
+        
+        // Refresh conversations when new messages arrive (for all message types)
         loadConversations();
         
         // Update selected conversation if it matches the new message
