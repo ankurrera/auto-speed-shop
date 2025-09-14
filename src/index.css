@@ -4,47 +4,46 @@
 
 @layer base {
   :root {
-    /* Minimalist High-contrast Theme Palette */
+    /* Improved High-contrast Light Theme Palette */
     --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+    --foreground: 220 26% 14%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card: 0 0% 99%;
+    --card-foreground: 220 26% 14%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --popover: 0 0% 99%;
+    --popover-foreground: 220 26% 14%;
 
-    /* Minimalist accent color #b22222 */
-    --primary: 0 67% 42%;
+    --primary: 0 84% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 0 67% 35%;
+    --primary-hover: 0 84% 50%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 220 26% 14%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 13% 40%;
 
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 9%;
+    --accent: 220 14% 92%;
+    --accent-foreground: 220 26% 14%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 89%;
-    --input: 0 0% 89%;
-    --ring: 0 67% 42%;
+    --border: 220 13% 80%;
+    --input: 220 13% 85%;
+    --ring: 0 84% 60%;
 
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
     --warning: 48 96% 53%;
-    --warning-foreground: 0 0% 9%;
+    --warning-foreground: 220 26% 14%;
 
-    /* Minimalist specific colors */
-    --minimalist-accent: 0 67% 42%;
-    --minimalist-gray: 0 0% 45%;
-    --minimalist-light-gray: 0 0% 96%;
+    /* Auto parts specific colors */
+    --automotive-red: 0 84% 60%;
+    --automotive-dark: 220 26% 14%;
+    --automotive-light: 220 14% 98%;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(0 84% 45%));
@@ -72,47 +71,46 @@
   }
 
   .dark {
-    /* Minimalist Dark Theme Palette */
-    --background: 0 0% 9%;
-    --foreground: 0 0% 98%;
+    /* High-contrast Dark Theme Palette */
+    --background: 0 0% 0%; /* <-- UPDATED to be pitch dark */
+    --foreground: 220 14% 95%;
 
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 0%; /* <-- UPDATED to be pitch dark */
+    --card-foreground: 220 14% 95%;
 
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 0%; /* <-- UPDATED to be pitch dark */
+    --popover-foreground: 220 14% 95%;
 
-    /* Keep same accent color for consistency */
-    --primary: 0 67% 42%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 0 67% 35%;
+    --primary: 0 84% 60%;
+    --primary-foreground: 220 10% 10%;
+    --primary-hover: 0 84% 65%;
 
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 220 17% 20%;
+    --secondary-foreground: 220 14% 95%;
 
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 63%;
+    --muted: 220 17% 20%;
+    --muted-foreground: 220 9% 65%;
 
-    --accent: 0 0% 14%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 220 17% 20%;
+    --accent-foreground: 220 14% 95%;
 
     --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 220 14% 95%;
 
-    --border: 0 0% 14%;
-    --input: 0 0% 14%;
-    --ring: 0 67% 42%;
+    --border: 220 17% 20%;
+    --input: 220 17% 20%;
+    --ring: 0 84% 60%;
 
     --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
+    --success-foreground: 220 14% 95%;
 
     --warning: 48 96% 53%;
-    --warning-foreground: 0 0% 9%;
+    --warning-foreground: 220 26% 14%;
 
-    /* Minimalist specific colors */
-    --minimalist-accent: 0 67% 42%;
-    --minimalist-gray: 0 0% 63%;
-    --minimalist-light-gray: 0 0% 14%;
+    /* Auto parts specific colors */
+    --automotive-red: 0 84% 60%;
+    --automotive-dark: 220 14% 95%;
+    --automotive-light: 220 26% 14%;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(0 84% 70%));
