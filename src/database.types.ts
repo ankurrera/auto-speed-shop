@@ -175,8 +175,11 @@ export type Database = {
         Row: {
           admin_id: string | null
           created_at: string
+          email: string | null
+          first_name: string | null
           id: string
           is_from_admin: boolean
+          last_name: string | null
           message: string
           sender_type: "user" | "admin"
           updated_at: string
@@ -185,8 +188,11 @@ export type Database = {
         Insert: {
           admin_id?: string | null
           created_at?: string
+          email?: string | null
+          first_name?: string | null
           id?: string
           is_from_admin?: boolean
+          last_name?: string | null
           message: string
           sender_type: "user" | "admin"
           updated_at?: string
@@ -195,8 +201,11 @@ export type Database = {
         Update: {
           admin_id?: string | null
           created_at?: string
+          email?: string | null
+          first_name?: string | null
           id?: string
           is_from_admin?: boolean
+          last_name?: string | null
           message?: string
           sender_type?: "user" | "admin"
           updated_at?: string
