@@ -63,13 +63,19 @@ export class ChatService {
     });
 
     // Create the response with proper structure to maintain backward compatibility
+    // For messages, we need to distinguish between user and admin profile data
     const chatMessage: ChatMessage = {
       ...message,
       user: {
         first_name: message.first_name || '',
         last_name: message.last_name || '',
         email: message.email || ''
-      }
+      },
+      admin: message.is_from_admin ? {
+        first_name: message.first_name || '',
+        last_name: message.last_name || '',
+        email: message.email || ''
+      } : undefined
     };
 
     return chatMessage;
@@ -116,7 +122,12 @@ export class ChatService {
         first_name: message.first_name || '',
         last_name: message.last_name || '',
         email: message.email || ''
-      }
+      },
+      admin: message.is_from_admin ? {
+        first_name: message.first_name || '',
+        last_name: message.last_name || '',
+        email: message.email || ''
+      } : undefined
     }));
 
     return chatMessages;
@@ -270,7 +281,12 @@ export class ChatService {
                 first_name: message.first_name || '',
                 last_name: message.last_name || '',
                 email: message.email || ''
-              }
+              },
+              admin: message.is_from_admin ? {
+                first_name: message.first_name || '',
+                last_name: message.last_name || '',
+                email: message.email || ''
+              } : undefined
             };
             onMessage(chatMessage);
           }
@@ -390,22 +406,10 @@ export class ChatService {
           timestamp: payload.new.created_at
         });
 
-        // Fetch the complete message with user and admin data immediately
+        // Fetch the complete message using denormalized data (now properly populated by our trigger)
         const { data: message, error } = await supabase
           .from('chat_messages')
-          .select(`
-            *,
-            user:profiles!chat_messages_user_id_fkey(
-              first_name,
-              last_name,
-              email
-            ),
-            admin:profiles!chat_messages_admin_id_fkey(
-              first_name,
-              last_name,
-              email
-            )
-          `)
+          .select('*')
           .eq('id', payload.new.id)
           .single();
 
@@ -414,9 +418,24 @@ export class ChatService {
             messageId: message.id,
             isFromAdmin: message.is_from_admin,
             senderType: message.sender_type,
-            userProfile: message.user ? 'present' : 'missing'
+            profileData: `${message.first_name} ${message.last_name}`.trim()
           });
-          onMessage(message as ChatMessage);
+          
+          // Transform to maintain backward compatibility with existing UI components
+          const chatMessage: ChatMessage = {
+            ...message,
+            user: {
+              first_name: message.first_name || '',
+              last_name: message.last_name || '',
+              email: message.email || ''
+            },
+            admin: message.is_from_admin ? {
+              first_name: message.first_name || '',
+              last_name: message.last_name || '',
+              email: message.email || ''
+            } : undefined
+          };
+          onMessage(chatMessage);
         } else {
           console.error('[ChatService] Error fetching complete message for instant messages:', error);
         }
@@ -491,7 +510,12 @@ export class ChatService {
                 first_name: message.first_name || '',
                 last_name: message.last_name || '',
                 email: message.email || ''
-              }
+              },
+              admin: message.is_from_admin ? {
+                first_name: message.first_name || '',
+                last_name: message.last_name || '',
+                email: message.email || ''
+              } : undefined
             };
             onMessage(chatMessage);
           }
@@ -543,7 +567,12 @@ export class ChatService {
               first_name: message.first_name || '',
               last_name: message.last_name || '',
               email: message.email || ''
-            }
+            },
+            admin: message.is_from_admin ? {
+              first_name: message.first_name || '',
+              last_name: message.last_name || '',
+              email: message.email || ''
+            } : undefined
           };
           // Call the callback with the message - NO FILTERING by sender_type
           onNewMessage(chatMessage);
