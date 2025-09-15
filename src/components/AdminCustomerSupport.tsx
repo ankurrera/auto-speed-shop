@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatService } from '@/services/chatService';
 import AdminChatConversation from './AdminChatConversation';
+import ChatDebugHelper from './ChatDebugHelper';
 
 interface Conversation {
   userId: string;
@@ -65,6 +66,19 @@ const AdminCustomerSupport = () => {
       const allConversations = await ChatService.getAllConversations();
       console.log('[AdminCustomerSupport] Loaded', allConversations.length, 'conversations');
       
+      // Log conversation details for debugging
+      allConversations.forEach((conv, index) => {
+        console.log(`[AdminCustomerSupport] Conversation ${index + 1}:`, {
+          userId: conv.userId,
+          userName: `${conv.user?.first_name || 'Unknown'} ${conv.user?.last_name || 'User'}`,
+          userEmail: conv.user?.email,
+          messageCount: conv.messages?.length || 0,
+          lastMessageType: conv.lastMessage?.sender_type,
+          lastMessageFromAdmin: conv.lastMessage?.is_from_admin,
+          lastMessagePreview: conv.lastMessage?.message?.substring(0, 50)
+        });
+      });
+      
       // Calculate unread count for each conversation (messages from users that admins haven't responded to)
       const conversationsWithUnread = await Promise.all(
         allConversations.map(async (conv) => {
@@ -98,7 +112,7 @@ const AdminCustomerSupport = () => {
       );
 
       setConversations(conversationsWithUnread);
-      console.log('[AdminCustomerSupport] Set conversations with unread counts');
+      console.log('[AdminCustomerSupport] Set conversations with unread counts. Total conversations:', conversationsWithUnread.length);
     } catch (error) {
       console.error('[AdminCustomerSupport] Failed to load conversations:', error);
       toast({
@@ -253,6 +267,11 @@ const AdminCustomerSupport = () => {
       </CardHeader>
 
       <CardContent className="p-0">
+        {/* Debug section - temporarily shown for troubleshooting */}
+        <div className="p-4 border-b bg-yellow-50">
+          <ChatDebugHelper />
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="text-center">

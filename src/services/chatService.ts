@@ -66,6 +66,8 @@ export class ChatService {
    * Get chat messages for a specific user conversation
    */
   static async getMessages(userId: string, limit = 50): Promise<ChatMessage[]> {
+    console.log('[ChatService] Fetching messages for user:', userId, 'with limit:', limit);
+    
     const { data, error } = await supabase
       .from('chat_messages')
       .select(`
@@ -81,8 +83,25 @@ export class ChatService {
       .limit(limit);
 
     if (error) {
+      console.error('[ChatService] Error fetching messages for user:', userId, error);
       throw new Error(`Failed to fetch messages: ${error.message}`);
     }
+
+    if (!data) {
+      console.warn('[ChatService] No data returned for user:', userId);
+      return [];
+    }
+
+    console.log('[ChatService] Retrieved', data.length, 'messages for user:', userId);
+    
+    // Log message types for debugging
+    const messageSummary = data.reduce((acc, msg) => {
+      const type = msg.sender_type || (msg.is_from_admin ? 'admin' : 'user');
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    console.log('[ChatService] Message breakdown for user', userId, ':', messageSummary);
 
     return data as ChatMessage[];
   }
@@ -99,9 +118,11 @@ export class ChatService {
     console.log('[ChatService] Getting all conversations for admin view');
 
     // Get all distinct user_ids who have participated in chat
+    // Filter out null values and ensure we only get customer conversations
     const { data: distinctUsers, error: usersError } = await supabase
       .from('chat_messages')
       .select('user_id')
+      .not('user_id', 'is', null)
       .order('created_at', { ascending: false });
 
     if (usersError) {
@@ -109,27 +130,67 @@ export class ChatService {
       throw new Error(`Failed to fetch conversations: ${usersError.message}`);
     }
 
-    // Get unique user IDs
-    const uniqueUserIds = [...new Set(distinctUsers.map(item => item.user_id))];
+    if (!distinctUsers || distinctUsers.length === 0) {
+      console.log('[ChatService] No chat messages found in database');
+      return [];
+    }
+
+    // Get unique user IDs and filter out any null/undefined values
+    const uniqueUserIds = [...new Set(distinctUsers
+      .map(item => item.user_id)
+      .filter(userId => userId && typeof userId === 'string')
+    )];
+    
     console.log('[ChatService] Found conversations for users:', uniqueUserIds);
+
+    if (uniqueUserIds.length === 0) {
+      console.log('[ChatService] No valid user IDs found');
+      return [];
+    }
 
     // Get user profiles for each conversation
     const conversationsWithMessages = await Promise.all(
       uniqueUserIds.map(async (userId: string) => {
         try {
-          // Get user profile
+          console.log('[ChatService] Processing conversation for user:', userId);
+
+          // Get user profile - be more lenient with missing profiles
           const { data: userProfile, error: profileError } = await supabase
             .from('profiles')
-            .select('first_name, last_name, email')
+            .select('first_name, last_name, email, is_admin')
             .eq('user_id', userId)
             .single();
 
           if (profileError) {
-            console.warn('[ChatService] No profile found for user:', userId, profileError);
+            console.warn('[ChatService] Profile lookup failed for user:', userId, profileError.message);
+            // Create a fallback profile instead of returning null
+            const fallbackProfile = {
+              first_name: 'Unknown',
+              last_name: 'User',
+              email: `user-${userId.slice(0, 8)}@unknown.com`
+            };
+            console.log('[ChatService] Using fallback profile for user:', userId);
+          }
+
+          // Skip admin-only profiles to avoid showing admin conversations in customer support
+          if (userProfile?.is_admin === true) {
+            console.log('[ChatService] Skipping admin profile:', userId);
             return null;
           }
 
+          // Use actual profile or fallback
+          const finalProfile = userProfile ? {
+            first_name: userProfile.first_name || 'Unknown',
+            last_name: userProfile.last_name || 'User', 
+            email: userProfile.email || `user-${userId.slice(0, 8)}@unknown.com`
+          } : {
+            first_name: 'Unknown',
+            last_name: 'User',
+            email: `user-${userId.slice(0, 8)}@unknown.com`
+          };
+
           // Get messages for this user
+          console.log('[ChatService] Fetching messages for user:', userId);
           const messages = await this.getMessages(userId);
           
           if (messages.length === 0) {
@@ -142,12 +203,13 @@ export class ChatService {
           console.log('[ChatService] Conversation for user:', userId, {
             messageCount: messages.length,
             lastMessageType: lastMessage.sender_type,
-            lastMessageTime: lastMessage.created_at
+            lastMessageTime: lastMessage.created_at,
+            userProfile: finalProfile
           });
 
           return {
             userId,
-            user: userProfile,
+            user: finalProfile,
             messages,
             lastMessage,
           };
