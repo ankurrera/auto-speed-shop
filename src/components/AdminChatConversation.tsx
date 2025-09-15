@@ -154,21 +154,6 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
     }
   };
 
-  // Helper functions to get display info for users
-  const getDisplayName = (user: any, fallbackName: string) => {
-    if (user?.first_name || user?.last_name) {
-      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
-    }
-    return fallbackName;
-  };
-
-  const getAdminDisplayName = (admin: any) => {
-    if (admin?.first_name || admin?.last_name) {
-      return `${admin.first_name || 'Admin'} ${admin.last_name || ''}`.trim();
-    }
-    return 'Admin';
-  };
-
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleString();
   };
@@ -221,11 +206,15 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
                     <p className={`text-xs mt-1 ${
                       message.is_from_admin ? 'text-blue-100' : 'text-muted-foreground'
                     }`}>
-                      {/* Display sender type and name clearly with better fallbacks */}
+                      {/* Display sender type and name clearly */}
                       {message.sender_type === 'admin' ? (
-                        getAdminDisplayName(message.admin)
+                        message.admin ? 
+                          `Admin (${message.admin.first_name || 'Unknown'} ${message.admin.last_name || 'User'}`.trim() + ')' :
+                          'Admin'
                       ) : (
-                        getDisplayName(message.user, userName)
+                        message.user ? 
+                          `${message.user.first_name || 'Unknown'} ${message.user.last_name || 'User'}`.trim() :
+                          userName
                       )} • {formatTime(message.created_at)}
                     </p>
                   </div>
