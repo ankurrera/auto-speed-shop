@@ -959,27 +959,65 @@ const Account = () => {
       });
 
       const uploadedImageUrls: string[] = [];
+      const failedUploads: string[] = [];
+      
       if (productFiles.length > 0) {
         const bucketName =
           listingType === "part" ? "part_images" : "products_images";
+        
         for (const f of productFiles) {
-          const ext = f.name.split(".").pop();
-          const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
-          const { error: uploadError } = await supabase.storage
-            .from(bucketName)
-            .upload(filePath, f, { upsert: true });
-          if (uploadError) {
+          try {
+            const ext = f.name.split(".").pop();
+            const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
+            const { error: uploadError } = await supabase.storage
+              .from(bucketName)
+              .upload(filePath, f, { upsert: true });
+              
+            if (uploadError) {
+              console.error(`Failed to upload ${f.name}:`, uploadError);
+              failedUploads.push(f.name);
+              continue; // Continue processing other images
+            }
+            
+            // Only get public URL and add to array if upload was successful
+            const { data: publicUrlData } = supabase.storage
+              .from(bucketName)
+              .getPublicUrl(filePath);
+            uploadedImageUrls.push(publicUrlData.publicUrl);
+          } catch (error) {
+            console.error(`Error processing ${f.name}:`, error);
+            failedUploads.push(f.name);
+            continue; // Continue processing other images
+          }
+        }
+        
+        // Show detailed feedback about upload results
+        if (failedUploads.length > 0) {
+          const successCount = uploadedImageUrls.length;
+          const failedCount = failedUploads.length;
+          
+          if (successCount === 0) {
+            // All uploads failed
             toast({
-              title: "Error",
-              description: "Image upload failed.",
+              title: "Upload Failed",
+              description: `All ${failedCount} image(s) failed to upload. Please try again.`,
               variant: "destructive",
             });
             return;
+          } else {
+            // Some uploads failed
+            toast({
+              title: "Partial Upload Success",
+              description: `${successCount} image(s) uploaded successfully. ${failedCount} failed: ${failedUploads.join(", ")}`,
+              variant: "default",
+            });
           }
-          const { data: publicUrlData } = supabase.storage
-            .from(bucketName)
-            .getPublicUrl(filePath);
-          uploadedImageUrls.push(publicUrlData.publicUrl);
+        } else if (uploadedImageUrls.length > 0) {
+          // All uploads successful
+          toast({
+            title: "Upload Successful",
+            description: `${uploadedImageUrls.length} image(s) uploaded successfully.`,
+          });
         }
       }
 
@@ -1645,6 +1683,34 @@ const Account = () => {
   // Image handling
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    // Validate file types
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const invalidFiles = files.filter(file => !validTypes.includes(file.type));
+    
+    if (invalidFiles.length > 0) {
+      toast({
+        title: "Invalid File Types",
+        description: `Please select only image files (JPG, PNG, GIF, WebP). Invalid files: ${invalidFiles.map(f => f.name).join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate file sizes (max 5MB per file)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const oversizedFiles = files.filter(file => file.size > maxSize);
+    
+    if (oversizedFiles.length > 0) {
+      toast({
+        title: "Files Too Large",
+        description: `Maximum file size is 5MB. Large files: ${oversizedFiles.map(f => f.name).join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setProductFiles(files);
     const previewUrls = files.map((f) => URL.createObjectURL(f));
     setProductInfo((prev) => ({
@@ -1655,12 +1721,23 @@ const Account = () => {
   const removeImage = (index: number) => {
     setProductInfo((prev) => {
       const nu = [...prev.image_urls];
+      
+      // Revoke object URL if it's a blob URL to prevent memory leaks
+      const urlToRemove = nu[index];
+      if (urlToRemove && urlToRemove.startsWith('blob:')) {
+        URL.revokeObjectURL(urlToRemove);
+      }
+      
       nu.splice(index, 1);
       return { ...prev, image_urls: nu };
     });
+    
     setProductFiles((prev) => {
       const nf = [...prev];
-      nf.splice(index, 1);
+      // Only remove from files array if the index is within the files range
+      if (index < nf.length) {
+        nf.splice(index, 1);
+      }
       return nf;
     });
   };
