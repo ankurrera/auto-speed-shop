@@ -185,6 +185,7 @@ const Account = () => {
     vin: "",
   });
   const [productFiles, setProductFiles] = useState<File[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]); // Track existing DB images separately
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{
     total: number;
@@ -1080,7 +1081,7 @@ const Account = () => {
       }
 
       const finalImageUrls = editingProductId
-        ? [...productInfo.image_urls, ...uploadedImageUrls]
+        ? [...existingImageUrls, ...uploadedImageUrls] // Use tracked existing images, not all image_urls
         : uploadedImageUrls;
 
       // Vehicle compatibility (optional)
@@ -1305,6 +1306,7 @@ const Account = () => {
       vin: "",
     });
     setProductFiles([]);
+    setExistingImageUrls([]); // Clear existing images tracking
     queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
   };
@@ -1324,12 +1326,15 @@ const Account = () => {
         specs = product.specifications as PartSpecifications;
       }
     }
+    
+    const existingUrls = product.image_urls || [];
+    setExistingImageUrls(existingUrls); // Store existing DB images separately
     setProductInfo({
       name: product.name,
       description: product.description || "",
       price: product.price?.toString() || "",
       stock_quantity: product.stock_quantity || 0,
-      image_urls: product.image_urls || [],
+      image_urls: existingUrls, // Only existing images for display
       specifications: specs.additional || "",
       category: product.category || specs.category || "",
       make: specs.make || "",
@@ -1344,12 +1349,15 @@ const Account = () => {
     setEditingProductId(part.id);
     const specs = part.specifications;
     setListingType("part");
+    
+    const existingUrls = part.image_urls || [];
+    setExistingImageUrls(existingUrls); // Store existing DB images separately
     setProductInfo({
       name: part.name,
       description: part.description || "",
       price: part.price?.toString() || "",
       stock_quantity: part.stock_quantity || 0,
-      image_urls: part.image_urls || [],
+      image_urls: existingUrls, // Only existing images for display
       specifications: specs?.additional || "",
       category: specs?.category || "",
       make: part.brand || specs?.make || "",
@@ -1791,7 +1799,7 @@ const Account = () => {
     const previewUrls = files.map((f) => URL.createObjectURL(f));
     setProductInfo((prev) => ({
       ...prev,
-      image_urls: [...prev.image_urls, ...previewUrls],
+      image_urls: [...existingImageUrls, ...previewUrls], // Combine existing DB images with new previews
     }));
     
     // Update progress to show completion and hide loading
@@ -1820,14 +1828,26 @@ const Account = () => {
       return { ...prev, image_urls: nu };
     });
     
-    setProductFiles((prev) => {
-      const nf = [...prev];
-      // Only remove from files array if the index is within the files range
-      if (index < nf.length) {
-        nf.splice(index, 1);
-      }
-      return nf;
-    });
+    // Calculate if this is an existing image or new file being removed
+    const existingImagesCount = existingImageUrls.length;
+    if (index < existingImagesCount) {
+      // Removing an existing image - update the existingImageUrls array
+      setExistingImageUrls(prev => {
+        const updated = [...prev];
+        updated.splice(index, 1);
+        return updated;
+      });
+    } else {
+      // Removing a new file - update the productFiles array
+      const fileIndex = index - existingImagesCount;
+      setProductFiles((prev) => {
+        const nf = [...prev];
+        if (fileIndex >= 0 && fileIndex < nf.length) {
+          nf.splice(fileIndex, 1);
+        }
+        return nf;
+      });
+    }
   };
 
   // Retry failed uploads
