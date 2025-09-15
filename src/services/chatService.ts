@@ -208,6 +208,9 @@ export class ChatService {
             return null;
           }
 
+          // Extract the last message (most recent) from the messages array
+          const lastMessage = messages[messages.length - 1];
+
           // Always prioritize the profiles table data to ensure ticket creator's identity consistency
           // The denormalized data should be consistent after our fix, but we use profiles as primary source
           const finalProfile = {
