@@ -2542,12 +2542,6 @@ const Account = () => {
                     icon={<Package className="h-5 w-5" />}
                     onClick={() => setShowInventoryManagement(true)}
                   />
-                  <ActionCard
-                    title="Customer Support"
-                    description="Manage customer support messages and conversations"
-                    icon={<MessageCircle className="h-5 w-5" />}
-                    onClick={() => setShowCustomerSupport(true)}
-                  />
                 </div>
                 
                 {/* Seller Management Section */}
@@ -2560,6 +2554,12 @@ const Account = () => {
                         description="Manage your seller profile and information"
                         icon={<Car className="h-5 w-5" />}
                         onClick={() => navigate("/seller-dashboard")}
+                      />
+                      <ActionCard
+                        title="Customer Support"
+                        description="Manage customer support messages and conversations"
+                        icon={<MessageCircle className="h-5 w-5" />}
+                        onClick={() => setShowCustomerSupport(true)}
                       />
                     </div>
                   </div>
