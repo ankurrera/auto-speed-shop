@@ -65,6 +65,19 @@ const AdminCustomerSupport = () => {
       const allConversations = await ChatService.getAllConversations();
       console.log('[AdminCustomerSupport] Loaded', allConversations.length, 'conversations');
       
+      // Log conversation details for debugging
+      allConversations.forEach((conv, index) => {
+        console.log(`[AdminCustomerSupport] Conversation ${index + 1}:`, {
+          userId: conv.userId,
+          userName: `${conv.user?.first_name || 'Unknown'} ${conv.user?.last_name || 'User'}`,
+          userEmail: conv.user?.email,
+          messageCount: conv.messages?.length || 0,
+          lastMessageType: conv.lastMessage?.sender_type,
+          lastMessageFromAdmin: conv.lastMessage?.is_from_admin,
+          lastMessagePreview: conv.lastMessage?.message?.substring(0, 50)
+        });
+      });
+      
       // Calculate unread count for each conversation (messages from users that admins haven't responded to)
       const conversationsWithUnread = await Promise.all(
         allConversations.map(async (conv) => {
@@ -98,7 +111,7 @@ const AdminCustomerSupport = () => {
       );
 
       setConversations(conversationsWithUnread);
-      console.log('[AdminCustomerSupport] Set conversations with unread counts');
+      console.log('[AdminCustomerSupport] Set conversations with unread counts. Total conversations:', conversationsWithUnread.length);
     } catch (error) {
       console.error('[AdminCustomerSupport] Failed to load conversations:', error);
       toast({
@@ -271,6 +284,9 @@ const AdminCustomerSupport = () => {
                 ? 'Try adjusting your search terms'
                 : 'Customer support messages will appear here when users start conversations.'
               }
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              💡 Debug tip: Visit <a href="/chat-demo" className="text-blue-500 hover:underline">/chat-demo</a> to test chat functionality
             </p>
           </div>
         ) : (
