@@ -63,7 +63,7 @@ export class ChatService {
   }
 
   /**
-   * Get chat messages for a specific user conversation
+   * Get chat messages for a specific user conversation with enhanced user data fetching
    */
   static async getMessages(userId: string, limit = 50): Promise<ChatMessage[]> {
     console.log('[ChatService] Fetching messages for user:', userId, 'with limit:', limit);
@@ -94,20 +94,39 @@ export class ChatService {
 
     console.log('[ChatService] Retrieved', data.length, 'messages for user:', userId);
     
-    // Log message types for debugging
-    const messageSummary = data.reduce((acc, msg) => {
+    // Ensure all messages have user data (the user data should represent the conversation owner, not the message sender)
+    const messagesWithUserData = data.map(message => {
+      // For all messages in this conversation, the user field should contain the customer's profile
+      // (even for admin messages, since user_id always points to the customer)
+      if (!message.user || (!message.user.first_name && !message.user.last_name && !message.user.email)) {
+        console.warn('[ChatService] Message missing user data, using fallback:', message.id);
+        return {
+          ...message,
+          user: {
+            first_name: 'Unknown',
+            last_name: 'User',
+            email: `user-${userId.slice(0, 8)}@unknown.com`
+          }
+        };
+      }
+      return message;
+    });
+    
+    // Log message types and user data for debugging
+    const messageSummary = messagesWithUserData.reduce((acc, msg) => {
       const type = msg.sender_type || (msg.is_from_admin ? 'admin' : 'user');
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
     
     console.log('[ChatService] Message breakdown for user', userId, ':', messageSummary);
+    console.log('[ChatService] Sample user data for conversation:', messagesWithUserData[0]?.user);
 
-    return data as ChatMessage[];
+    return messagesWithUserData as ChatMessage[];
   }
 
   /**
-   * Get all user conversations (admin view)
+   * Get all user conversations (admin view) with improved user profile fetching
    */
   static async getAllConversations(): Promise<{
     userId: string;
@@ -117,79 +136,74 @@ export class ChatService {
   }[]> {
     console.log('[ChatService] Getting all conversations for admin view');
 
-    // Get all distinct user_ids who have participated in chat
-    // Filter out null values and ensure we only get customer conversations
-    const { data: distinctUsers, error: usersError } = await supabase
+    // Use a more efficient query to get conversations with user data in one go
+    const { data: conversationsData, error: conversationsError } = await supabase
       .from('chat_messages')
-      .select('user_id')
+      .select(`
+        user_id,
+        created_at,
+        user:profiles!chat_messages_user_id_fkey(
+          first_name,
+          last_name,
+          email,
+          is_admin
+        )
+      `)
       .not('user_id', 'is', null)
       .order('created_at', { ascending: false });
 
-    if (usersError) {
-      console.error('[ChatService] Error fetching distinct users:', usersError);
-      throw new Error(`Failed to fetch conversations: ${usersError.message}`);
+    if (conversationsError) {
+      console.error('[ChatService] Error fetching conversations:', conversationsError);
+      throw new Error(`Failed to fetch conversations: ${conversationsError.message}`);
     }
 
-    if (!distinctUsers || distinctUsers.length === 0) {
+    if (!conversationsData || conversationsData.length === 0) {
       console.log('[ChatService] No chat messages found in database');
       return [];
     }
 
-    // Get unique user IDs and filter out any null/undefined values
-    const uniqueUserIds = [...new Set(distinctUsers
-      .map(item => item.user_id)
-      .filter(userId => userId && typeof userId === 'string')
-    )];
-    
-    console.log('[ChatService] Found conversations for users:', uniqueUserIds);
+    // Group by user_id and get unique conversations with their user data
+    const userConversations = new Map<string, {
+      userId: string;
+      userProfile: any;
+      latestTimestamp: string;
+    }>();
 
-    if (uniqueUserIds.length === 0) {
-      console.log('[ChatService] No valid user IDs found');
-      return [];
-    }
+    conversationsData.forEach((item) => {
+      const userId = item.user_id;
+      const userProfile = item.user;
+      
+      // Skip if user is admin (don't show admin conversations in customer support)
+      if (userProfile?.is_admin === true) {
+        return;
+      }
 
-    // Get user profiles for each conversation
+      if (!userConversations.has(userId) || 
+          item.created_at > userConversations.get(userId)!.latestTimestamp) {
+        userConversations.set(userId, {
+          userId,
+          userProfile,
+          latestTimestamp: item.created_at
+        });
+      }
+    });
+
+    console.log('[ChatService] Found', userConversations.size, 'unique user conversations');
+
+    // Process each conversation
     const conversationsWithMessages = await Promise.all(
-      uniqueUserIds.map(async (userId: string) => {
+      Array.from(userConversations.values()).map(async ({ userId, userProfile }) => {
         try {
           console.log('[ChatService] Processing conversation for user:', userId);
 
-          // Get user profile - be more lenient with missing profiles
-          const { data: userProfile, error: profileError } = await supabase
-            .from('profiles')
-            .select('first_name, last_name, email, is_admin')
-            .eq('user_id', userId)
-            .single();
-
-          if (profileError) {
-            console.warn('[ChatService] Profile lookup failed for user:', userId, profileError.message);
-            // Create a fallback profile instead of returning null
-            const fallbackProfile = {
-              first_name: 'Unknown',
-              last_name: 'User',
-              email: `user-${userId.slice(0, 8)}@unknown.com`
-            };
-            console.log('[ChatService] Using fallback profile for user:', userId);
-          }
-
-          // Skip admin-only profiles to avoid showing admin conversations in customer support
-          if (userProfile?.is_admin === true) {
-            console.log('[ChatService] Skipping admin profile:', userId);
-            return null;
-          }
-
-          // Use actual profile or fallback
-          const finalProfile = userProfile ? {
-            first_name: userProfile.first_name || 'Unknown',
-            last_name: userProfile.last_name || 'User', 
-            email: userProfile.email || `user-${userId.slice(0, 8)}@unknown.com`
-          } : {
-            first_name: 'Unknown',
-            last_name: 'User',
-            email: `user-${userId.slice(0, 8)}@unknown.com`
+          // Prepare user profile with fallbacks
+          const finalProfile = {
+            first_name: userProfile?.first_name || 'Unknown',
+            last_name: userProfile?.last_name || 'User',
+            email: userProfile?.email || `user-${userId.slice(0, 8)}@unknown.com`
           };
 
-          // Get messages for this user
+          // Get messages for this user with user data included
           console.log('[ChatService] Fetching messages for user:', userId);
           const messages = await this.getMessages(userId);
           
@@ -233,7 +247,7 @@ export class ChatService {
   }
 
   /**
-   * Subscribe to real-time messages for a user conversation
+   * Subscribe to real-time messages for a user conversation with enhanced user data
    */
   static subscribeToMessages(
     userId: string,
@@ -265,7 +279,16 @@ export class ChatService {
             .single();
 
           if (!error && message) {
-            onMessage(message as ChatMessage);
+            // Ensure user data is present with fallback
+            const messageWithUserData = {
+              ...message,
+              user: message.user || {
+                first_name: 'Unknown',
+                last_name: 'User',
+                email: `user-${userId.slice(0, 8)}@unknown.com`
+              }
+            };
+            onMessage(messageWithUserData as ChatMessage);
           }
         }
       )
@@ -398,13 +421,23 @@ export class ChatService {
           .single();
 
         if (!error && message) {
+          // Ensure user data is present with fallback
+          const messageWithUserData = {
+            ...message,
+            user: message.user || {
+              first_name: 'Unknown',
+              last_name: 'User',
+              email: `user-${userId.slice(0, 8)}@unknown.com`
+            }
+          };
+          
           console.log('[ChatService] Instant messages calling onMessage with complete message:', {
-            messageId: message.id,
-            isFromAdmin: message.is_from_admin,
-            senderType: message.sender_type,
-            userProfile: message.user ? 'present' : 'missing'
+            messageId: messageWithUserData.id,
+            isFromAdmin: messageWithUserData.is_from_admin,
+            senderType: messageWithUserData.sender_type,
+            userProfile: messageWithUserData.user ? 'present' : 'missing'
           });
-          onMessage(message as ChatMessage);
+          onMessage(messageWithUserData as ChatMessage);
         } else {
           console.error('[ChatService] Error fetching complete message for instant messages:', error);
         }
@@ -479,7 +512,16 @@ export class ChatService {
             .single();
 
           if (!error && message) {
-            onMessage(message as ChatMessage);
+            // Ensure user data is present with fallback
+            const messageWithUserData = {
+              ...message,
+              user: message.user || {
+                first_name: 'Unknown',
+                last_name: 'User',
+                email: `user-${(message.user_id || '').slice(0, 8)}@unknown.com`
+              }
+            };
+            onMessage(messageWithUserData as ChatMessage);
           }
         }
       )
@@ -528,9 +570,19 @@ export class ChatService {
           .single();
 
         if (!error && message) {
-          console.log('[ChatService] Admin dashboard processing:', message.sender_type, 'message for user:', message.user_id);
+          // Ensure user data is present with fallback
+          const messageWithUserData = {
+            ...message,
+            user: message.user || {
+              first_name: 'Unknown',
+              last_name: 'User',
+              email: `user-${(message.user_id || '').slice(0, 8)}@unknown.com`
+            }
+          };
+          
+          console.log('[ChatService] Admin dashboard processing:', messageWithUserData.sender_type, 'message for user:', messageWithUserData.user_id);
           // Call the callback with the message - NO FILTERING by sender_type
-          onNewMessage(message as ChatMessage);
+          onNewMessage(messageWithUserData as ChatMessage);
           if (onConversationUpdate) {
             onConversationUpdate();
           }
