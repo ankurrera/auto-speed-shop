@@ -48,6 +48,7 @@ const AdminUserManagement = () => {
           `)
           .eq('is_admin', false)
           .eq('is_seller', false)
+          .eq('role', 'user')
           .order('created_at', { ascending: false });
         
         if (fallbackError) throw fallbackError;
@@ -125,27 +126,6 @@ const AdminUserManagement = () => {
     );
   };
 
-  const handleSendCoupon = (userId: string, userEmail: string, userName: string) => {
-    toast({
-      title: "Send Coupon",
-      description: `Send discount coupon to ${userName || userEmail}?`,
-      action: (
-        <Button
-          variant="default"
-          onClick={() => {
-            // Here you would implement the actual coupon sending logic
-            toast({
-              title: "Coupon Sent!",
-              description: `Discount coupon has been sent to ${userEmail}`,
-            });
-          }}
-        >
-          Send
-        </Button>
-      ),
-    });
-  };
-
   if (isLoading) {
     return <p>Loading users...</p>;
   }
@@ -155,7 +135,7 @@ const AdminUserManagement = () => {
   }
 
   return (
-    <Card className="bg-neutral-900/60 border-neutral-800">
+    <Card className="bg-card border-border">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <User className="h-5 w-5" />
@@ -170,7 +150,6 @@ const AdminUserManagement = () => {
               <TableHead>User Details</TableHead>
               <TableHead>Email</TableHead>
               <TableHead className="text-center">Orders</TableHead>
-              <TableHead className="text-center">Send Coupons</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -196,21 +175,6 @@ const AdminUserManagement = () => {
                 </TableCell>
                 <TableCell className="text-center">
                   <span className="font-semibold text-primary">{user.order_count}</span>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSendCoupon(
-                      user.user_id, 
-                      user.email || '', 
-                      user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : ''
-                    )}
-                    className="flex items-center gap-1"
-                  >
-                    <Send className="h-3 w-3" />
-                    Send Coupon
-                  </Button>
                 </TableCell>
               </TableRow>
             ))}
