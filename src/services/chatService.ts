@@ -137,7 +137,7 @@ export class ChatService {
     // Filter out null values and ensure we only get customer conversations
     const { data: distinctUsers, error: usersError } = await supabase
       .from('chat_messages')
-      .select('user_id, first_name, last_name, email')
+      .select('user_id')
       .not('user_id', 'is', null)
       .order('created_at', { ascending: false });
 
@@ -179,6 +179,7 @@ export class ChatService {
 
           if (profileError) {
             console.warn('[ChatService] Profile lookup failed for user:', userId, profileError.message);
+            console.log('[ChatService] Using fallback profile for user:', userId);
           }
 
           // Skip admin-only profiles to avoid showing admin conversations in customer support
@@ -198,11 +199,9 @@ export class ChatService {
 
           // Use denormalized data from the most recent message, fallback to profiles table, then to defaults
           const lastMessage = messages[messages.length - 1];
-          
-          // Prefer denormalized data from chat_messages, then profile data, then fallbacks
           const finalProfile = {
-            first_name: lastMessage.first_name || userProfile?.first_name || '',
-            last_name: lastMessage.last_name || userProfile?.last_name || '',
+            first_name: lastMessage.first_name || userProfile?.first_name || 'Unknown',
+            last_name: lastMessage.last_name || userProfile?.last_name || 'User',
             email: lastMessage.email || userProfile?.email || `user-${userId.slice(0, 8)}@unknown.com`
           };
           
@@ -210,12 +209,7 @@ export class ChatService {
             messageCount: messages.length,
             lastMessageType: lastMessage.sender_type,
             lastMessageTime: lastMessage.created_at,
-            userProfile: finalProfile,
-            dataSource: {
-              firstName: lastMessage.first_name ? 'denormalized' : userProfile?.first_name ? 'profile' : 'fallback',
-              lastName: lastMessage.last_name ? 'denormalized' : userProfile?.last_name ? 'profile' : 'fallback',
-              email: lastMessage.email ? 'denormalized' : userProfile?.email ? 'profile' : 'fallback'
-            }
+            userProfile: finalProfile
           });
 
           return {
