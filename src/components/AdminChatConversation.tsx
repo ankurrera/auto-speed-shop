@@ -153,7 +153,7 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="flex-row items-center justify-between space-y-0 pb-4 border-b flex-shrink-0">
+      <CardHeader className="flex-row items-center justify-between space-y-0 pb-4 border-b">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onBack}>
             <ArrowLeft className="h-4 w-4" />
@@ -165,9 +165,9 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+      <CardContent className="flex-1 flex flex-col p-0">
         {/* Messages area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -188,12 +188,12 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
                   key={message.id}
                   className={`flex ${message.is_from_admin ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[75%] rounded-lg px-3 py-2 break-words ${
+                  <div className={`max-w-[75%] rounded-lg px-3 py-2 ${
                     message.is_from_admin 
                       ? 'bg-blue-500 text-white' 
                       : 'bg-muted'
                   }`}>
-                    <p className="text-sm whitespace-pre-wrap">
+                    <p className="text-sm whitespace-pre-wrap break-words">
                       {message.message}
                     </p>
                     <p className={`text-xs mt-1 ${
@@ -210,8 +210,8 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
           <div ref={messagesEndRef} />
         </div>
         
-        {/* Message input - Fixed at bottom */}
-        <div className="border-t p-4 flex-shrink-0">
+        {/* Message input */}
+        <div className="border-t p-4">
           <div className="flex gap-2">
             <Input
               value={newMessage}
