@@ -26,7 +26,8 @@ import {
   RefreshCw,
   User,
   Calendar,
-  DollarSign
+  DollarSign,
+  ArrowLeft
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -267,13 +268,21 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
-          Payment Management
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Track and manage all payment submissions, verifications, and rejections
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Payment Management
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Track and manage all payment submissions, verifications, and rejections
+            </p>
+          </div>
+          <Button variant="outline" onClick={onBack} className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Controls */}
