@@ -7,6 +7,11 @@ export type ChatMessage = Database['public']['Tables']['chat_messages']['Row'] &
     last_name: string;
     email: string;
   };
+  admin?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
 };
 
 export type ChatMessageInsert = Database['public']['Tables']['chat_messages']['Insert'];
@@ -45,6 +50,11 @@ export class ChatService {
           first_name,
           last_name,
           email
+        ),
+        admin:profiles!chat_messages_admin_id_fkey(
+          first_name,
+          last_name,
+          email
         )
       `)
       .single();
@@ -73,6 +83,11 @@ export class ChatService {
       .select(`
         *,
         user:profiles!chat_messages_user_id_fkey(
+          first_name,
+          last_name,
+          email
+        ),
+        admin:profiles!chat_messages_admin_id_fkey(
           first_name,
           last_name,
           email
@@ -163,12 +178,6 @@ export class ChatService {
 
           if (profileError) {
             console.warn('[ChatService] Profile lookup failed for user:', userId, profileError.message);
-            // Create a fallback profile instead of returning null
-            const fallbackProfile = {
-              first_name: 'Unknown',
-              last_name: 'User',
-              email: `user-${userId.slice(0, 8)}@unknown.com`
-            };
             console.log('[ChatService] Using fallback profile for user:', userId);
           }
 
@@ -250,12 +259,17 @@ export class ChatService {
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
-          // Fetch the complete message with user data
+          // Fetch the complete message with user and admin data
           const { data: message, error } = await supabase
             .from('chat_messages')
             .select(`
               *,
               user:profiles!chat_messages_user_id_fkey(
+                first_name,
+                last_name,
+                email
+              ),
+              admin:profiles!chat_messages_admin_id_fkey(
                 first_name,
                 last_name,
                 email
@@ -383,12 +397,17 @@ export class ChatService {
           timestamp: payload.new.created_at
         });
 
-        // Fetch the complete message with user data immediately
+        // Fetch the complete message with user and admin data immediately
         const { data: message, error } = await supabase
           .from('chat_messages')
           .select(`
             *,
             user:profiles!chat_messages_user_id_fkey(
+              first_name,
+              last_name,
+              email
+            ),
+            admin:profiles!chat_messages_admin_id_fkey(
               first_name,
               last_name,
               email
@@ -464,12 +483,17 @@ export class ChatService {
           table: 'chat_messages',
         },
         async (payload) => {
-          // Fetch the complete message with user data
+          // Fetch the complete message with user and admin data
           const { data: message, error } = await supabase
             .from('chat_messages')
             .select(`
               *,
               user:profiles!chat_messages_user_id_fkey(
+                first_name,
+                last_name,
+                email
+              ),
+              admin:profiles!chat_messages_admin_id_fkey(
                 first_name,
                 last_name,
                 email
@@ -513,12 +537,17 @@ export class ChatService {
           userId: payload.new.user_id
         });
 
-        // Fetch the complete message with user data
+        // Fetch the complete message with user and admin data
         const { data: message, error } = await supabase
           .from('chat_messages')
           .select(`
             *,
             user:profiles!chat_messages_user_id_fkey(
+              first_name,
+              last_name,
+              email
+            ),
+            admin:profiles!chat_messages_admin_id_fkey(
               first_name,
               last_name,
               email

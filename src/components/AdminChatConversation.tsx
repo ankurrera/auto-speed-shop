@@ -207,7 +207,11 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
                       message.is_from_admin ? 'text-blue-100' : 'text-muted-foreground'
                     }`}>
                       {/* Display sender type and name clearly */}
-                      {message.sender_type === 'admin' ? 'Admin' : (
+                      {message.sender_type === 'admin' ? (
+                        message.admin ? 
+                          `Admin (${message.admin.first_name || 'Unknown'} ${message.admin.last_name || 'User'}`.trim() + ')' :
+                          'Admin'
+                      ) : (
                         message.user ? 
                           `${message.user.first_name || 'Unknown'} ${message.user.last_name || 'User'}`.trim() :
                           userName
