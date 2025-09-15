@@ -178,16 +178,30 @@ const AdminCustomerSupport = () => {
     };
   }, [isAdmin, loadConversations]);
 
+  // Helper function to get display name for a user
+  const getDisplayName = (user: any, userId: string) => {
+    if (user?.first_name || user?.last_name) {
+      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return `User ${userId.slice(-8)}`;
+  };
+
+  // Helper function to get display email for a user
+  const getDisplayEmail = (user: any, userId: string) => {
+    if (user?.email) {
+      return user.email;
+    }
+    return `user-${userId.slice(0, 8)}@unknown.com`;
+  };
+
   // Filter conversations based on search query
   const filteredConversations = conversations.filter(conv => {
-    // Skip conversations with missing user data
-    if (!conv.user || !conv.user.first_name && !conv.user.last_name && !conv.user.email) {
-      return false;
-    }
-    
     const searchLower = searchQuery.toLowerCase();
-    const userName = `${conv.user.first_name || ''} ${conv.user.last_name || ''}`.toLowerCase().trim();
-    const userEmail = conv.user.email?.toLowerCase() || '';
+    const userName = getDisplayName(conv.user, conv.userId).toLowerCase();
+    const userEmail = getDisplayEmail(conv.user, conv.userId).toLowerCase();
     const lastMessage = conv.lastMessage?.message.toLowerCase() || '';
     
     return userName.includes(searchLower) || 
@@ -224,13 +238,8 @@ const AdminCustomerSupport = () => {
   }
 
   if (selectedConversation) {
-    const displayName = selectedConversation.user?.first_name || selectedConversation.user?.last_name ? 
-      `${selectedConversation.user.first_name || ''} ${selectedConversation.user.last_name || ''}`.trim() :
-      selectedConversation.user?.email ? 
-        selectedConversation.user.email.split('@')[0] : 
-        `User ${selectedConversation.userId.slice(-8)}`;
-    
-    const displayEmail = selectedConversation.user?.email || `No email • ID: ${selectedConversation.userId.slice(-8)}`;
+    const displayName = getDisplayName(selectedConversation.user, selectedConversation.userId);
+    const displayEmail = getDisplayEmail(selectedConversation.user, selectedConversation.userId);
     
     return (
       <AdminChatConversation
@@ -309,12 +318,7 @@ const AdminCustomerSupport = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium truncate">
-                        {conversation.user?.first_name || conversation.user?.last_name ? 
-                          `${conversation.user.first_name || ''} ${conversation.user.last_name || ''}`.trim() :
-                          conversation.user?.email ? 
-                            conversation.user.email.split('@')[0] : 
-                            `User ${conversation.userId.slice(-8)}`
-                        }
+                        {getDisplayName(conversation.user, conversation.userId)}
                       </h4>
                       {conversation.unreadCount > 0 && (
                         <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
@@ -323,7 +327,7 @@ const AdminCustomerSupport = () => {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground truncate mb-1">
-                      {conversation.user?.email || `No email • ID: ${conversation.userId.slice(-8)}`}
+                      {getDisplayEmail(conversation.user, conversation.userId)}
                     </p>
                     {conversation.lastMessage && (
                       <p className="text-sm text-muted-foreground truncate">
