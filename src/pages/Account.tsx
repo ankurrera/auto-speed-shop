@@ -185,6 +185,20 @@ const Account = () => {
     vin: "",
   });
   const [productFiles, setProductFiles] = useState<File[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    total: number;
+    completed: number;
+    currentFile: string;
+    failedFiles: string[];
+    successfulFiles: string[];
+  }>({
+    total: 0,
+    completed: 0,
+    currentFile: '',
+    failedFiles: [],
+    successfulFiles: []
+  });
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [showManageProducts, setShowManageProducts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -962,10 +976,29 @@ const Account = () => {
       const failedUploads: string[] = [];
       
       if (productFiles.length > 0) {
+        // Show upload progress
+        setIsUploadingImages(true);
+        setUploadProgress({
+          total: productFiles.length,
+          completed: 0,
+          currentFile: '',
+          failedFiles: [],
+          successfulFiles: []
+        });
+        
         const bucketName =
           listingType === "part" ? "part_images" : "products_images";
         
-        for (const f of productFiles) {
+        for (let i = 0; i < productFiles.length; i++) {
+          const f = productFiles[i];
+          
+          // Update progress for current file
+          setUploadProgress(prev => ({
+            ...prev,
+            currentFile: f.name,
+            completed: i
+          }));
+          
           try {
             const ext = f.name.split(".").pop();
             const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
@@ -976,6 +1009,10 @@ const Account = () => {
             if (uploadError) {
               console.error(`Failed to upload ${f.name}:`, uploadError);
               failedUploads.push(f.name);
+              setUploadProgress(prev => ({
+                ...prev,
+                failedFiles: [...prev.failedFiles, f.name]
+              }));
               continue; // Continue processing other images
             }
             
@@ -984,12 +1021,33 @@ const Account = () => {
               .from(bucketName)
               .getPublicUrl(filePath);
             uploadedImageUrls.push(publicUrlData.publicUrl);
+            
+            setUploadProgress(prev => ({
+              ...prev,
+              successfulFiles: [...prev.successfulFiles, f.name]
+            }));
           } catch (error) {
             console.error(`Error processing ${f.name}:`, error);
             failedUploads.push(f.name);
+            setUploadProgress(prev => ({
+              ...prev,
+              failedFiles: [...prev.failedFiles, f.name]
+            }));
             continue; // Continue processing other images
           }
         }
+        
+        // Final progress update
+        setUploadProgress(prev => ({
+          ...prev,
+          completed: productFiles.length,
+          currentFile: failedUploads.length > 0 ? 'Upload completed with errors' : 'All uploads successful!'
+        }));
+        
+        // Hide upload progress after showing final status
+        setTimeout(() => {
+          setIsUploadingImages(false);
+        }, 2000);
         
         // Show detailed feedback about upload results
         if (failedUploads.length > 0) {
@@ -1685,11 +1743,22 @@ const Account = () => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     
+    // Show loading state immediately
+    setIsUploadingImages(true);
+    setUploadProgress({
+      total: files.length,
+      completed: 0,
+      currentFile: 'Validating files...',
+      failedFiles: [],
+      successfulFiles: []
+    });
+    
     // Validate file types
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     const invalidFiles = files.filter(file => !validTypes.includes(file.type));
     
     if (invalidFiles.length > 0) {
+      setIsUploadingImages(false);
       toast({
         title: "Invalid File Types",
         description: `Please select only image files (JPG, PNG, GIF, WebP). Invalid files: ${invalidFiles.map(f => f.name).join(", ")}`,
@@ -1703,6 +1772,7 @@ const Account = () => {
     const oversizedFiles = files.filter(file => file.size > maxSize);
     
     if (oversizedFiles.length > 0) {
+      setIsUploadingImages(false);
       toast({
         title: "Files Too Large",
         description: `Maximum file size is 5MB. Large files: ${oversizedFiles.map(f => f.name).join(", ")}`,
@@ -1711,12 +1781,30 @@ const Account = () => {
       return;
     }
     
+    // Update progress to show files are being processed
+    setUploadProgress(prev => ({
+      ...prev,
+      currentFile: 'Creating preview images...'
+    }));
+    
     setProductFiles(files);
     const previewUrls = files.map((f) => URL.createObjectURL(f));
     setProductInfo((prev) => ({
       ...prev,
       image_urls: [...prev.image_urls, ...previewUrls],
     }));
+    
+    // Update progress to show completion and hide loading
+    setUploadProgress(prev => ({
+      ...prev,
+      currentFile: 'Images ready for upload',
+      completed: files.length
+    }));
+    
+    // Hide loading after a brief moment to show "ready" state
+    setTimeout(() => {
+      setIsUploadingImages(false);
+    }, 1000);
   };
   const removeImage = (index: number) => {
     setProductInfo((prev) => {
@@ -1740,6 +1828,100 @@ const Account = () => {
       }
       return nf;
     });
+  };
+
+  // Retry failed uploads
+  const retryFailedUploads = async (failedFileNames: string[]) => {
+    if (!session?.user) return;
+    
+    const failedFiles = productFiles.filter(file => failedFileNames.includes(file.name));
+    if (failedFiles.length === 0) return;
+    
+    setIsUploadingImages(true);
+    setUploadProgress({
+      total: failedFiles.length,
+      completed: 0,
+      currentFile: 'Retrying failed uploads...',
+      failedFiles: [],
+      successfulFiles: []
+    });
+    
+    const bucketName = listingType === "part" ? "part_images" : "products_images";
+    const retryUploadedUrls: string[] = [];
+    const retryFailedUploads: string[] = [];
+    
+    for (let i = 0; i < failedFiles.length; i++) {
+      const f = failedFiles[i];
+      
+      setUploadProgress(prev => ({
+        ...prev,
+        currentFile: `Retrying: ${f.name}`,
+        completed: i
+      }));
+      
+      try {
+        const ext = f.name.split(".").pop();
+        const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, f, { upsert: true });
+          
+        if (uploadError) {
+          console.error(`Retry failed to upload ${f.name}:`, uploadError);
+          retryFailedUploads.push(f.name);
+          setUploadProgress(prev => ({
+            ...prev,
+            failedFiles: [...prev.failedFiles, f.name]
+          }));
+          continue;
+        }
+        
+        const { data: publicUrlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+        retryUploadedUrls.push(publicUrlData.publicUrl);
+        
+        setUploadProgress(prev => ({
+          ...prev,
+          successfulFiles: [...prev.successfulFiles, f.name]
+        }));
+      } catch (error) {
+        console.error(`Error retrying ${f.name}:`, error);
+        retryFailedUploads.push(f.name);
+        setUploadProgress(prev => ({
+          ...prev,
+          failedFiles: [...prev.failedFiles, f.name]
+        }));
+      }
+    }
+    
+    setUploadProgress(prev => ({
+      ...prev,
+      completed: failedFiles.length,
+      currentFile: retryFailedUploads.length > 0 ? 'Retry completed with some failures' : 'All retries successful!'
+    }));
+    
+    // Show results
+    if (retryUploadedUrls.length > 0) {
+      toast({
+        title: "Retry Successful",
+        description: `${retryUploadedUrls.length} image(s) uploaded successfully on retry.`,
+      });
+    }
+    
+    if (retryFailedUploads.length > 0) {
+      toast({
+        title: "Some Retries Failed",
+        description: `${retryFailedUploads.length} image(s) still failed: ${retryFailedUploads.join(", ")}`,
+        variant: "destructive",
+      });
+    }
+    
+    setTimeout(() => {
+      setIsUploadingImages(false);
+    }, 2000);
+    
+    return retryUploadedUrls;
   };
 
   // Logout
@@ -3050,7 +3232,74 @@ const Account = () => {
                           type="file"
                           multiple
                           onChange={handleImageUpload}
+                          disabled={isUploadingImages}
                         />
+                        
+                        {/* Image Upload Loading Overlay */}
+                        {isUploadingImages && (
+                          <div className="mt-4 p-4 border border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-950 dark:border-blue-400">
+                            <div className="flex items-center space-x-3">
+                              <RefreshCcw className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                  Uploading Images...
+                                </div>
+                                <div className="text-xs text-blue-700 dark:text-blue-300">
+                                  {uploadProgress.currentFile}
+                                </div>
+                              </div>
+                              <div className="text-sm text-blue-600 dark:text-blue-400">
+                                {uploadProgress.completed}/{uploadProgress.total}
+                              </div>
+                            </div>
+                            
+                            {/* Progress bar */}
+                            <div className="mt-3">
+                              <div className="flex justify-between text-xs text-blue-700 dark:text-blue-300 mb-1">
+                                <span>Progress</span>
+                                <span>{Math.round((uploadProgress.completed / uploadProgress.total) * 100)}%</span>
+                              </div>
+                              <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                            
+                            {/* Success/Failed files summary */}
+                            {(uploadProgress.successfulFiles.length > 0 || uploadProgress.failedFiles.length > 0) && (
+                              <div className="mt-3 space-y-1">
+                                {uploadProgress.successfulFiles.length > 0 && (
+                                  <div className="text-xs text-green-600 dark:text-green-400">
+                                    ✅ Successful: {uploadProgress.successfulFiles.join(", ")}
+                                  </div>
+                                )}
+                                {uploadProgress.failedFiles.length > 0 && (
+                                  <div className="text-xs text-red-600 dark:text-red-400">
+                                    ❌ Failed: {uploadProgress.failedFiles.join(", ")}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Retry button for failed uploads */}
+                            {uploadProgress.failedFiles.length > 0 && uploadProgress.completed === uploadProgress.total && (
+                              <div className="mt-3">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => retryFailedUploads(uploadProgress.failedFiles)}
+                                  className="text-xs"
+                                >
+                                  <RefreshCcw className="h-3 w-3 mr-1" />
+                                  Retry Failed Uploads
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
