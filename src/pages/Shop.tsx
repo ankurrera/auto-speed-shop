@@ -347,9 +347,9 @@ const Shop = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Shop All Items</h1>
-        <div className="relative w-full md:w-1/3 mt-4 md:mt-0">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">Shop All Items</h1>
+        <div className="relative w-full lg:w-1/3">
           <Input
             type="search"
             placeholder="Search for items..."
@@ -369,7 +369,7 @@ const Shop = () => {
           <h3 className="text-xl font-bold text-foreground mb-4">
             Find the Perfect Fit
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Select value={selectedYear} onValueChange={(value) => handleSelectChange(setSelectedYear, "year", value)}>
               <SelectTrigger className="h-12">
                 <SelectValue placeholder="Year" />
@@ -429,11 +429,11 @@ const Shop = () => {
         </Card>
       
       {/* Filters and Sorting */}
-      <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4 my-8">
-        <div className="flex items-center space-x-2">
-          <Label>Sort by:</Label>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 sm:space-x-4 my-8 gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+          <Label className="whitespace-nowrap">Sort by:</Label>
           <Select value={sortOrder} onValueChange={handleSortChange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
@@ -444,10 +444,10 @@ const Shop = () => {
           </Select>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <Label>Price Range:</Label>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+          <Label className="whitespace-nowrap">Price Range:</Label>
           <Select value={priceRange} onValueChange={handlePriceRangeChange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Price Range" />
             </SelectTrigger>
             <SelectContent>
@@ -462,22 +462,25 @@ const Shop = () => {
       </div>
 
       {/* Filter Mode Buttons */}
-      <div className="flex justify-center space-x-4 mb-8">
+      <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
         <Button
           variant={filterMode === "all" ? "default" : "outline"}
           onClick={() => handleFilterModeChange("all")}
+          className="text-sm sm:text-base"
         >
           All Items
         </Button>
         <Button
           variant={filterMode === "parts" ? "default" : "outline"}
           onClick={() => handleFilterModeChange("parts")}
+          className="text-sm sm:text-base"
         >
           Parts
         </Button>
         <Button
           variant={filterMode === "products" ? "default" : "outline"}
           onClick={() => handleFilterModeChange("products")}
+          className="text-sm sm:text-base"
         >
           Products
         </Button>
@@ -487,7 +490,7 @@ const Shop = () => {
       <section>
         {isLoading && <p>Loading items...</p>}
         {!isLoading && filteredItems.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
             {filteredItems.map((item) => (
               <ProductCard
                 key={item.id}
