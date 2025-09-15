@@ -144,6 +144,90 @@ export type Database = {
           },
         ]
       }
+      email_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          email: string
+          subscribed_to_new_products: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email: string
+          subscribed_to_new_products?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email?: string
+          subscribed_to_new_products?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          admin_id: string | null
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          is_from_admin: boolean
+          last_name: string | null
+          message: string
+          sender_type: "user" | "admin"
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          is_from_admin?: boolean
+          last_name?: string | null
+          message: string
+          sender_type: "user" | "admin"
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          is_from_admin?: boolean
+          last_name?: string | null
+          message?: string
+          sender_type?: "user" | "admin"
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "chat_messages_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -664,30 +748,33 @@ export type Database = {
         }
         Relationships: []
       }
-      email_subscriptions: {
+      typing_indicators: {
         Row: {
-          id: string
-          user_id: string
-          email: string
-          subscribed_to_new_products: boolean
+          conversation_user_id: string
           created_at: string
-          updated_at: string
+          id: string
+          is_admin: boolean
+          is_typing: boolean
+          last_typed_at: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          email: string
-          subscribed_to_new_products?: boolean
+          conversation_user_id: string
           created_at?: string
-          updated_at?: string
+          id?: string
+          is_admin?: boolean
+          is_typing?: boolean
+          last_typed_at?: string
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          email?: string
-          subscribed_to_new_products?: boolean
+          conversation_user_id?: string
           created_at?: string
-          updated_at?: string
+          id?: string
+          is_admin?: boolean
+          is_typing?: boolean
+          last_typed_at?: string
+          user_id?: string
         }
         Relationships: []
       }

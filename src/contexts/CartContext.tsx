@@ -74,9 +74,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchCartItems = useCallback(async (currentUserId: string | null) => {
     if (!currentUserId) {
-      // Only log once per session to reduce console noise
-      if (!hasLoggedUnauthenticated) {
+      // Only log once per session in development mode to reduce console noise
+      if (!hasLoggedUnauthenticated && import.meta.env.DEV) {
         console.log("User not authenticated, not fetching cart.");
+        setHasLoggedUnauthenticated(true);
+      } else if (!hasLoggedUnauthenticated) {
         setHasLoggedUnauthenticated(true);
       }
       setCartItems([]);

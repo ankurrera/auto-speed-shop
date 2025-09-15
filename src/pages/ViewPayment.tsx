@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CheckCircle, XCircle, Download, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { verifyPayment } from "@/services/customOrderService";
+import jsPDF from 'jspdf';
 
 interface PaymentData {
   transaction_id: string;
@@ -131,10 +132,10 @@ const ViewPayment = () => {
   };
 
   const handleDownloadScreenshot = async () => {
-    if (!paymentData?.payment_screenshot_url || !paymentData?.transaction_id) {
+    if (!paymentData?.payment_screenshot_url || !order?.order_number) {
       toast({
         title: "Error",
-        description: "Screenshot or transaction ID not available",
+        description: "Screenshot or Order ID not available",
         variant: "destructive"
       });
       return;
@@ -149,37 +150,81 @@ const ViewPayment = () => {
       
       const blob = await response.blob();
       
-      // Determine file extension from the blob type or URL
-      let extension = 'png';
-      if (blob.type.includes('jpeg') || blob.type.includes('jpg')) {
-        extension = 'jpg';
-      } else if (blob.type.includes('png')) {
-        extension = 'png';
-      } else if (paymentData.payment_screenshot_url.includes('.jpg') || paymentData.payment_screenshot_url.includes('.jpeg')) {
-        extension = 'jpg';
+      // Create an image element to get dimensions
+      const img = new Image();
+      const imageLoadPromise = new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image'));
+      });
+      
+      img.src = URL.createObjectURL(blob);
+      await imageLoadPromise;
+      
+      // Create PDF with jsPDF
+      const pdf = new jsPDF({
+        orientation: img.width > img.height ? 'landscape' : 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Calculate dimensions to fit the image on the page
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20; // 20mm margin
+      
+      const maxWidth = pageWidth - (2 * margin);
+      const maxHeight = pageHeight - (2 * margin);
+      
+      let imgWidth = img.width * 0.264583; // Convert pixels to mm (assuming 96 DPI)
+      let imgHeight = img.height * 0.264583;
+      
+      // Scale down if image is too large
+      if (imgWidth > maxWidth) {
+        const ratio = maxWidth / imgWidth;
+        imgWidth = maxWidth;
+        imgHeight = imgHeight * ratio;
       }
       
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${paymentData.transaction_id}.${extension}`;
-      document.body.appendChild(link);
-      link.click();
+      if (imgHeight > maxHeight) {
+        const ratio = maxHeight / imgHeight;
+        imgHeight = maxHeight;
+        imgWidth = imgWidth * ratio;
+      }
+      
+      // Center the image on the page
+      const x = (pageWidth - imgWidth) / 2;
+      const y = (pageHeight - imgHeight) / 2;
+      
+      // Add the image to PDF
+      pdf.addImage(img.src, 'JPEG', x, y, imgWidth, imgHeight);
+      
+      // Add header text
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Payment Screenshot - Order ${order.order_number}`, pageWidth / 2, 15, { align: 'center' });
+      
+      // Add transaction ID if available
+      if (paymentData.transaction_id) {
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Transaction ID: ${paymentData.transaction_id}`, margin, pageHeight - 10);
+      }
+      
+      // Save the PDF with Order ID as filename
+      pdf.save(`${order.order_number}.pdf`);
       
       // Cleanup
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      URL.revokeObjectURL(img.src);
       
       toast({
         title: "Download Complete",
-        description: `Screenshot saved as ${paymentData.transaction_id}.${extension}`
+        description: `Payment screenshot saved as ${order.order_number}.pdf`
       });
     } catch (error) {
       console.error('Download error:', error);
       toast({
         title: "Download Failed",
-        description: "Unable to download screenshot. Please try again.",
+        description: "Unable to download screenshot as PDF. Please try again.",
         variant: "destructive"
       });
     }
@@ -324,7 +369,7 @@ const ViewPayment = () => {
                       className="flex-1"
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      Download
+                      Download as PDF
                     </Button>
                   </div>
                 </div>
