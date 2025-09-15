@@ -75,8 +75,8 @@ const MessageList = ({ messages, loading, currentUserId, isTyping, typingInfo }:
   }
 
   return (
-    <ScrollArea className="h-full p-4" ref={scrollAreaRef}>
-      <div className="space-y-4">
+    <ScrollArea className="h-full max-h-full p-4" ref={scrollAreaRef}>
+      <div className="space-y-4 min-h-0">
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
             <p className="text-sm">No messages yet.</p>
