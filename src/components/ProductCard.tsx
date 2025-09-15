@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { toast } from "sonner";
+import { getBestImageUrl, validateImageUrls } from "@/lib/imageUtils";
 
 export interface ProductCardProps {
   id: string;
@@ -45,11 +46,33 @@ const ProductCard = ({
   const { isWishlisted, toggleWishlist } = useWishlist();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [dominantColor, setDominantColor] = useState('bg-muted');
+  const [imageError, setImageError] = useState<{ [key: number]: boolean }>({});
+  const [fallbackUsed, setFallbackUsed] = useState(false);
 
   // Function to handle image change on hover
   const handleImageChange = (index: number) => {
     setCurrentImageIndex(index);
   };
+
+  // Function to handle image loading errors
+  const handleImageError = (index: number) => {
+    setImageError(prev => ({ ...prev, [index]: true }));
+    
+    // If all images fail to load and we haven't used fallback yet, use placeholder
+    if (!fallbackUsed && image_urls && image_urls.length > 0) {
+      const allImagesFailed = image_urls.every((_, i) => imageError[i] || i === index);
+      if (allImagesFailed) {
+        setFallbackUsed(true);
+      }
+    }
+  };
+
+  // Reset error state when image URLs change
+  useEffect(() => {
+    setImageError({});
+    setFallbackUsed(false);
+    setCurrentImageIndex(0);
+  }, [image_urls]);
   
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault(); // Prevents the Link from navigating
@@ -74,8 +97,27 @@ const handleWishlist = (e: React.MouseEvent) => {
     toggleWishlist({ id, name, brand, price, image: image_urls[0], is_part: isPart }); // Pass the is_part flag
 };
   
-  // Choose the image to display. Default to the first one if the array is valid.
-  const displayImage = image_urls && image_urls.length > 0 ? image_urls[currentImageIndex] : '/placeholder.svg';
+  // Choose the image to display with improved fallback logic
+  const getDisplayImage = () => {
+    const validUrls = validateImageUrls(image_urls);
+    
+    // If no valid URLs or fallback is needed, use placeholder
+    if (validUrls.length === 0 || fallbackUsed) {
+      return getBestImageUrl([], category);
+    }
+    
+    // Find the first non-errored image
+    const validImageIndex = validUrls.findIndex((_, index) => !imageError[index]);
+    if (validImageIndex === -1) {
+      return getBestImageUrl([], category);
+    }
+    
+    // Use current image if it's valid, otherwise use the first valid image
+    const targetIndex = imageError[currentImageIndex] ? validImageIndex : currentImageIndex;
+    return validUrls[targetIndex] || getBestImageUrl([], category);
+  };
+
+  const displayImage = getDisplayImage();
 
   // Function to extract the dominant color from an image using a temporary canvas
   const getDominantColor = (imgSrc: string) => {
@@ -118,26 +160,29 @@ const handleWishlist = (e: React.MouseEvent) => {
             className="relative aspect-square overflow-hidden rounded-t-lg transition-colors duration-300"
             style={{ backgroundColor: dominantColor }}
           >
-            {/* Main product image with lazy loading */}
+            {/* Main product image with lazy loading and error handling */}
             <img
               src={displayImage}
               alt={name}
               className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
+              onError={() => handleImageError(currentImageIndex)}
             />
             
-            {/* Gallery thumbnails on hover */}
-            {image_urls && image_urls.length > 1 && (
+            {/* Gallery thumbnails on hover - only show if we have valid images */}
+            {validateImageUrls(image_urls).length > 1 && !fallbackUsed && (
               <div className="absolute bottom-2 left-2 right-2 flex justify-center gap-1">
-                {image_urls.map((_, index) => (
-                  <button
-                    key={index}
-                    className={cn(
-                      "h-1 w-8 rounded-full transition-colors",
-                      currentImageIndex === index ? "bg-white" : "bg-gray-400"
-                    )}
-                    onMouseEnter={() => handleImageChange(index)}
-                  />
+                {validateImageUrls(image_urls).map((_, index) => (
+                  !imageError[index] && (
+                    <button
+                      key={index}
+                      className={cn(
+                        "h-1 w-8 rounded-full transition-colors",
+                        currentImageIndex === index ? "bg-white" : "bg-gray-400"
+                      )}
+                      onMouseEnter={() => handleImageChange(index)}
+                    />
+                  )
                 ))}
               </div>
             )}

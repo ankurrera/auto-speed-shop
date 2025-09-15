@@ -54,6 +54,7 @@ import AdminCustomerSupport from "@/components/AdminCustomerSupport";
 import { ORDER_STATUS } from "@/types/order";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 import EmailNotificationService from "../services/emailNotificationService";
+import { checkStorageBuckets } from "@/lib/imageUtils";
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
@@ -969,6 +970,19 @@ const Account = () => {
           try {
             const ext = f.name.split(".").pop();
             const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
+            
+            // First check if the bucket exists
+            const bucketStatus = await checkStorageBuckets();
+            const bucketExists = listingType === "part" ? 
+              bucketStatus.partImagesBucket : 
+              bucketStatus.productsImagesBucket;
+            
+            if (!bucketExists) {
+              console.warn(`Storage bucket '${bucketName}' not available. Skipping image upload for ${f.name}.`);
+              failedUploads.push(f.name);
+              continue;
+            }
+            
             const { error: uploadError } = await supabase.storage
               .from(bucketName)
               .upload(filePath, f, { upsert: true });
@@ -997,13 +1011,21 @@ const Account = () => {
           const failedCount = failedUploads.length;
           
           if (successCount === 0) {
-            // All uploads failed
+            // All uploads failed - check if it's due to missing buckets
+            const bucketMissingMessage = failedUploads.some(name => true) ? 
+              " This might be due to missing storage configuration. You can still save the listing without images." : "";
+            
             toast({
-              title: "Upload Failed",
-              description: `All ${failedCount} image(s) failed to upload. Please try again.`,
-              variant: "destructive",
+              title: "Image Upload Failed",
+              description: `All ${failedCount} image(s) failed to upload.${bucketMissingMessage}`,
+              variant: "default", // Changed from destructive to allow proceeding
             });
-            return;
+            
+            // Ask user if they want to proceed without images
+            const proceed = confirm("Image uploads failed. Do you want to save the listing without images?");
+            if (!proceed) {
+              return;
+            }
           } else {
             // Some uploads failed
             toast({

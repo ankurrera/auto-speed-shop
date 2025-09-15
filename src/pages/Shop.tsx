@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Database } from "@/database.types";
 import { useCart } from "@/contexts/CartContext";
 import { Search } from "lucide-react";
+import { demoProducts, isDemoMode } from "@/lib/demoData";
 
 // Define the specific types from your generated database types
 type Product = Database["public"]["Tables"]["products"]["Row"];
@@ -156,30 +157,62 @@ const Shop = () => {
 
 
   const fetchParts = async () => {
-    const { data, error } = await supabase
-      .from("parts")
-      .select("*")
-      .eq("is_active", true); // Only fetch active parts
-    if (error) throw error;
-    return data.map(item => ({ ...item, type: "part" })) as ShopItem[];
+    try {
+      const { data, error } = await supabase
+        .from("parts")
+        .select("*")
+        .eq("is_active", true);
+      
+      if (error) throw error;
+      return data.map(item => ({ ...item, type: "part" })) as ShopItem[];
+    } catch (error) {
+      console.error("Error fetching parts:", error);
+      // Return empty array on error to prevent app from breaking
+      return [];
+    }
   };
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("is_active", true); // Only fetch active products
-    if (error) throw error;
-    return data.map(item => ({ ...item, type: "product" })) as ShopItem[];
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true);
+      
+      if (error) throw error;
+      return data.map(item => ({ ...item, type: "product" })) as ShopItem[];
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      // Return empty array on error to prevent app from breaking
+      return [];
+    }
   };
 
-  const { data: allItems = [], isLoading } = useQuery<ShopItem[]>({
+  const { data: allItems = [], isLoading, error: queryError } = useQuery<ShopItem[]>({
     queryKey: ["shopItems"],
     queryFn: async () => {
+      // Check if we should use demo mode
+      if (isDemoMode()) {
+        console.log("Using demo data mode");
+        return demoProducts as ShopItem[];
+      }
+      
       const [parts, products] = await Promise.all([fetchParts(), fetchProducts()]);
-      return [...parts, ...products];
+      const combinedItems = [...parts, ...products];
+      
+      // If both parts and products are empty and we're not in demo mode, 
+      // automatically enable demo mode for development
+      if (combinedItems.length === 0) {
+        console.warn("No items loaded from database. Enabling demo mode...");
+        localStorage.setItem('demo-mode', 'true');
+        return demoProducts as ShopItem[];
+      }
+      
+      return combinedItems;
     },
     staleTime: 1000 * 60, // 1 minute
+    retry: 1, // Retry failed requests 1 time
+    retryDelay: 1000, // Wait 1 second between retries
   });
 
 
@@ -348,7 +381,14 @@ const Shop = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 gap-4">
-        <h1 className="text-2xl sm:text-3xl font-bold">Shop All Items</h1>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">Shop All Items</h1>
+          {(isDemoMode() || localStorage.getItem('demo-mode') === 'true') && (
+            <p className="text-sm text-orange-600 mt-1">
+              🎭 Demo Mode: Showing sample products for demonstration
+            </p>
+          )}
+        </div>
         <div className="relative w-full lg:w-1/3">
           <Input
             type="search"
@@ -489,7 +529,15 @@ const Shop = () => {
       {/* Results */}
       <section>
         {isLoading && <p>Loading items...</p>}
-        {!isLoading && filteredItems.length > 0 ? (
+        {queryError && (
+          <div className="text-center py-8">
+            <p className="text-red-600 mb-4">Unable to load items from the database.</p>
+            <p className="text-muted-foreground">
+              This might be due to network connectivity issues. Please check your internet connection or try again later.
+            </p>
+          </div>
+        )}
+        {!isLoading && !queryError && filteredItems.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
             {filteredItems.map((item) => (
               <ProductCard
@@ -514,7 +562,7 @@ const Shop = () => {
             ))}
           </div>
         ) : (
-          !isLoading && (
+          !isLoading && !queryError && (
             <p className="col-span-full text-center text-muted-foreground">
               No items found matching your criteria.
             </p>
