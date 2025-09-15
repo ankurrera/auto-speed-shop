@@ -161,40 +161,33 @@ export class ChatService {
             .eq('user_id', userId)
             .single();
 
-          // Create a fallback profile for cases where profile lookup fails
-          let finalProfile;
-          
           if (profileError) {
             console.warn('[ChatService] Profile lookup failed for user:', userId, profileError.message);
-            
-            // Use fallback profile when lookup fails
-            finalProfile = {
+            // Create a fallback profile instead of returning null
+            const fallbackProfile = {
               first_name: 'Unknown',
               last_name: 'User',
               email: `user-${userId.slice(0, 8)}@unknown.com`
             };
             console.log('[ChatService] Using fallback profile for user:', userId);
-          } else if (userProfile) {
-            // Skip admin-only profiles to avoid showing admin conversations in customer support
-            if (userProfile.is_admin === true) {
-              console.log('[ChatService] Skipping admin profile:', userId);
-              return null;
-            }
-            
-            // Use actual profile data, with fallbacks for empty fields
-            finalProfile = {
-              first_name: userProfile.first_name || 'Unknown',
-              last_name: userProfile.last_name || 'User', 
-              email: userProfile.email || `user-${userId.slice(0, 8)}@unknown.com`
-            };
-          } else {
-            // Profile exists but has null data - use fallback
-            finalProfile = {
-              first_name: 'Unknown',
-              last_name: 'User',
-              email: `user-${userId.slice(0, 8)}@unknown.com`
-            };
           }
+
+          // Skip admin-only profiles to avoid showing admin conversations in customer support
+          if (userProfile?.is_admin === true) {
+            console.log('[ChatService] Skipping admin profile:', userId);
+            return null;
+          }
+
+          // Use actual profile or fallback
+          const finalProfile = userProfile ? {
+            first_name: userProfile.first_name || 'Unknown',
+            last_name: userProfile.last_name || 'User', 
+            email: userProfile.email || `user-${userId.slice(0, 8)}@unknown.com`
+          } : {
+            first_name: 'Unknown',
+            last_name: 'User',
+            email: `user-${userId.slice(0, 8)}@unknown.com`
+          };
 
           // Get messages for this user
           console.log('[ChatService] Fetching messages for user:', userId);
