@@ -186,36 +186,50 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center bg-background overflow-hidden">
-        <div className="absolute inset-0">
-          <img
-            src={heroImage}
-            alt="Auto Parts Hero"
-            className="w-full h-full object-cover opacity-80" 
-          />
-          {/* Semi-transparent overlay for text contrast */}
-          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
-        </div>
-        <div className="relative container mx-auto px-4 text-center z-10">
-          <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-tight animate-fade-in-up">
-            <span className="text-white dark:text-white">Your Ultimate</span>
-            <br />
-            <span className="bg-gradient-primary bg-clip-text text-transparent">Auto Parts Destination</span>
-          </h1>
-          <p className="text-lg md:text-xl mt-4 max-w-3xl mx-auto animate-fade-in-up delay-100 text-white">
-            Discover premium parts and accessories for a ride that reflects your style and performance needs.
-          </p>
+      {/* Hero Section - Redesigned with prominent image and clean text block */}
+      <section className="relative min-h-[80vh] flex items-center bg-background overflow-hidden">
+        <div className="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Left: Text Content */}
+          <div className="space-y-8 lg:order-1">
+            <div className="space-y-4">
+              <h1 className="text-4xl md:text-6xl font-bold text-foreground leading-tight">
+                <span className="text-foreground">Premium</span>
+                <br />
+                <span className="text-primary">Auto Parts</span>
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
+                Discover high-quality automotive parts and accessories engineered for performance, reliability, and style.
+              </p>
+            </div>
             
-          {/* Vehicle Search */}
-          <Card className="mt-12 w-full max-w-4xl mx-auto bg-card/70 backdrop-blur-md shadow-lg animate-fade-in-up delay-200">
-            <CardContent className="p-6">
-              <h3 className="text-xl font-bold text-foreground mb-4">
+            <Button size="lg" className="bg-primary hover:bg-primary-hover text-primary-foreground px-8 py-3 text-lg font-medium shadow-lg">
+              Explore Products
+            </Button>
+          </div>
+          
+          {/* Right: Hero Image */}
+          <div className="lg:order-2">
+            <div className="relative">
+              <img
+                src={heroImage}
+                alt="Premium Auto Parts"
+                className="w-full h-[500px] object-cover rounded-lg shadow-lg" 
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-lg"></div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Vehicle Search Tool - Clean horizontal module */}
+        <div className="absolute bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
+          <div className="container mx-auto px-4 py-6">
+            <div className="bg-white dark:bg-card rounded-lg shadow-lg p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4 text-center">
                 Find the Perfect Fit
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger className="h-12">
+                  <SelectTrigger className="h-11 bg-secondary/50">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent
@@ -231,7 +245,7 @@ const Home = () => {
                 </Select>
                 
                 <Select value={selectedMake} onValueChange={setSelectedMake}>
-                  <SelectTrigger className="h-12">
+                  <SelectTrigger className="h-11 bg-secondary/50">
                     <SelectValue placeholder="Make" />
                   </SelectTrigger>
                   <SelectContent
@@ -247,7 +261,7 @@ const Home = () => {
                 </Select>
                 
                 <Select value={selectedModel} onValueChange={setSelectedModel}>
-                  <SelectTrigger className="h-12">
+                  <SelectTrigger className="h-11 bg-secondary/50">
                     <SelectValue placeholder="Model" />
                   </SelectTrigger>
                   <SelectContent
@@ -262,108 +276,127 @@ const Home = () => {
                   </SelectContent>
                 </Select>
                   
-                  <Button size="lg" className="h-12 shadow-primary hover:shadow-lg transition-all duration-300" onClick={handleSearch}>
-                    <Search className="h-5 w-5 mr-2" />
-                    Search Items
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
-        {/* 2. Add the Brand Carousel component here */}
-        <BrandCarousel />
-
-        {/* Features */}
-        <section className="py-24 bg-background">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <Badge variant="secondary" className="mb-4 text-primary">Why Choose Us?</Badge>
-              <h2 className="text-4xl font-bold">Driven by Quality, Delivered with Speed</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up">
-                <CardHeader className="p-0">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Truck className="h-8 w-8 text-primary-foreground" />
-                  </div>
-                  <CardTitle className="font-semibold text-lg">Fast Shipping</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 pt-2">
-                  <p className="text-muted-foreground text-sm">Free shipping on orders over $75, nationwide.</p>
-                </CardContent>
-              </Card>
-              <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-100">
-                <CardHeader className="p-0">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Shield className="h-8 w-8 text-primary-foreground" />
-                  </div>
-                  <CardTitle className="font-semibold text-lg">Quality Guarantee</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 pt-2">
-                  <p className="text-muted-foreground text-sm">All parts are backed by a comprehensive warranty.</p>
-                </CardContent>
-              </Card>
-              <Link to="/contact">
-                <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-200 cursor-pointer">
-                  <CardHeader className="p-0">
-                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Wrench className="h-8 w-8 text-primary-foreground" />
-                    </div>
-                    <CardTitle className="font-semibold text-lg">Expert Support</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0 pt-2">
-                    <p className="text-muted-foreground text-sm">Get professional advice from our experienced team.</p>
-                  </CardContent>
-                </Card>
-              </Link>
-              <Link to="/new-arrivals">
-                <Card className="text-center p-6 transition-all duration-300 hover:shadow-lg hover:border-primary border-transparent hover:scale-105 animate-fade-in-up delay-300">
-                  <CardHeader className="p-0">
-                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Sparkles className="h-8 w-8 text-primary-foreground" />
-                    </div>
-                    <CardTitle className="font-semibold text-lg">New Arrivals</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0 pt-2">
-                    <p className="text-muted-foreground text-sm">Always the latest and greatest products in stock.</p>
-                  </CardContent>
-                </Card>
-              </Link>
+                <Button size="lg" className="h-11 bg-primary hover:bg-primary-hover shadow-md" onClick={handleSearch}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Search Parts
+                </Button>
+              </div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Featured Products */}
-        <section className="py-24 bg-secondary">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16 animate-fade-in-up">
-              <h2 className="text-4xl font-bold">Featured Products</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto mt-4">
-                Top-rated parts chosen by our experts for your car's best performance.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {featuredProducts.map((product) => (
-                <ProductCard 
-                  key={product.id} 
-                  {...product} 
-                  className="hover:scale-105 transition-transform duration-300 animate-fade-in-up"
+      {/* Brand Carousel */}
+      <BrandCarousel />
+
+      {/* Why Choose Us - Two-column layout with image and features */}
+      <section className="py-20 bg-secondary/30">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            {/* Left: Large Image */}
+            <div className="space-y-6">
+              <div className="relative">
+                <img
+                  src={heroImage}
+                  alt="Quality Auto Parts"
+                  className="w-full h-[400px] object-cover rounded-lg shadow-lg"
                 />
-              ))}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent rounded-lg"></div>
+              </div>
             </div>
             
-            <div className="text-center mt-16 animate-fade-in-up delay-400">
-              <Button size="lg" variant="default" className="text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300" asChild>
-                <Link to="/shop">Explore All Products</Link>
-              </Button>
+            {/* Right: Features List */}
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <Badge variant="secondary" className="mb-2 text-primary bg-primary/10">Why Choose Us?</Badge>
+                <h2 className="text-3xl md:text-4xl font-bold text-foreground">
+                  Driven by Quality, Delivered with Excellence
+                </h2>
+                <p className="text-muted-foreground text-lg">
+                  Experience the difference with our premium automotive solutions.
+                </p>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="flex items-start space-x-4 group">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                    <Truck className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">Fast Shipping</h3>
+                    <p className="text-muted-foreground">Free shipping on orders over $75, with nationwide delivery.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4 group">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                    <Shield className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">Quality Guarantee</h3>
+                    <p className="text-muted-foreground">All parts backed by comprehensive warranty and quality assurance.</p>
+                  </div>
+                </div>
+                
+                <Link to="/contact" className="block">
+                  <div className="flex items-start space-x-4 group cursor-pointer">
+                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                      <Wrench className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">Expert Support</h3>
+                      <p className="text-muted-foreground">Professional advice from our experienced automotive team.</p>
+                    </div>
+                  </div>
+                </Link>
+                
+                <Link to="/new-arrivals" className="block">
+                  <div className="flex items-start space-x-4 group cursor-pointer">
+                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                      <Sparkles className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">New Arrivals</h3>
+                      <p className="text-muted-foreground">Latest automotive innovations and cutting-edge products.</p>
+                    </div>
+                  </div>
+                </Link>
+              </div>
             </div>
           </div>
-        </section>
-      </div>
-    );
+        </div>
+      </section>
+
+      {/* Curated Collections - Enhanced product section */}
+      <section className="py-20 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16 space-y-4">
+            <Badge variant="secondary" className="mb-2 text-primary bg-primary/10">Featured</Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground">Curated Collections</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              Handpicked parts and accessories chosen by our experts for superior performance and reliability.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {featuredProducts.map((product) => (
+              <ProductCard 
+                key={product.id} 
+                {...product} 
+                className="hover:scale-105 transition-all duration-300 shadow-sm hover:shadow-lg bg-white dark:bg-card border border-border hover:border-primary/20"
+              />
+            ))}
+          </div>
+          
+          <div className="text-center mt-16">
+            <Button size="lg" variant="outline" className="text-lg px-8 py-3 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300" asChild>
+              <Link to="/shop">View All Products</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
   };
   
   export default Home;
