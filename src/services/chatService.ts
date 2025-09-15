@@ -117,86 +117,80 @@ export class ChatService {
   }[]> {
     console.log('[ChatService] Getting all conversations for admin view');
 
-    // Get all distinct user_ids who have participated in chat with their profiles in one query
-    // This JOIN approach is more efficient and ensures we get profile data
-    const { data: conversationData, error: conversationError } = await supabase
+    // Get all distinct user_ids who have participated in chat
+    // Filter out null values and ensure we only get customer conversations
+    const { data: distinctUsers, error: usersError } = await supabase
       .from('chat_messages')
-      .select(`
-        user_id,
-        created_at,
-        profiles!chat_messages_user_id_fkey(
-          user_id,
-          first_name,
-          last_name,
-          email,
-          is_admin
-        )
-      `)
+      .select('user_id')
       .not('user_id', 'is', null)
       .order('created_at', { ascending: false });
 
-    if (conversationError) {
-      console.error('[ChatService] Error fetching conversations with profiles:', conversationError);
-      throw new Error(`Failed to fetch conversations: ${conversationError.message}`);
+    if (usersError) {
+      console.error('[ChatService] Error fetching distinct users:', usersError);
+      throw new Error(`Failed to fetch conversations: ${usersError.message}`);
     }
 
-    if (!conversationData || conversationData.length === 0) {
+    if (!distinctUsers || distinctUsers.length === 0) {
       console.log('[ChatService] No chat messages found in database');
       return [];
     }
 
-    // Process the data to get unique users with their profiles
-    const userMap = new Map<string, {
-      userId: string;
-      profile: any;
-      lastMessageTime: string;
-    }>();
+    // Get unique user IDs and filter out any null/undefined values
+    const uniqueUserIds = [...new Set(distinctUsers
+      .map(item => item.user_id)
+      .filter(userId => userId && typeof userId === 'string')
+    )];
+    
+    console.log('[ChatService] Found conversations for users:', uniqueUserIds);
 
-    conversationData.forEach(item => {
-      if (item.user_id && item.profiles) {
-        // Skip admin users from customer support view
-        if (item.profiles.is_admin === true) {
-          return;
-        }
-
-        // Keep track of the most recent message time for each user
-        if (!userMap.has(item.user_id) || 
-            new Date(item.created_at) > new Date(userMap.get(item.user_id)!.lastMessageTime)) {
-          userMap.set(item.user_id, {
-            userId: item.user_id,
-            profile: item.profiles,
-            lastMessageTime: item.created_at
-          });
-        }
-      }
-    });
-
-    if (userMap.size === 0) {
-      console.log('[ChatService] No valid non-admin users found');
+    if (uniqueUserIds.length === 0) {
+      console.log('[ChatService] No valid user IDs found');
       return [];
     }
 
-    const uniqueUsers = Array.from(userMap.values());
-    console.log('[ChatService] Found conversations for', uniqueUsers.length, 'users');
-
-    // Get messages and build conversation objects
+    // Get user profiles for each conversation
     const conversationsWithMessages = await Promise.all(
-      uniqueUsers.map(async ({ userId, profile }) => {
+      uniqueUserIds.map(async (userId: string) => {
         try {
-          console.log('[ChatService] Processing conversation for user:', userId, {
-            firstName: profile.first_name,
-            lastName: profile.last_name,
-            email: profile.email
-          });
+          console.log('[ChatService] Processing conversation for user:', userId);
 
-          // Ensure we have valid profile data, using actual database values
-          const finalProfile = {
-            first_name: profile.first_name || 'Unknown',
-            last_name: profile.last_name || 'User',
-            email: profile.email || `unknown-${userId.slice(0, 8)}@customer.com`
+          // Get user profile - be more lenient with missing profiles
+          const { data: userProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email, is_admin')
+            .eq('user_id', userId)
+            .single();
+
+          if (profileError) {
+            console.warn('[ChatService] Profile lookup failed for user:', userId, profileError.message);
+            // Create a fallback profile instead of returning null
+            const fallbackProfile = {
+              first_name: 'Unknown',
+              last_name: 'User',
+              email: `user-${userId.slice(0, 8)}@unknown.com`
+            };
+            console.log('[ChatService] Using fallback profile for user:', userId);
+          }
+
+          // Skip admin-only profiles to avoid showing admin conversations in customer support
+          if (userProfile?.is_admin === true) {
+            console.log('[ChatService] Skipping admin profile:', userId);
+            return null;
+          }
+
+          // Use actual profile or fallback
+          const finalProfile = userProfile ? {
+            first_name: userProfile.first_name || 'Unknown',
+            last_name: userProfile.last_name || 'User', 
+            email: userProfile.email || `user-${userId.slice(0, 8)}@unknown.com`
+          } : {
+            first_name: 'Unknown',
+            last_name: 'User',
+            email: `user-${userId.slice(0, 8)}@unknown.com`
           };
 
           // Get messages for this user
+          console.log('[ChatService] Fetching messages for user:', userId);
           const messages = await this.getMessages(userId);
           
           if (messages.length === 0) {
@@ -234,7 +228,7 @@ export class ChatService {
         new Date(a.lastMessage.created_at).getTime()
       );
 
-    console.log('[ChatService] Returning', validConversations.length, 'valid conversations with proper user data');
+    console.log('[ChatService] Returning', validConversations.length, 'valid conversations');
     return validConversations;
   }
 
