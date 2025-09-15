@@ -7,7 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatService } from '@/services/chatService';
 import AdminChatConversation from './AdminChatConversation';
-import ChatDebugHelper from './ChatDebugHelper';
 
 interface Conversation {
   userId: string;
@@ -267,11 +266,6 @@ const AdminCustomerSupport = () => {
       </CardHeader>
 
       <CardContent className="p-0">
-        {/* Debug section - temporarily shown for troubleshooting */}
-        <div className="p-4 border-b bg-yellow-50">
-          <ChatDebugHelper />
-        </div>
-
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
@@ -290,6 +284,9 @@ const AdminCustomerSupport = () => {
                 ? 'Try adjusting your search terms'
                 : 'Customer support messages will appear here when users start conversations.'
               }
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              💡 Debug tip: Visit <a href="/chat-demo" className="text-blue-500 hover:underline">/chat-demo</a> to test chat functionality
             </p>
           </div>
         ) : (
