@@ -188,9 +188,6 @@ const Account = () => {
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [showManageProducts, setShowManageProducts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  // Image upload loading states
-  const [uploadingImages, setUploadingImages] = useState<Set<number>>(new Set());
-  const [imageUploadProgress, setImageUploadProgress] = useState<Map<number, number>>(new Map());
 
   // Routing / utilities
   const navigate = useNavigate();
@@ -955,27 +952,78 @@ const Account = () => {
         setSellerId(currentSellerId);
       }
 
-      // Check if any images are still uploading
-      if (uploadingImages.size > 0) {
-        toast({
-          title: "Images Still Uploading",
-          description: "Please wait for all images to finish uploading before submitting.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       // Show initial progress
       toast({
         title: "Processing...",
-        description: "Saving your listing...",
+        description: "Uploading images and saving your listing...",
       });
 
-      // Use the already uploaded images from productInfo.image_urls
-      const finalImageUrls = productInfo.image_urls.filter(url => 
-        // Filter out any remaining blob URLs (shouldn't happen but safety check)
-        !url.startsWith('blob:')
-      );
+      const uploadedImageUrls: string[] = [];
+      const failedUploads: string[] = [];
+      
+      if (productFiles.length > 0) {
+        const bucketName =
+          listingType === "part" ? "part_images" : "products_images";
+        
+        for (const f of productFiles) {
+          try {
+            const ext = f.name.split(".").pop();
+            const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
+            const { error: uploadError } = await supabase.storage
+              .from(bucketName)
+              .upload(filePath, f, { upsert: true });
+              
+            if (uploadError) {
+              console.error(`Failed to upload ${f.name}:`, uploadError);
+              failedUploads.push(f.name);
+              continue; // Continue processing other images
+            }
+            
+            // Only get public URL and add to array if upload was successful
+            const { data: publicUrlData } = supabase.storage
+              .from(bucketName)
+              .getPublicUrl(filePath);
+            uploadedImageUrls.push(publicUrlData.publicUrl);
+          } catch (error) {
+            console.error(`Error processing ${f.name}:`, error);
+            failedUploads.push(f.name);
+            continue; // Continue processing other images
+          }
+        }
+        
+        // Show detailed feedback about upload results
+        if (failedUploads.length > 0) {
+          const successCount = uploadedImageUrls.length;
+          const failedCount = failedUploads.length;
+          
+          if (successCount === 0) {
+            // All uploads failed
+            toast({
+              title: "Upload Failed",
+              description: `All ${failedCount} image(s) failed to upload. Please try again.`,
+              variant: "destructive",
+            });
+            return;
+          } else {
+            // Some uploads failed
+            toast({
+              title: "Partial Upload Success",
+              description: `${successCount} image(s) uploaded successfully. ${failedCount} failed: ${failedUploads.join(", ")}`,
+              variant: "default",
+            });
+          }
+        } else if (uploadedImageUrls.length > 0) {
+          // All uploads successful
+          toast({
+            title: "Upload Successful",
+            description: `${uploadedImageUrls.length} image(s) uploaded successfully.`,
+          });
+        }
+      }
+
+      const finalImageUrls = editingProductId
+        ? [...productInfo.image_urls, ...uploadedImageUrls]
+        : uploadedImageUrls;
 
       // Vehicle compatibility (optional)
       let vehicleId: string | null = null;
@@ -1199,9 +1247,6 @@ const Account = () => {
       vin: "",
     });
     setProductFiles([]);
-    // Clear loading states
-    setUploadingImages(new Set());
-    setImageUploadProgress(new Map());
     queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
   };
@@ -1636,7 +1681,7 @@ const Account = () => {
     togglePartFeatureMutation.mutate({ partId: id, is_featured: featured });
 
   // Image handling
-  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     
@@ -1666,114 +1711,14 @@ const Account = () => {
       return;
     }
     
-    // Get current user session for upload
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to upload images.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Determine bucket name
-    const bucketName = listingType === "part" ? "part_images" : "products_images";
-    
-    // Create preview URLs and start uploading each file immediately
-    const currentImageCount = productInfo.image_urls.length;
-    const newPreviewUrls: string[] = [];
-    const newUploadingSet = new Set(uploadingImages);
-    
-    // Add preview URLs and mark as uploading
-    files.forEach((file, index) => {
-      const previewUrl = URL.createObjectURL(file);
-      newPreviewUrls.push(previewUrl);
-      newUploadingSet.add(currentImageCount + index);
-    });
-    
-    // Update state with preview URLs and loading states
+    setProductFiles(files);
+    const previewUrls = files.map((f) => URL.createObjectURL(f));
     setProductInfo((prev) => ({
       ...prev,
-      image_urls: [...prev.image_urls, ...newPreviewUrls],
+      image_urls: [...prev.image_urls, ...previewUrls],
     }));
-    setUploadingImages(newUploadingSet);
-    
-    // Upload each file individually
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const imageIndex = currentImageCount + i;
-      
-      try {
-        const ext = file.name.split(".").pop();
-        const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(filePath, file, { upsert: true });
-          
-        if (uploadError) {
-          console.error(`Failed to upload ${file.name}:`, uploadError);
-          toast({
-            title: "Upload Failed",
-            description: `Failed to upload ${file.name}: ${uploadError.message}`,
-            variant: "destructive",
-          });
-          continue;
-        }
-        
-        // Get public URL for the uploaded image
-        const { data: publicUrlData } = supabase.storage
-          .from(bucketName)
-          .getPublicUrl(filePath);
-        
-        // Replace preview URL with actual uploaded URL
-        setProductInfo((prev) => {
-          const updatedUrls = [...prev.image_urls];
-          // Revoke the old blob URL to prevent memory leaks
-          if (updatedUrls[imageIndex] && updatedUrls[imageIndex].startsWith('blob:')) {
-            URL.revokeObjectURL(updatedUrls[imageIndex]);
-          }
-          updatedUrls[imageIndex] = publicUrlData.publicUrl;
-          return { ...prev, image_urls: updatedUrls };
-        });
-        
-        toast({
-          title: "Upload Successful",
-          description: `${file.name} uploaded successfully.`,
-        });
-        
-      } catch (error) {
-        console.error(`Error uploading ${file.name}:`, error);
-        toast({
-          title: "Upload Error",
-          description: `Error uploading ${file.name}. Please try again.`,
-          variant: "destructive",
-        });
-      } finally {
-        // Remove loading state for this image
-        setUploadingImages((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(imageIndex);
-          return newSet;
-        });
-      }
-    }
-    
-    // Clear the file input
-    e.target.value = '';
   };
   const removeImage = (index: number) => {
-    // Don't allow removal if image is currently uploading
-    if (uploadingImages.has(index)) {
-      toast({
-        title: "Cannot Remove",
-        description: "Please wait for the image to finish uploading before removing it.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setProductInfo((prev) => {
       const nu = [...prev.image_urls];
       
@@ -1785,22 +1730,6 @@ const Account = () => {
       
       nu.splice(index, 1);
       return { ...prev, image_urls: nu };
-    });
-    
-    // Update uploading states - shift indices for items after the removed index
-    setUploadingImages((prev) => {
-      const newSet = new Set<number>();
-      prev.forEach((uploadingIndex) => {
-        if (uploadingIndex < index) {
-          // Keep indices before the removed index as-is
-          newSet.add(uploadingIndex);
-        } else if (uploadingIndex > index) {
-          // Shift indices after the removed index down by 1
-          newSet.add(uploadingIndex - 1);
-        }
-        // Skip the index being removed
-      });
-      return newSet;
     });
     
     setProductFiles((prev) => {
@@ -3137,25 +3066,13 @@ const Account = () => {
                               alt=""
                               className="object-cover w-full h-full"
                             />
-                            {/* Loading overlay */}
-                            {uploadingImages.has(idx) && (
-                              <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                                <div className="text-center">
-                                  <RefreshCcw className="h-4 w-4 text-white animate-spin mx-auto mb-1" />
-                                  <span className="text-xs text-white">Uploading...</span>
-                                </div>
-                              </div>
-                            )}
-                            {/* Remove button - only show if not uploading */}
-                            {!uploadingImages.has(idx) && (
-                              <button
-                                type="button"
-                                onClick={() => removeImage(idx)}
-                                className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs text-red-400 transition"
-                              >
-                                Remove
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeImage(idx)}
+                              className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs text-red-400 transition"
+                            >
+                              Remove
+                            </button>
                           </div>
                         ))}
                       </div>
