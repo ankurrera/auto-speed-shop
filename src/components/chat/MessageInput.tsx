@@ -66,7 +66,7 @@ const MessageInput = ({ onSendMessage, onTyping, disabled }: MessageInputProps) 
 
   return (
     <div className="flex gap-2 items-end">
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <Textarea
           ref={textareaRef}
           placeholder={disabled ? 'Sign in to chat with support...' : 'Type your message...'}
@@ -85,7 +85,7 @@ const MessageInput = ({ onSendMessage, onTyping, disabled }: MessageInputProps) 
         onClick={handleSend}
         disabled={!message.trim() || isSending || disabled}
         size="icon"
-        className="mb-6"
+        className="h-10 w-10 flex-shrink-0"
       >
         <Send className="h-4 w-4" />
       </Button>
