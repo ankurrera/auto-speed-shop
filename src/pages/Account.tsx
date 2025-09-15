@@ -48,6 +48,7 @@ import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
 import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
 import AdminPaymentManagement from "@/components/AdminPaymentManagement";
+import { DraggableImageList } from "@/components/DraggableImageList";
 import AdminPayoutManagement from "@/components/AdminPayoutManagement";
 import AdminInventoryManagement from "@/components/AdminInventoryManagement";
 import AdminCustomerSupport from "@/components/AdminCustomerSupport";
@@ -1814,6 +1815,37 @@ const Account = () => {
       setIsUploadingImages(false);
     }, 1000);
   };
+  // Handle image reordering
+  const handleImageReorder = (newOrder: string[]) => {
+    setProductInfo((prev) => ({
+      ...prev,
+      image_urls: newOrder,
+    }));
+    
+    // Update the existing images and product files arrays to match the new order
+    const existingImagesCount = existingImageUrls.length;
+    const newExistingImages: string[] = [];
+    const newProductFiles: File[] = [];
+    
+    newOrder.forEach((url, newIndex) => {
+      const oldIndex = productInfo.image_urls.indexOf(url);
+      
+      if (oldIndex < existingImagesCount) {
+        // This is an existing image
+        newExistingImages.push(url);
+      } else {
+        // This is a new file
+        const fileIndex = oldIndex - existingImagesCount;
+        if (fileIndex >= 0 && fileIndex < productFiles.length) {
+          newProductFiles.push(productFiles[fileIndex]);
+        }
+      }
+    });
+    
+    setExistingImageUrls(newExistingImages);
+    setProductFiles(newProductFiles);
+  };
+
   const removeImage = (index: number) => {
     setProductInfo((prev) => {
       const nu = [...prev.image_urls];
@@ -3251,6 +3283,7 @@ const Account = () => {
                         <Input
                           type="file"
                           multiple
+                          accept="image/*"
                           onChange={handleImageUpload}
                           disabled={isUploadingImages}
                         />
@@ -3323,29 +3356,12 @@ const Account = () => {
                       </div>
                     </div>
 
-                    {productInfo.image_urls.length > 0 && (
-                      <div className="flex flex-wrap gap-3">
-                        {productInfo.image_urls.map((url, idx) => (
-                          <div
-                            key={idx}
-                            className="relative group w-24 h-24 rounded border border-neutral-700 overflow-hidden"
-                          >
-                            <img
-                              src={url}
-                              alt=""
-                              className="object-cover w-full h-full"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeImage(idx)}
-                              className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs text-red-400 transition"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {/* Draggable Image Preview */}
+                    <DraggableImageList
+                      images={productInfo.image_urls}
+                      onReorder={handleImageReorder}
+                      onRemove={removeImage}
+                    />
 
                     {listingType === "part" && (
                       <div className="space-y-4 border rounded-lg p-4 border-neutral-700">
