@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, Heart, Menu, X, ChevronDown, LogOut, LayoutDashboard, TrendingUp, Search } from "lucide-react";
+import { ShoppingCart, User, Heart, Menu, X, ChevronDown, LogOut, LayoutDashboard, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -28,7 +27,6 @@ const Header = () => {
     is_admin: false,
     is_seller: false,
   });
-  const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
   const { cartItems } = useCart();
@@ -37,14 +35,6 @@ const Header = () => {
   const wishlistCount = wishlistItems.length;
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/shop?query=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery("");
-    }
-  };
 
   const fetchUserProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -150,12 +140,12 @@ const Header = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50 shadow-sm">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+    <header className="bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
+      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         
         {/* Mobile Header (Hamburger, Logo, Actions) */}
         <div className="flex items-center justify-between w-full md:hidden">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
             <Button
               variant="ghost"
               size="sm"
@@ -165,16 +155,17 @@ const Header = () => {
               {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </Button>
             <Link to="/" className="flex items-center space-x-2">
-              <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-8 w-auto" />
+              <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-10 w-auto" />
               <div className="flex-1 min-w-0">
-                <h1 className="text-lg font-bold text-foreground truncate">AutoParts Pro</h1>
+                <h1 className="text-xl font-bold text-foreground truncate">AutoParts Pro</h1>
+                <p className="text-xs text-muted-foreground truncate">Premium Auto Parts</p>
               </div>
             </Link>
           </div>
-          <div className="flex items-center space-x-1">
-            <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0">
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
               <Link to="/wishlist">
-                <Heart className="h-4 w-4" />
+                <Heart className="h-4 w-4 md:h-5 md:w-5" />
                 {wishlistCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
                     {wishlistCount}
@@ -182,9 +173,9 @@ const Header = () => {
                 )}
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0">
+            <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
               <Link to="/cart">
-                <ShoppingCart className="h-4 w-4" />
+                <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
                 {cartItemCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
                     {cartItemCount}
@@ -195,8 +186,8 @@ const Header = () => {
             {userSession ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative h-9 w-9 p-0">
-                    <User className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="relative md:h-10 md:w-10 md:p-0">
+                    <User className="h-4 w-4 md:h-5 md:w-5" />
                     <span className="sr-only">User Account Menu</span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -209,6 +200,10 @@ const Header = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/account/orders">Order History</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/contact">Customer Care</Link>
@@ -240,83 +235,71 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0">
+              <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
                 <Link to="/account">
-                  <User className="h-4 w-4" />
+                  <User className="h-4 w-4 md:h-5 md:w-5" />
                 </Link>
               </Button>
             )}
+            <SimpleThemeToggle />
           </div>
         </div>
         
         {/* Desktop Layout */}
         <div className="hidden md:flex md:w-full items-center justify-between">
           {/* Left: Logo & Name */}
-          <Link to="/" className="flex items-center space-x-3">
-            <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-10 w-auto" />
+          <Link to="/" className="flex items-center space-x-2">
+            <img src={CarWrenchLogo} alt="AutoParts Pro Logo" className="h-14 w-auto" />
             <div>
-              <h1 className="text-xl font-bold text-foreground">AutoParts Pro</h1>
-              <p className="text-xs text-muted-foreground">Premium Auto Parts</p>
+              <h1 className="text-2xl font-bold text-foreground">AutoParts Pro</h1>
+              <p className="text-sm text-muted-foreground">Premium Auto Parts</p>
             </div>
           </Link>
           
-          {/* Center: Navigation Links & Search */}
-          <div className="flex items-center space-x-8">
-            <nav className="flex items-center space-x-6">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
-                    isActive(item.href)
-                      ? "text-primary"
-                      : "text-foreground"
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary text-foreground">
-                  Brands
-                  <ChevronDown className="h-3 w-3" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {brands.map((brand) => (
-                    <Link to={`/shop?make=${brand.name}`} key={brand.name}>
-                      <DropdownMenuItem className="cursor-pointer">
-                        {brand.name}
-                      </DropdownMenuItem>
-                    </Link>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <Link to="/shop">
+          {/* Center: Navigation Links */}
+          <nav className="flex items-center space-x-8">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  isActive(item.href)
+                    ? "text-primary border-b-2 border-primary pb-3"
+                    : "text-foreground"
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary">
+                Shop by Brands
+                <ChevronDown className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {brands.map((brand) => (
+                  <Link to={`/shop?make=${brand.name}`} key={brand.name}>
                     <DropdownMenuItem className="cursor-pointer">
-                      View All Brands
+                      {brand.name}
                     </DropdownMenuItem>
                   </Link>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </nav>
-            
-            {/* Streamlined Search Bar */}
-            <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search parts..."
-                className="pl-10 pr-4 py-2 w-64 bg-secondary/50 border-border focus:border-primary focus:ring-1 focus:ring-primary"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </form>
-          </div>
+                ))}
+                <DropdownMenuSeparator />
+                <Link to="/shop">
+                  <DropdownMenuItem className="cursor-pointer">
+                    View All Brands
+                  </DropdownMenuItem>
+                </Link>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </nav>
           
           {/* Right: Action Buttons */}
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0">
+            
+            <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
               <Link to="/wishlist">
-                <Heart className="h-4 w-4" />
+                <Heart className="h-4 w-4 md:h-5 md:w-5" />
                 {wishlistCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
                     {wishlistCount}
@@ -324,9 +307,9 @@ const Header = () => {
                 )}
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0">
+            <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
               <Link to="/cart">
-                <ShoppingCart className="h-4 w-4" />
+                <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
                 {cartItemCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
                     {cartItemCount}
@@ -338,8 +321,8 @@ const Header = () => {
             {userSession ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative h-9 w-9 p-0">
-                    <User className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="relative md:h-10 md:w-10 md:p-0">
+                    <User className="h-4 w-4 md:h-5 md:w-5" />
                     <span className="sr-only">User Account Menu</span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -352,6 +335,10 @@ const Header = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/account/orders">Order History</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/contact">Customer Care</Link>
@@ -383,9 +370,9 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" size="sm" asChild className="relative h-9 w-9 p-0">
+              <Button variant="ghost" size="sm" asChild className="relative md:h-10 md:w-10 md:p-0">
                 <Link to="/account">
-                  <User className="h-4 w-4" />
+                  <User className="h-4 w-4 md:h-5 md:w-5" />
                 </Link>
               </Button>
             )}
@@ -394,25 +381,13 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu (collapsible with transition) */}
       <div
         className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
           isMobileMenuOpen ? 'max-h-96 opacity-100 py-4 border-t border-border' : 'max-h-0 opacity-0'
         }`}
       >
         <div className="container mx-auto px-4 flex flex-col space-y-4">
-          {/* Mobile Search */}
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search parts..."
-              className="pl-10 pr-4 py-2 w-full bg-secondary/50 border-border focus:border-primary focus:ring-1 focus:ring-primary"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </form>
-          
           <div className="flex flex-col space-y-4">
               {navigation.map((item) => (
                 <Link
@@ -428,7 +403,7 @@ const Header = () => {
               ))}
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex justify-start items-center gap-1 text-sm font-medium transition-colors hover:text-primary">
-                  Brands
+                  Shop by Brands
                   <ChevronDown className="h-4 w-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>

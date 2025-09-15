@@ -4,130 +4,127 @@
 
 @layer base {
   :root {
-    /* Refined Professional Color Palette - Black, White, Gray with Controlled Accent */
+    /* Improved High-contrast Light Theme Palette */
     --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+    --foreground: 220 26% 14%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card: 0 0% 99%;
+    --card-foreground: 220 26% 14%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --popover: 0 0% 99%;
+    --popover-foreground: 220 26% 14%;
 
-    /* Subtle dark red accent as primary */
-    --primary: 0 65% 35%;
+    --primary: 0 84% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 0 65% 30%;
+    --primary-hover: 0 84% 50%;
 
-    /* Professional gray tones */
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 220 26% 14%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 13% 40%;
 
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 9%;
+    --accent: 220 14% 92%;
+    --accent-foreground: 220 26% 14%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Minimalist borders and inputs */
-    --border: 0 0% 85%;
-    --input: 0 0% 96%;
-    --ring: 0 65% 35%;
+    --border: 220 13% 80%;
+    --input: 220 13% 85%;
+    --ring: 0 84% 60%;
 
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
     --warning: 48 96% 53%;
-    --warning-foreground: 0 0% 9%;
+    --warning-foreground: 220 26% 14%;
 
-    /* Auto parts specific colors - refined */
-    --automotive-red: 0 65% 35%;
-    --automotive-dark: 0 0% 9%;
-    --automotive-light: 0 0% 98%;
+    /* Auto parts specific colors */
+    --automotive-red: 0 84% 60%;
+    --automotive-dark: 220 26% 14%;
+    --automotive-light: 220 14% 98%;
 
-    /* Clean gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(0 65% 25%));
-    --gradient-hero: linear-gradient(135deg, hsl(0 0% 9%), hsl(0 0% 15%));
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(0 84% 45%));
+    --gradient-hero: linear-gradient(135deg, hsl(220 26% 14%), hsl(220 20% 20%));
 
-    /* Subtle shadows for clean design */
-    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.06);
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -2px hsl(0 0% 0% / 0.05);
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(220 13% 80% / 0.15);
+    --shadow-md: 0 4px 6px -1px hsl(220 13% 80% / 0.25), 0 2px 4px -1px hsl(220 13% 80% / 0.15);
+    --shadow-lg: 0 10px 15px -3px hsl(220 13% 80% / 0.25), 0 4px 6px -2px hsl(220 13% 80% / 0.15);
     --shadow-primary: 0 4px 14px 0 hsl(var(--primary) / 0.15);
 
     /* Border radius */
-    --radius: 0.375rem;
-    --radius-lg: 0.5rem;
+    --radius: 0.5rem;
+    --radius-lg: 0.75rem;
 
     /* Sidebar colors */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 9%;
-    --sidebar-primary: 0 0% 9%;
+    --sidebar-background: 0 0% 97%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 96%;
-    --sidebar-accent-foreground: 0 0% 9%;
-    --sidebar-border: 0 0% 90%;
-    --sidebar-ring: 0 65% 35%;
+    --sidebar-accent: 220 14% 90%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 75%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    /* Dark mode with professional contrast */
-    --background: 0 0% 5%;
-    --foreground: 0 0% 95%;
+    /* High-contrast Dark Theme Palette */
+    --background: 0 0% 0%; /* <-- UPDATED to be pitch dark */
+    --foreground: 220 14% 95%;
 
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 95%;
+    --card: 0 0% 0%; /* <-- UPDATED to be pitch dark */
+    --card-foreground: 220 14% 95%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 0 0% 0%; /* <-- UPDATED to be pitch dark */
+    --popover-foreground: 220 14% 95%;
 
-    --primary: 0 65% 50%;
-    --primary-foreground: 0 0% 95%;
-    --primary-hover: 0 65% 55%;
+    --primary: 0 84% 60%;
+    --primary-foreground: 220 10% 10%;
+    --primary-hover: 0 84% 65%;
 
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 95%;
+    --secondary: 220 17% 20%;
+    --secondary-foreground: 220 14% 95%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 220 17% 20%;
+    --muted-foreground: 220 9% 65%;
 
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 95%;
+    --accent: 220 17% 20%;
+    --accent-foreground: 220 14% 95%;
 
     --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 95%;
+    --destructive-foreground: 220 14% 95%;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 0 65% 50%;
+    --border: 220 17% 20%;
+    --input: 220 17% 20%;
+    --ring: 0 84% 60%;
 
     --success: 142 76% 36%;
-    --success-foreground: 0 0% 95%;
+    --success-foreground: 220 14% 95%;
 
     --warning: 48 96% 53%;
-    --warning-foreground: 0 0% 9%;
+    --warning-foreground: 220 26% 14%;
 
     /* Auto parts specific colors */
-    --automotive-red: 0 65% 50%;
-    --automotive-dark: 0 0% 95%;
-    --automotive-light: 0 0% 9%;
+    --automotive-red: 0 84% 60%;
+    --automotive-dark: 220 14% 95%;
+    --automotive-light: 220 26% 14%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(0 65% 60%));
-    --gradient-hero: linear-gradient(135deg, hsl(0 0% 5%), hsl(0 0% 12%));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(0 84% 70%));
+    --gradient-hero: linear-gradient(135deg, hsl(220 10% 10%), hsl(220 20% 18%));
 
     /* Sidebar colors */
-    --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 0 65% 50%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 0 65% 50%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
