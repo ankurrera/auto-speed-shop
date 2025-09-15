@@ -10,6 +10,3 @@ npm-debug.log*
 # Temporary test files
 test_parts_deletion.js
 validate_migrations.sh
-test_ticket_identity_fix.sql
-TESTING_GUIDE.md
-FIX_SUMMARY.md

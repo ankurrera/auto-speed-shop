@@ -208,15 +208,12 @@ export class ChatService {
             return null;
           }
 
-          // Extract the last message (most recent) from the messages array
+          // Use denormalized data from the most recent message, fallback to profiles table, then to defaults
           const lastMessage = messages[messages.length - 1];
-
-          // Always prioritize the profiles table data to ensure ticket creator's identity consistency
-          // The denormalized data should be consistent after our fix, but we use profiles as primary source
           const finalProfile = {
-            first_name: userProfile?.first_name || 'Unknown',
-            last_name: userProfile?.last_name || 'User', 
-            email: userProfile?.email || `user-${userId.slice(0, 8)}@unknown.com`
+            first_name: lastMessage.first_name || userProfile?.first_name || 'Unknown',
+            last_name: lastMessage.last_name || userProfile?.last_name || 'User',
+            email: lastMessage.email || userProfile?.email || `user-${userId.slice(0, 8)}@unknown.com`
           };
           
           console.log('[ChatService] Conversation for user:', userId, {
