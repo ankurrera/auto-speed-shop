@@ -264,7 +264,7 @@ const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProp
         : 'bottom-4 right-4 w-96 h-[500px]'
     }`}>
       <Card className="h-full flex flex-col">
-        <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+        <CardHeader className="flex-row items-center justify-between space-y-0 pb-2 flex-shrink-0">
           <CardTitle className="text-lg flex items-center gap-2">
             <MessageCircle className="h-5 w-5" />
             Support Chat
@@ -277,8 +277,8 @@ const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProp
             ✕
           </button>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col p-0">
-          <div className="flex-1 overflow-hidden">
+        <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+          <div className="flex-1 overflow-hidden min-h-0">
             <MessageList 
               messages={messages}
               loading={loading}
@@ -287,7 +287,7 @@ const ChatWindow = ({ isOpen, onClose, isAuthenticated = false }: ChatWindowProp
               typingInfo={typingInfo}
             />
           </div>
-          <div className="border-t p-4">
+          <div className="border-t p-4 flex-shrink-0">
             <MessageInput 
               onSendMessage={handleSendMessage}
               onTyping={handleTyping}
