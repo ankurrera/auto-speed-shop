@@ -57,21 +57,45 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
     loadMessages();
   }, [userId, toast]);
 
-  // Set up real-time subscription
+  // Set up real-time subscription using the enhanced instant messages
   useEffect(() => {
-    subscriptionRef.current = ChatService.subscribeToMessages(
+    if (!currentAdmin) return;
+
+    console.log('[AdminChatConversation] Setting up real-time subscription for user:', userId);
+
+    // Use the enhanced subscription that handles both user and admin messages
+    // This addresses the requirement to listen for 'newMessage' events regardless of sender type
+    subscriptionRef.current = ChatService.subscribeToInstantMessages(
       userId,
       (newMessage: ChatMessage) => {
-        setMessages(prev => [...prev, newMessage]);
+        console.log('[AdminChatConversation] Received', newMessage.sender_type, 'message:', {
+          messageId: newMessage.id,
+          isFromAdmin: newMessage.is_from_admin,
+          senderType: newMessage.sender_type,
+          messagePreview: newMessage.message.substring(0, 50)
+        });
+
+        // Check for duplicate messages to avoid showing the same message twice
+        setMessages(prev => {
+          const isDuplicate = prev.some(msg => msg.id === newMessage.id);
+          if (isDuplicate) {
+            console.log('[AdminChatConversation] Skipping duplicate message:', newMessage.id);
+            return prev;
+          }
+          
+          console.log('[AdminChatConversation] Adding new', newMessage.sender_type, 'message to conversation');
+          return [...prev, newMessage];
+        });
       }
     );
 
     return () => {
       if (subscriptionRef.current) {
+        console.log('[AdminChatConversation] Cleaning up subscription for user:', userId);
         subscriptionRef.current.unsubscribe();
       }
     };
-  }, [userId]);
+  }, [userId, currentAdmin]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -83,21 +107,32 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
   const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || sending || !currentAdmin) return;
 
+    console.log('[AdminChatConversation] Admin sending message:', {
+      userId: userId,
+      adminId: currentAdmin.id,
+      messagePreview: newMessage.trim().substring(0, 50)
+    });
+
     setSending(true);
     try {
-      await ChatService.sendMessage({
+      const sentMessage = await ChatService.sendMessage({
         userId: userId,
         message: newMessage.trim(),
         isFromAdmin: true,
         adminId: currentAdmin.id
       });
       
+      console.log('[AdminChatConversation] Admin message sent successfully:', {
+        messageId: sentMessage.id,
+        senderType: sentMessage.sender_type
+      });
+      
       setNewMessage('');
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('[AdminChatConversation] Failed to send admin message:', error);
       toast({
         title: 'Error',
-        description: 'Failed to send message',
+        description: 'Failed to send message. Please try again.',
         variant: 'destructive'
       });
     } finally {
@@ -145,27 +180,32 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
               <p>No messages in this conversation yet.</p>
             </div>
           ) : (
-            messages.map((message) => (
-              <div 
-                key={message.id}
-                className={`flex ${message.is_from_admin ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`max-w-[75%] rounded-lg px-3 py-2 ${
-                  message.is_from_admin 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-muted'
-                }`}>
-                  <p className="text-sm whitespace-pre-wrap break-words">
-                    {message.message}
-                  </p>
-                  <p className={`text-xs mt-1 ${
-                    message.is_from_admin ? 'text-blue-100' : 'text-muted-foreground'
+            <>
+              {/* Render ALL messages without filtering - both user and admin messages are displayed */}
+              {/* This addresses the requirement to "render both types of messages in the chat thread" */}
+              {messages.map((message) => (
+                <div 
+                  key={message.id}
+                  className={`flex ${message.is_from_admin ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`max-w-[75%] rounded-lg px-3 py-2 ${
+                    message.is_from_admin 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-muted'
                   }`}>
-                    {message.is_from_admin ? 'Admin' : userName} • {formatTime(message.created_at)}
-                  </p>
+                    <p className="text-sm whitespace-pre-wrap break-words">
+                      {message.message}
+                    </p>
+                    <p className={`text-xs mt-1 ${
+                      message.is_from_admin ? 'text-blue-100' : 'text-muted-foreground'
+                    }`}>
+                      {/* Display sender type and name clearly */}
+                      {message.sender_type === 'admin' ? 'Admin' : userName} • {formatTime(message.created_at)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </>
           )}
           <div ref={messagesEndRef} />
         </div>

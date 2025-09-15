@@ -22,10 +22,17 @@ export class ChatService {
     isFromAdmin: boolean;
     adminId?: string;
   }): Promise<ChatMessage> {
+    console.log('[ChatService] Sending message:', {
+      userId: data.userId,
+      senderType: data.isFromAdmin ? 'admin' : 'user',
+      messagePreview: data.message.substring(0, 50) + (data.message.length > 50 ? '...' : '')
+    });
+
     const messageData: ChatMessageInsert = {
       user_id: data.userId,
       message: data.message,
       is_from_admin: data.isFromAdmin,
+      sender_type: data.isFromAdmin ? 'admin' : 'user',
       admin_id: data.adminId || null,
     };
 
@@ -43,8 +50,14 @@ export class ChatService {
       .single();
 
     if (error) {
+      console.error('[ChatService] Failed to send message:', error);
       throw new Error(`Failed to send message: ${error.message}`);
     }
+
+    console.log('[ChatService] Message sent successfully:', {
+      messageId: message.id,
+      senderType: message.sender_type
+    });
 
     return message as ChatMessage;
   }
@@ -83,53 +96,78 @@ export class ChatService {
     messages: ChatMessage[];
     lastMessage: ChatMessage;
   }[]> {
-    // First get all users who have sent messages
-    const { data: conversations, error } = await supabase
+    console.log('[ChatService] Getting all conversations for admin view');
+
+    // Get all distinct user_ids who have participated in chat
+    const { data: distinctUsers, error: usersError } = await supabase
       .from('chat_messages')
-      .select(`
-        user_id,
-        user:profiles!chat_messages_user_id_fkey(
-          first_name,
-          last_name,
-          email
-        )
-      `)
+      .select('user_id')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      throw new Error(`Failed to fetch conversations: ${error.message}`);
+    if (usersError) {
+      console.error('[ChatService] Error fetching distinct users:', usersError);
+      throw new Error(`Failed to fetch conversations: ${usersError.message}`);
     }
 
-    // Group by user and get messages for each
-    const userGroups = conversations.reduce((acc, msg) => {
-      if (!acc[msg.user_id]) {
-        acc[msg.user_id] = {
-          userId: msg.user_id,
-          user: msg.user,
-        };
-      }
-      return acc;
-    }, {} as Record<string, { userId: string; user: { first_name: string; last_name: string; email: string } }>);
+    // Get unique user IDs
+    const uniqueUserIds = [...new Set(distinctUsers.map(item => item.user_id))];
+    console.log('[ChatService] Found conversations for users:', uniqueUserIds);
 
-    // Get messages for each user
+    // Get user profiles for each conversation
     const conversationsWithMessages = await Promise.all(
-      Object.values(userGroups).map(async (group: { userId: string; user: { first_name: string; last_name: string; email: string } }) => {
-        const messages = await this.getMessages(group.userId);
-        return {
-          ...group,
-          messages,
-          lastMessage: messages[messages.length - 1],
-        };
+      uniqueUserIds.map(async (userId: string) => {
+        try {
+          // Get user profile
+          const { data: userProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('user_id', userId)
+            .single();
+
+          if (profileError) {
+            console.warn('[ChatService] No profile found for user:', userId, profileError);
+            return null;
+          }
+
+          // Get messages for this user
+          const messages = await this.getMessages(userId);
+          
+          if (messages.length === 0) {
+            console.warn('[ChatService] No messages found for user:', userId);
+            return null;
+          }
+
+          const lastMessage = messages[messages.length - 1];
+          
+          console.log('[ChatService] Conversation for user:', userId, {
+            messageCount: messages.length,
+            lastMessageType: lastMessage.sender_type,
+            lastMessageTime: lastMessage.created_at
+          });
+
+          return {
+            userId,
+            user: userProfile,
+            messages,
+            lastMessage,
+          };
+        } catch (error) {
+          console.error('[ChatService] Error processing conversation for user:', userId, error);
+          return null;
+        }
       })
     );
 
-    // Sort by last message timestamp
-    return conversationsWithMessages
-      .filter(conv => conv.lastMessage)
+    // Filter out null results and sort by last message timestamp
+    const validConversations = conversationsWithMessages
+      .filter((conv): conv is NonNullable<typeof conv> => conv !== null)
       .sort((a, b) => 
         new Date(b.lastMessage.created_at).getTime() - 
         new Date(a.lastMessage.created_at).getTime()
       );
+
+    console.log('[ChatService] Returning', validConversations.length, 'valid conversations');
+    return validConversations;
   }
 
   /**
@@ -173,25 +211,32 @@ export class ChatService {
   }
 
   /**
-   * Set typing indicator
+   * Set typing indicator using proper UPSERT logic
    */
   static async setTypingIndicator(userId: string, isTyping: boolean, isAdmin = false): Promise<void> {
     if (isTyping) {
+      // Use UPSERT to avoid duplicate key constraint errors
       const { error } = await supabase
         .from('typing_indicators')
         .upsert({
+          user_id: userId,
           conversation_user_id: userId,
           is_typing: true,
           last_typed_at: new Date().toISOString(),
+          is_admin: isAdmin,
+        }, {
+          onConflict: 'user_id,conversation_user_id'
         });
       
       if (error) {
         console.error('Error setting typing indicator:', error);
       }
     } else {
+      // Remove typing indicator when not typing
       const { error } = await supabase
         .from('typing_indicators')
         .delete()
+        .eq('user_id', userId)
         .eq('conversation_user_id', userId);
       
       if (error) {
@@ -247,15 +292,18 @@ export class ChatService {
 
   /**
    * Enhanced real-time message subscription with instant delivery
+   * This handles both user-to-admin and admin-to-user message broadcasting
    */
   static subscribeToInstantMessages(
     userId: string,
     onMessage: (message: ChatMessage) => void,
     onTypingChange?: (isTyping: boolean, userInfo?: { isAdmin: boolean; name: string }) => void
   ) {
-    const channel = supabase.channel(`instant_chat:${userId}`);
+    console.log('[ChatService] Setting up instant messages subscription for user:', userId);
+    const channelName = `instant_chat:${userId}:${Date.now()}`;
+    const channel = supabase.channel(channelName);
 
-    // Subscribe to new messages
+    // Subscribe to messages for this specific user (both incoming and outgoing)
     channel.on(
       'postgres_changes',
       {
@@ -265,6 +313,14 @@ export class ChatService {
         filter: `user_id=eq.${userId}`,
       },
       async (payload) => {
+        console.log('[ChatService] Instant messages received new message payload:', {
+          messageId: payload.new.id,
+          userId: payload.new.user_id,
+          isFromAdmin: payload.new.is_from_admin,
+          senderType: payload.new.sender_type,
+          timestamp: payload.new.created_at
+        });
+
         // Fetch the complete message with user data immediately
         const { data: message, error } = await supabase
           .from('chat_messages')
@@ -280,7 +336,15 @@ export class ChatService {
           .single();
 
         if (!error && message) {
+          console.log('[ChatService] Instant messages calling onMessage with complete message:', {
+            messageId: message.id,
+            isFromAdmin: message.is_from_admin,
+            senderType: message.sender_type,
+            userProfile: message.user ? 'present' : 'missing'
+          });
           onMessage(message as ChatMessage);
+        } else {
+          console.error('[ChatService] Error fetching complete message for instant messages:', error);
         }
       }
     );
@@ -298,12 +362,12 @@ export class ChatService {
         async (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const typingData = payload.new as TypingIndicator;
-            if (typingData.is_typing) {
-              // Get user info
+            if (typingData.is_typing && typingData.user_id !== userId) {
+              // Only show typing indicator for other users (not self)
               const { data: profile } = await supabase
                 .from('profiles')
                 .select('first_name, last_name, is_admin')
-                .eq('user_id', userId)
+                .eq('user_id', typingData.user_id)
                 .single();
               
               if (profile) {
@@ -320,15 +384,16 @@ export class ChatService {
       );
     }
 
+    console.log('[ChatService] Starting subscription for channel:', channelName);
     return channel.subscribe();
   }
 
   /**
-   * Subscribe to all new messages (admin view)
+   * Subscribe to all new messages (admin view) - Enhanced to handle real-time updates
    */
   static subscribeToAllMessages(onMessage: (message: ChatMessage) => void) {
     return supabase
-      .channel('chat_messages:all')
+      .channel('chat_messages:all_admin')
       .on(
         'postgres_changes',
         {
@@ -357,5 +422,63 @@ export class ChatService {
         }
       )
       .subscribe();
+  }
+
+  /**
+   * Subscribe to all conversations for admin dashboard updates
+   * This method listens for ALL message types (both user and admin messages)
+   * addressing the requirement to NOT filter messages only by sender_type = 'admin'
+   */
+  static subscribeToAdminDashboard(onNewMessage: (message: ChatMessage) => void, onConversationUpdate?: () => void) {
+    console.log('[ChatService] Setting up admin dashboard subscription for ALL message types');
+    const channelName = `admin_dashboard:all_messages:${Date.now()}`;
+    const channel = supabase.channel(channelName);
+
+    // Listen for all new messages to update conversations
+    // IMPORTANT: No filtering by sender_type - accepts both 'user' and 'admin' messages
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        // NO FILTER HERE - this receives ALL messages regardless of sender_type
+      },
+      async (payload) => {
+        console.log('[ChatService] Admin dashboard received message:', {
+          messageId: payload.new.id,
+          senderType: payload.new.sender_type,
+          userId: payload.new.user_id
+        });
+
+        // Fetch the complete message with user data
+        const { data: message, error } = await supabase
+          .from('chat_messages')
+          .select(`
+            *,
+            user:profiles!chat_messages_user_id_fkey(
+              first_name,
+              last_name,
+              email
+            )
+          `)
+          .eq('id', payload.new.id)
+          .single();
+
+        if (!error && message) {
+          console.log('[ChatService] Admin dashboard processing:', message.sender_type, 'message for user:', message.user_id);
+          // Call the callback with the message - NO FILTERING by sender_type
+          onNewMessage(message as ChatMessage);
+          if (onConversationUpdate) {
+            onConversationUpdate();
+          }
+        } else {
+          console.error('[ChatService] Error fetching complete message for admin dashboard:', error);
+        }
+      }
+    );
+
+    console.log('[ChatService] Starting admin dashboard subscription:', channelName);
+    return channel.subscribe();
   }
 }
