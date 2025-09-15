@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, Package, Truck, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import TrackOrderTimeline from "@/components/TrackOrderTimeline";
 
 interface OrderDetails {
   id: string;
@@ -22,14 +23,6 @@ interface OrderDetails {
     unit_price: number;
     total_price: number;
   }>;
-}
-
-interface TrackingEvent {
-  date: string;
-  status: string;
-  description: string;
-  location?: string;
-  completed: boolean;
 }
 
 const OrderTracking = () => {
@@ -130,98 +123,6 @@ const OrderTracking = () => {
   }
 
   // Generate tracking events based on order status and dates
-  const generateTrackingEvents = (order: OrderDetails): TrackingEvent[] => {
-    const events: TrackingEvent[] = [
-      {
-        date: order.created_at,
-        status: "Order Placed",
-        description: "Your order has been successfully placed and payment confirmed.",
-        completed: true
-      }
-    ];
-
-    // Add processing event
-    if (order.status !== "pending") {
-      events.push({
-        date: order.created_at,
-        status: "Processing",
-        description: "Your order is being prepared for shipment.",
-        completed: true
-      });
-    }
-
-    // Add shipped event if available
-    if (order.shipped_at) {
-      events.push({
-        date: order.shipped_at,
-        status: "Shipped",
-        description: "Your order has been shipped and is on its way to you.",
-        location: "Distribution Center",
-        completed: true
-      });
-    } else if (order.status === "shipped" || order.status === "delivered") {
-      events.push({
-        date: new Date().toISOString(),
-        status: "Shipped",
-        description: "Your order has been shipped and is on its way to you.",
-        location: "Distribution Center",
-        completed: true
-      });
-    }
-
-    // Add in transit events for shipped orders
-    if (order.status === "shipped" || order.status === "delivered") {
-      events.push({
-        date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        status: "In Transit",
-        description: "Your package is in transit to the destination.",
-        location: "Transit Hub",
-        completed: order.status === "delivered"
-      });
-    }
-
-    // Add delivered event if available
-    if (order.delivered_at) {
-      events.push({
-        date: order.delivered_at,
-        status: "Delivered",
-        description: "Your order has been delivered successfully.",
-        location: "Delivery Address",
-        completed: true
-      });
-    } else if (order.status === "delivered") {
-      events.push({
-        date: new Date().toISOString(),
-        status: "Delivered",
-        description: "Your order has been delivered successfully.",
-        location: "Delivery Address",
-        completed: true
-      });
-    }
-
-    return events;
-  };
-
-  const trackingEvents = generateTrackingEvents(orderDetails);
-
-  const getStatusIcon = (status: string, completed: boolean) => {
-    if (completed) {
-      return <CheckCircle className="h-6 w-6 text-green-500" />;
-    }
-
-    switch (status.toLowerCase()) {
-      case "shipped":
-      case "in transit":
-        return <Truck className="h-6 w-6 text-blue-500" />;
-      case "processing":
-        return <Package className="h-6 w-6 text-orange-500" />;
-      case "delivered":
-        return <MapPin className="h-6 w-6 text-green-500" />;
-      default:
-        return <Clock className="h-6 w-6 text-muted-foreground" />;
-    }
-  };
-
   const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case "delivered":
@@ -254,46 +155,9 @@ const OrderTracking = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Tracking Timeline */}
+            {/* Track Order Progress */}
             <div className="md:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tracking History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {trackingEvents.map((event, index) => (
-                      <div key={index} className="flex items-start gap-4">
-                        <div className="flex-shrink-0">
-                          {getStatusIcon(event.status, event.completed)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className={`font-semibold ${event.completed ? "text-foreground" : "text-muted-foreground"}`}>
-                              {event.status}
-                            </h4>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(event.date).toLocaleDateString()} {new Date(event.date).toLocaleTimeString()}
-                            </span>
-                          </div>
-                          <p className={`text-sm ${event.completed ? "text-muted-foreground" : "text-muted-foreground/70"}`}>
-                            {event.description}
-                          </p>
-                          {event.location && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              <MapPin className="h-3 w-3 inline mr-1" />
-                              {event.location}
-                            </p>
-                          )}
-                        </div>
-                        {index < trackingEvents.length - 1 && (
-                          <div className="absolute left-3 mt-8 w-0.5 h-6 bg-border"></div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <TrackOrderTimeline orderStatus={orderDetails.status} />
             </div>
 
             {/* Order Summary */}
@@ -364,6 +228,26 @@ const OrderTracking = () => {
                         </div>
                       ))}
                     </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Post-Payment Cancellation Guidance */}
+              {(orderDetails.status === "payment_submitted" || 
+                orderDetails.status === "payment_verified" || 
+                orderDetails.status === "confirmed" ||
+                orderDetails.status === "shipped" ||
+                orderDetails.status === "delivered") && (
+                <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+                  <CardHeader>
+                    <CardTitle className="text-blue-700 dark:text-blue-300 text-sm">
+                      Need to Cancel or Update Your Order?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-blue-600 dark:text-blue-400 text-sm">
+                      For cancellations or updates after payment confirmation, please contact Customer Care Services.
+                    </p>
                   </CardContent>
                 </Card>
               )}

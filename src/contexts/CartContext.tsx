@@ -53,15 +53,20 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
   const [userId, setUserId] = useState<string | null>(null);
+  const [hasLoggedUnauthenticated, setHasLoggedUnauthenticated] = useState(false);
 
   // Use a listener to update the userId whenever auth state changes
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserId(session?.user?.id ?? null);
+      // Reset the logged flag when user state changes
+      setHasLoggedUnauthenticated(false);
     });
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user?.id ?? null);
+      // Reset the logged flag when user state changes
+      setHasLoggedUnauthenticated(false);
     });
 
     return () => subscription.unsubscribe();
@@ -69,7 +74,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchCartItems = useCallback(async (currentUserId: string | null) => {
     if (!currentUserId) {
-      console.log("User not authenticated, not fetching cart.");
+      // Only log once per session in development mode to reduce console noise
+      if (!hasLoggedUnauthenticated && import.meta.env.DEV) {
+        console.log("User not authenticated, not fetching cart.");
+        setHasLoggedUnauthenticated(true);
+      } else if (!hasLoggedUnauthenticated) {
+        setHasLoggedUnauthenticated(true);
+      }
       setCartItems([]);
       return;
     }
@@ -140,7 +151,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (err) {
       console.error("Error fetching cart:", err);
     }
-  }, []);
+  }, [hasLoggedUnauthenticated]);
 
   useEffect(() => {
     fetchCartItems(userId);

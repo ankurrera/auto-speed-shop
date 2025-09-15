@@ -27,6 +27,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { createInvoice, verifyPayment } from "@/services/customOrderService";
 import { ORDER_STATUS, PAYMENT_STATUS, type OrderInvoice } from "@/types/order";
@@ -225,6 +226,7 @@ const getSampleInvoiceOrders = (): Order[] => {
 
 const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -373,7 +375,7 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
     setIsCreatingInvoice(true);
     try {
       const newTaxAmount = +((selectedOrder.subtotal + convenienceFee + deliveryCharge) * 0.0825).toFixed(2);
-      const newTotal = selectedOrder.subtotal + selectedOrder.shipping_amount + convenienceFee + deliveryCharge + newTaxAmount;
+      const newTotal = selectedOrder.subtotal + convenienceFee + deliveryCharge + newTaxAmount;
 
       const invoice: OrderInvoice = {
         subtotal: selectedOrder.subtotal,
@@ -493,10 +495,6 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
                       <span>Subtotal:</span>
                       <span>${order.subtotal.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Shipping:</span>
-                      <span>${order.shipping_amount.toFixed(2)}</span>
-                    </div>
                   </div>
                 </div>
 
@@ -551,10 +549,6 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
                       <span>${order.subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Shipping:</span>
-                      <span>${order.shipping_amount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
                       <span>Convenience Fee:</span>
                       <span>${(parseFloat(invoiceForm.convenience_fee) || 0).toFixed(2)}</span>
                     </div>
@@ -569,7 +563,7 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
                     <Separator className="my-2" />
                     <div className="flex justify-between font-bold">
                       <span>Total:</span>
-                      <span>${(order.subtotal + order.shipping_amount + (parseFloat(invoiceForm.convenience_fee) || 0) + (parseFloat(invoiceForm.delivery_charge) || 0) + ((order.subtotal + (parseFloat(invoiceForm.convenience_fee) || 0) + (parseFloat(invoiceForm.delivery_charge) || 0)) * 0.0825)).toFixed(2)}</span>
+                      <span>${(order.subtotal + (parseFloat(invoiceForm.convenience_fee) || 0) + (parseFloat(invoiceForm.delivery_charge) || 0) + ((order.subtotal + (parseFloat(invoiceForm.convenience_fee) || 0) + (parseFloat(invoiceForm.delivery_charge) || 0)) * 0.0825)).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -606,43 +600,17 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
       case ORDER_STATUS.PAYMENT_SUBMITTED: {
         const paymentData = order.notes ? JSON.parse(order.notes) : null;
         return (
-          <div className="space-y-2">
+          <div className="space-y-3 min-w-[200px]">
             {paymentData && (
-              <div className="text-xs space-y-1">
-                <p><strong>Transaction ID:</strong> {paymentData.transaction_id}</p>
-                <p><strong>Amount:</strong> ${paymentData.payment_amount}</p>
-                {paymentData.payment_screenshot_url && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open(paymentData.payment_screenshot_url, '_blank')}
-                  >
-                    <Eye className="h-3 w-3 mr-1" />
-                    View Screenshot
-                  </Button>
-                )}
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">
+                  Payment submitted: ${paymentData.payment_amount}
+                </p>
+                <p className="text-xs text-blue-600 font-medium">
+                  Payment verification managed in Payout section
+                </p>
               </div>
             )}
-            <div className="flex gap-1">
-              <Button
-                size="sm"
-                onClick={() => handleVerifyPayment(order.id, true)}
-                disabled={isVerifyingPayment}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Verify
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => handleVerifyPayment(order.id, false)}
-                disabled={isVerifyingPayment}
-              >
-                <XCircle className="h-3 w-3 mr-1" />
-                Reject
-              </Button>
-            </div>
           </div>
         );
       }
@@ -676,41 +644,43 @@ const AdminInvoiceManagement = ({ onBack }: { onBack: () => void }) => {
       </CardHeader>
       <CardContent>
         {orders.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order #</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.order_number}</TableCell>
-                  <TableCell>
-                    {order.profiles ? (
-                      <div>
-                        <p className="font-medium">{order.profiles.first_name} {order.profiles.last_name}</p>
-                        <p className="text-xs text-muted-foreground">{order.profiles.email}</p>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Unknown</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>{getStatusBadge(order.status)}</TableCell>
-                  <TableCell className="text-right">${order.total_amount.toFixed(2)}</TableCell>
-                  <TableCell className="text-center">
-                    {getActionButton(order)}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[120px]">Order #</TableHead>
+                  <TableHead className="min-w-[180px]">Customer</TableHead>
+                  <TableHead className="min-w-[100px]">Date</TableHead>
+                  <TableHead className="min-w-[140px]">Status</TableHead>
+                  <TableHead className="text-right min-w-[100px]">Total</TableHead>
+                  <TableHead className="text-center min-w-[300px]">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {orders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">{order.order_number}</TableCell>
+                    <TableCell>
+                      {order.profiles ? (
+                        <div>
+                          <p className="font-medium">{order.profiles.first_name} {order.profiles.last_name}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[160px]">{order.profiles.email}</p>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Unknown</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{getStatusBadge(order.status)}</TableCell>
+                    <TableCell className="text-right">${order.total_amount.toFixed(2)}</TableCell>
+                    <TableCell className="text-center">
+                      {getActionButton(order)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         ) : (
           <div className="text-center py-8">
             <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
