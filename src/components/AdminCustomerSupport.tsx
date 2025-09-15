@@ -65,6 +65,19 @@ const AdminCustomerSupport = () => {
       const allConversations = await ChatService.getAllConversations();
       console.log('[AdminCustomerSupport] Loaded', allConversations.length, 'conversations');
       
+      // Log conversation details for debugging
+      allConversations.forEach((conv, index) => {
+        console.log(`[AdminCustomerSupport] Conversation ${index + 1}:`, {
+          userId: conv.userId,
+          userName: `${conv.user?.first_name || 'Unknown'} ${conv.user?.last_name || 'User'}`,
+          userEmail: conv.user?.email,
+          messageCount: conv.messages?.length || 0,
+          lastMessageType: conv.lastMessage?.sender_type,
+          lastMessageFromAdmin: conv.lastMessage?.is_from_admin,
+          lastMessagePreview: conv.lastMessage?.message?.substring(0, 50)
+        });
+      });
+      
       // Calculate unread count for each conversation (messages from users that admins haven't responded to)
       const conversationsWithUnread = await Promise.all(
         allConversations.map(async (conv) => {
@@ -98,7 +111,7 @@ const AdminCustomerSupport = () => {
       );
 
       setConversations(conversationsWithUnread);
-      console.log('[AdminCustomerSupport] Set conversations with unread counts');
+      console.log('[AdminCustomerSupport] Set conversations with unread counts. Total conversations:', conversationsWithUnread.length);
     } catch (error) {
       console.error('[AdminCustomerSupport] Failed to load conversations:', error);
       toast({
@@ -211,11 +224,19 @@ const AdminCustomerSupport = () => {
   }
 
   if (selectedConversation) {
+    const displayName = selectedConversation.user?.first_name || selectedConversation.user?.last_name ? 
+      `${selectedConversation.user.first_name || ''} ${selectedConversation.user.last_name || ''}`.trim() :
+      selectedConversation.user?.email ? 
+        selectedConversation.user.email.split('@')[0] : 
+        `User ${selectedConversation.userId.slice(-8)}`;
+    
+    const displayEmail = selectedConversation.user?.email || `No email • ID: ${selectedConversation.userId.slice(-8)}`;
+    
     return (
       <AdminChatConversation
         userId={selectedConversation.userId}
-        userName={`${selectedConversation.user?.first_name || 'Unknown'} ${selectedConversation.user?.last_name || 'User'}`}
-        userEmail={selectedConversation.user?.email || 'No email available'}
+        userName={displayName}
+        userEmail={displayEmail}
         onBack={() => setSelectedConversation(null)}
       />
     );
@@ -272,6 +293,9 @@ const AdminCustomerSupport = () => {
                 : 'Customer support messages will appear here when users start conversations.'
               }
             </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              💡 Debug tip: Visit <a href="/chat-demo" className="text-blue-500 hover:underline">/chat-demo</a> to test chat functionality
+            </p>
           </div>
         ) : (
           <div className="divide-y">
@@ -285,7 +309,12 @@ const AdminCustomerSupport = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium truncate">
-                        {(conversation.user?.first_name || 'Unknown') + ' ' + (conversation.user?.last_name || 'User')}
+                        {conversation.user?.first_name || conversation.user?.last_name ? 
+                          `${conversation.user.first_name || ''} ${conversation.user.last_name || ''}`.trim() :
+                          conversation.user?.email ? 
+                            conversation.user.email.split('@')[0] : 
+                            `User ${conversation.userId.slice(-8)}`
+                        }
                       </h4>
                       {conversation.unreadCount > 0 && (
                         <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
@@ -294,7 +323,7 @@ const AdminCustomerSupport = () => {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground truncate mb-1">
-                      {conversation.user?.email || 'No email available'}
+                      {conversation.user?.email || `No email • ID: ${conversation.userId.slice(-8)}`}
                     </p>
                     {conversation.lastMessage && (
                       <p className="text-sm text-muted-foreground truncate">
