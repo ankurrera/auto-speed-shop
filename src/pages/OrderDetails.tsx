@@ -34,6 +34,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getOrderDetails, respondToInvoice, submitPayment, cancelOrder } from "@/services/customOrderService";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 import InvoiceDisplay from "@/components/InvoiceDisplay";
+import TrackOrderTimeline from "@/components/TrackOrderTimeline";
 
 interface OrderDetails {
   id: string;
@@ -583,6 +584,17 @@ const OrderDetails = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* Track Order Section */}
+          <div className="mb-8">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold">Track Order</h2>
+              <p className="text-muted-foreground">
+                Follow your order progress through our 7-step workflow
+              </p>
+            </div>
+            <TrackOrderTimeline orderStatus={orderDetails.status} />
+          </div>
 
           {/* Notes */}
           {orderDetails.notes && (
