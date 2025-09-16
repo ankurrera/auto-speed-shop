@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CheckCircle, XCircle, Download, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { verifyPayment } from "@/services/customOrderService";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 import jsPDF from 'jspdf';
 
@@ -61,7 +60,6 @@ const ViewPayment = () => {
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [paymentRecord, setPaymentRecord] = useState<PaymentRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
   // Check if payment data was passed from AdminPaymentManagement
   const passedPaymentRecord = location.state?.paymentRecord as PaymentRecord;
@@ -210,34 +208,6 @@ const ViewPayment = () => {
     
     fetchOrderDetails();
   }, [orderId, navigate, fetchOrderDetails]);
-
-  const handleVerifyPayment = async (verified: boolean) => {
-    if (!orderId) return;
-    
-    setIsVerifyingPayment(true);
-    try {
-      await verifyPayment(orderId, verified);
-      
-      toast({
-        title: verified ? "Payment Verified" : "Payment Rejected",
-        description: verified 
-          ? "Order has been confirmed and customer notified"
-          : "Payment verification failed, customer will be notified"
-      });
-      
-      // Navigate back to invoice management
-      navigate(-1);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to verify payment";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    } finally {
-      setIsVerifyingPayment(false);
-    }
-  };
 
   const handleDownloadPDFReceipt = async () => {
     const orderNumber = activeOrder?.order_number || paymentRecord?.order_number || 'payment-receipt';
@@ -586,95 +556,6 @@ const ViewPayment = () => {
               ) : (
                 <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
                   <p>No screenshot available</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Status</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {isPaymentPending() 
-                  ? "Review the payment details above and verify or reject the payment."
-                  : isPaymentProcessed()
-                  ? "This payment has already been processed. No further action is required."
-                  : "Payment status is being processed."
-                }
-              </p>
-            </CardHeader>
-            <CardContent>
-              {isPaymentPending() ? (
-                /* Show action buttons for pending payments */
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Button
-                      size="lg"
-                      onClick={() => handleVerifyPayment(true)}
-                      disabled={isVerifyingPayment}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      Verify Payment
-                    </Button>
-                    <Button
-                      size="lg"
-                      variant="destructive"
-                      onClick={() => handleVerifyPayment(false)}
-                      disabled={isVerifyingPayment}
-                    >
-                      <XCircle className="h-5 w-5 mr-2" />
-                      Reject Payment
-                    </Button>
-                  </div>
-                  
-                  {isVerifyingPayment && (
-                    <div className="text-center text-sm text-muted-foreground">
-                      Processing payment verification...
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* Show status for already processed payments */
-                <div className="space-y-4">
-                  <div className="flex items-center justify-center p-6 border-2 border-dashed rounded-lg">
-                    <div className="text-center space-y-3">
-                      <div className="flex justify-center">
-                        {getPaymentStatusBadge()}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {paymentRecord?.payment_status === PAYMENT_STATUS.VERIFIED || order?.status === ORDER_STATUS.CONFIRMED
-                          ? "This payment has been verified and the order is confirmed. Payment decisions cannot be changed once processed."
-                          : paymentRecord?.payment_status === PAYMENT_STATUS.FAILED
-                          ? "This payment has been rejected. Payment decisions cannot be changed once processed."
-                          : "Payment processing is complete."
-                        }
-                      </p>
-                      {paymentRecord?.rejection_reason && (
-                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                          <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
-                          <p className="text-sm text-red-700 mt-1">{paymentRecord.rejection_reason}</p>
-                        </div>
-                      )}
-
-                      {/* Always show download receipt option for processed payments */}
-                      {isPaymentProcessed() && (
-                        <div className="mt-4">
-                          <Button
-                            variant="outline"
-                            onClick={handleDownloadPDFReceipt}
-                            className="flex items-center gap-2"
-                          >
-                            <Download className="h-4 w-4" />
-                            Download Transaction Receipt
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
               )}
             </CardContent>
