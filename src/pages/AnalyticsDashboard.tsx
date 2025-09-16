@@ -20,6 +20,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis } from "recharts";
 
+interface LocationData {
+  location: string;
+  count: number;
+}
+
+interface BestProduct {
+  product_name: string;
+  total_quantity: number;
+  sale: string;
+  revenue: string;
+}
+
+interface RecentOrder {
+  order_number: string;
+  customer_name: string;
+  customer_location: string;
+  total_amount: string;
+  status: string;
+}
+
 const AnalyticsDashboard = () => {
   const [chartPeriod, setChartPeriod] = useState("30");
 
@@ -115,7 +135,7 @@ const AnalyticsDashboard = () => {
   })).reverse() || [];
 
   // Prepare user location data for pie chart
-  const locationData = userAnalytics?.top_locations?.map((location: any, index: number) => ({
+  const locationData = userAnalytics?.top_locations?.map((location: LocationData, index: number) => ({
     name: location.location,
     value: location.count,
     fill: `hsl(${index * 60}, 70%, 60%)`
@@ -350,7 +370,7 @@ const AnalyticsDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bestProducts?.map((product: any, index: number) => (
+                  {bestProducts?.map((product: BestProduct, index: number) => (
                     <TableRow key={index}>
                       <TableCell className="font-medium">{product.product_name}</TableCell>
                       <TableCell className="text-right">{product.total_quantity}</TableCell>
@@ -435,7 +455,7 @@ const AnalyticsDashboard = () => {
                 <p className="text-muted-foreground">Loading orders...</p>
               ) : (
                 <div className="space-y-3">
-                  {recentOrders?.slice(0, 5).map((order: any, index: number) => (
+                  {recentOrders?.slice(0, 5).map((order: RecentOrder, index: number) => (
                     <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
                       <div>
                         <p className="font-medium">{order.order_number}</p>

@@ -40,6 +40,18 @@ interface PaymentRecord {
   rejection_reason?: string;
 }
 
+interface RawOrderData {
+  id: string;
+  order_number: string;
+  user_id: string;
+  status: string;
+  payment_status: string;
+  total_amount: string | number;
+  created_at: string;
+  updated_at: string;
+  notes?: string;
+}
+
 const UserPaymentManagement = ({ onBack }: { onBack: () => void }) => {
   const [activeTab, setActiveTab] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -58,7 +70,7 @@ const UserPaymentManagement = ({ onBack }: { onBack: () => void }) => {
       }
 
       // Get user's orders with payment information
-      let { data: orders, error } = await supabase
+      const { data: orders, error } = await supabase
         .from('orders')
         .select(`
           id,
@@ -81,7 +93,7 @@ const UserPaymentManagement = ({ onBack }: { onBack: () => void }) => {
 
       // Transform orders into payment records
       const paymentRecords: PaymentRecord[] = (orders || [])
-        .filter((order: any) => {
+        .filter((order: RawOrderData) => {
           // Include orders that have payment data or payment status
           const hasPaymentData = order.notes && order.notes !== '';
           const hasPaymentStatus = order.payment_status && order.payment_status !== '';
@@ -89,7 +101,7 @@ const UserPaymentManagement = ({ onBack }: { onBack: () => void }) => {
           
           return (hasPaymentData || hasPaymentStatus) && hasAmount;
         })
-        .map((order: any) => {
+        .map((order: RawOrderData) => {
           let paymentData = null;
           let rejectionReason = null;
 

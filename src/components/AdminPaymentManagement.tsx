@@ -58,6 +58,21 @@ interface PaymentRecord {
   rejection_reason?: string;
 }
 
+interface RawOrderData {
+  id: string;
+  order_number: string;
+  user_id: string;
+  status: string;
+  payment_status: string;
+  total_amount: string | number;
+  created_at: string;
+  updated_at: string;
+  notes?: string;
+  customer_first_name?: string;
+  customer_last_name?: string;
+  customer_email?: string;
+}
+
 const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -108,7 +123,7 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
 
       // Transform orders into payment records with very inclusive filtering
       const paymentRecords: PaymentRecord[] = (orders || [])
-        .filter((order: any) => {
+        .filter((order: RawOrderData) => {
           // Include any order that has payment-related data
           const hasAmount = order.total_amount && order.total_amount > 0;
           const hasPaymentStatus = order.payment_status && order.payment_status !== '';
@@ -122,7 +137,7 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
           
           return includeOrder;
         })
-        .map((order: any) => {
+        .map((order: RawOrderData) => {
           let paymentData = null;
           let rejectionReason = null;
 

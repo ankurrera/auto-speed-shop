@@ -10,6 +10,17 @@ import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 import { subscribeToOrderStatusUpdates, OrderStatusUpdate } from "@/services/orderStatusService";
 import { getOrderDetails } from "@/services/customOrderService";
 
+interface ShippingAddress {
+  first_name: string;
+  last_name: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country?: string;
+}
+
 interface OrderDetails {
   id: string;
   order_number: string;
@@ -19,7 +30,7 @@ interface OrderDetails {
   created_at: string;
   shipped_at?: string;
   delivered_at?: string;
-  shipping_address: any;
+  shipping_address: ShippingAddress | null;
   user_id?: string;
   order_items?: Array<{
     id: string;
@@ -55,7 +66,7 @@ const OrderTracking = () => {
       }
 
       setOrderDetails(order);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching order details:", err);
       setError("Failed to load order details");
     } finally {

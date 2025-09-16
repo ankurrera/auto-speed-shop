@@ -36,6 +36,17 @@ import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 import InvoiceDisplay from "@/components/InvoiceDisplay";
 import TrackOrderTimeline from "@/components/TrackOrderTimeline";
 
+interface ShippingAddress {
+  first_name: string;
+  last_name: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country?: string;
+}
+
 interface OrderDetails {
   id: string;
   order_number: string;
@@ -50,7 +61,7 @@ interface OrderDetails {
   created_at: string;
   updated_at: string;
   notes?: string;
-  shipping_address?: any;
+  shipping_address?: ShippingAddress | null;
   order_items?: Array<{
     id: string;
     product_name: string;
@@ -136,11 +147,11 @@ const OrderDetails = () => {
         }
 
         setOrderDetails(order);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error fetching order:", error);
         toast({
           title: "Error",
-          description: error.message || "Failed to load order details",
+          description: error instanceof Error ? error.message : "Failed to load order details",
           variant: "destructive"
         });
       } finally {
@@ -168,10 +179,10 @@ const OrderDetails = () => {
           ? "You can now proceed with payment using the PayPal details below."
           : "The invoice has been declined. The order will be cancelled.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to respond to invoice",
+        description: error instanceof Error ? error.message : "Failed to respond to invoice",
         variant: "destructive"
       });
     } finally {
@@ -194,10 +205,10 @@ const OrderDetails = () => {
         title: "Order Cancelled",
         description: "Your order has been successfully cancelled. Refunds, if applicable, will follow company policy.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to cancel order",
+        description: error instanceof Error ? error.message : "Failed to cancel order",
         variant: "destructive"
       });
     } finally {
@@ -258,10 +269,10 @@ const OrderDetails = () => {
         screenshotFile: null
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Payment Submission Failed",
-        description: error.message || "Failed to submit payment details",
+        description: error instanceof Error ? error.message : "Failed to submit payment details",
         variant: "destructive"
       });
     } finally {
