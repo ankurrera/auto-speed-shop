@@ -62,7 +62,7 @@ BEGIN
     -- Update step 1 completion timestamp
     UPDATE order_progress_steps 
     SET completed_at = now() 
-    WHERE order_id = initialize_order_progress_steps.order_id AND step_number = 1;
+    WHERE order_progress_steps.order_id = initialize_order_progress_steps.order_id AND step_number = 1;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -81,7 +81,7 @@ BEGIN
         updated_at = now(),
         completed_at = CASE WHEN p_status = 'completed' THEN now() ELSE completed_at END,
         canceled_at = CASE WHEN p_status = 'canceled' THEN now() ELSE canceled_at END
-    WHERE order_id = p_order_id AND step_number = p_step_number;
+    WHERE order_progress_steps.order_id = p_order_id AND step_number = p_step_number;
     
     -- Handle conditional logic for cancellations
     IF p_step_number = 3 AND p_status = 'canceled' THEN
@@ -91,7 +91,7 @@ BEGIN
             status = 'canceled',
             updated_at = now(),
             canceled_at = now()
-        WHERE order_id = p_order_id AND step_number BETWEEN 4 AND 7;
+        WHERE order_progress_steps.order_id = p_order_id AND step_number BETWEEN 4 AND 7;
     END IF;
     
     IF p_step_number = 6 AND p_status = 'canceled' THEN
@@ -101,7 +101,7 @@ BEGIN
             status = 'canceled',
             updated_at = now(),
             canceled_at = now()
-        WHERE order_id = p_order_id AND step_number = 7;
+        WHERE order_progress_steps.order_id = p_order_id AND step_number = 7;
     END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -187,7 +187,7 @@ BEGIN
             -- Cancel all remaining steps
             UPDATE order_progress_steps 
             SET status = 'canceled', updated_at = now(), canceled_at = now()
-            WHERE order_id = p_order_id AND status = 'pending';
+            WHERE order_progress_steps.order_id = p_order_id AND status = 'pending';
             
         ELSE
             -- For other statuses, just ensure step 1 is complete
@@ -201,7 +201,7 @@ CREATE OR REPLACE FUNCTION trigger_sync_order_progress()
 RETURNS trigger AS $$
 BEGIN
     -- Initialize progress steps if they don't exist
-    IF NOT EXISTS (SELECT 1 FROM order_progress_steps WHERE order_id = NEW.id) THEN
+    IF NOT EXISTS (SELECT 1 FROM order_progress_steps WHERE order_progress_steps.order_id = NEW.id) THEN
         PERFORM initialize_order_progress_steps(NEW.id);
     END IF;
     
