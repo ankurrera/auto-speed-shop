@@ -29,6 +29,7 @@ import TrackOrderDemo from "./pages/TrackOrderDemo";
 import SellerDashboard from "./pages/SellerDashboard";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import ViewPayment from "./pages/ViewPayment";
+import CheckoutDemo from "./pages/CheckoutDemo";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
@@ -68,6 +69,7 @@ const App = () => {
                     <Route path="/seller-dashboard" element={<SellerDashboard />} />
                     <Route path="/analytics" element={<AnalyticsDashboard />} />
                     <Route path="/checkout" element={<CustomCheckout />} />
+                    <Route path="/checkout-demo" element={<CheckoutDemo />} />
                     <Route path="/custom-checkout" element={<CustomCheckout />} />
                     <Route path="/custom-order-demo" element={<CustomOrderFlowDemo />} />
                     <Route path="/invoice-demo" element={<InvoiceDemo />} />

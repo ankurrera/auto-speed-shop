@@ -1,0 +1,518 @@
+import { useState, useEffect, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Package, Clock, MapPin, Edit } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const TAX_RATE = 0.0825;
+
+interface Address {
+  id: string;
+  first_name: string;
+  last_name: string;
+  address_line_1: string;
+  address_line_2?: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+  phone: string;
+  type: string;
+  is_default: boolean;
+}
+
+// Mock data for demonstration
+const mockAddresses: Address[] = [
+  {
+    id: "1",
+    first_name: "John",
+    last_name: "Doe",
+    address_line_1: "123 Main Street",
+    address_line_2: "Apt 4B",
+    city: "New York",
+    state: "NY",
+    postal_code: "10001",
+    country: "US",
+    phone: "555-123-4567",
+    type: "shipping",
+    is_default: true,
+  },
+  {
+    id: "2",
+    first_name: "John",
+    last_name: "Doe",
+    address_line_1: "456 Oak Avenue",
+    city: "Los Angeles", 
+    state: "CA",
+    postal_code: "90210",
+    country: "US",
+    phone: "555-987-6543",
+    type: "shipping",
+    is_default: false,
+  },
+  {
+    id: "3",
+    first_name: "John",
+    last_name: "Doe",
+    address_line_1: "789 Business Blvd",
+    address_line_2: "Suite 200",
+    city: "Chicago",
+    state: "IL",
+    postal_code: "60601",
+    country: "US",
+    phone: "555-456-7890",
+    type: "shipping",
+    is_default: false,
+  },
+];
+
+const mockCartItems = [
+  {
+    id: "1",
+    name: "High Performance Brake Pads",
+    price: 89.99,
+    quantity: 2,
+  },
+  {
+    id: "2", 
+    name: "Oil Filter - Premium Grade",
+    price: 15.99,
+    quantity: 1,
+  },
+  {
+    id: "3",
+    name: "Air Filter Replacement",
+    price: 24.99,
+    quantity: 1,
+  },
+];
+
+const CheckoutDemo = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Address management state
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [useManualEntry, setUseManualEntry] = useState(false);
+  const [addressesLoading, setAddressesLoading] = useState(true);
+  
+  const [shippingInfo, setShippingInfo] = useState({
+    firstName: "",
+    lastName: "",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+  });
+
+  // Simulate fetching user addresses
+  const fetchUserAddresses = useCallback(async () => {
+    try {
+      setAddressesLoading(true);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setAddresses(mockAddresses);
+      
+      // Auto-select default address if exists and no manual entry preference
+      const defaultAddress = mockAddresses.find((addr) => addr.is_default);
+      if (defaultAddress && !useManualEntry) {
+        setSelectedAddressId(defaultAddress.id);
+        populateFromAddress(defaultAddress);
+      }
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+      setUseManualEntry(true); // Fallback to manual entry
+    } finally {
+      setAddressesLoading(false);
+    }
+  }, [useManualEntry]);
+
+  // Populate shipping info from selected address
+  const populateFromAddress = (address: Address) => {
+    setShippingInfo({
+      firstName: address.first_name,
+      lastName: address.last_name,
+      address: address.address_line_1 + (address.address_line_2 ? ` ${address.address_line_2}` : ""),
+      city: address.city,
+      state: address.state,
+      zip: address.postal_code,
+    });
+  };
+
+  // Initialize demo
+  useEffect(() => {
+    fetchUserAddresses();
+  }, [fetchUserAddresses]);
+
+  // Check if form is valid (either selected address or complete manual entry)
+  const isFormValid = useManualEntry 
+    ? Object.values(shippingInfo).every(value => value.trim() !== "")
+    : selectedAddressId !== "" || Object.values(shippingInfo).every(value => value.trim() !== "");
+
+  // Calculate totals
+  const subtotal = mockCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const tax = +(subtotal * TAX_RATE).toFixed(2);
+  const total = +(subtotal + tax).toFixed(2);
+
+  const handleInputChange = (field: string, value: string) => {
+    setShippingInfo(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddressSelection = (addressId: string) => {
+    if (addressId === "manual") {
+      setUseManualEntry(true);
+      setSelectedAddressId("");
+      // Clear form for manual entry
+      setShippingInfo({
+        firstName: "",
+        lastName: "",
+        address: "",
+        city: "",
+        state: "",
+        zip: "",
+      });
+    } else {
+      setUseManualEntry(false);
+      setSelectedAddressId(addressId);
+      const selectedAddress = addresses.find(addr => addr.id === addressId);
+      if (selectedAddress) {
+        populateFromAddress(selectedAddress);
+      }
+    }
+  };
+
+  const getSelectedAddress = () => {
+    return addresses.find(addr => addr.id === selectedAddressId);
+  };
+
+  const handleSubmitOrder = async () => {
+    if (!isFormValid) {
+      toast({
+        title: "Incomplete Information",
+        description: "Please fill in all shipping details.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Simulate order submission
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      toast({
+        title: "Order Request Submitted!",
+        description: "Your order #DEMO-12345 has been submitted for admin review. You will receive an invoice soon.",
+      });
+
+      // Navigate to a demo success page
+      navigate("/");
+      
+    } catch (error) {
+      console.error("Order submission error:", error);
+      toast({
+        title: "Order Failed",
+        description: "Failed to submit order request. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8 pt-24">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold mb-4">Checkout Demo</h1>
+            <p className="text-muted-foreground">
+              Address Selection Feature Demonstration - Submit your order request. Our admin will review and send you an invoice.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Shipping Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Shipping Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Address Selection */}
+                {!addressesLoading && addresses.length > 0 && (
+                  <div className="space-y-3">
+                    <Label>Choose Address</Label>
+                    <Select 
+                      value={useManualEntry ? "manual" : selectedAddressId} 
+                      onValueChange={handleAddressSelection}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a saved address or enter manually" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {addresses.map((address) => (
+                          <SelectItem key={address.id} value={address.id}>
+                            <div className="flex items-center gap-2">
+                              {address.is_default && (
+                                <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
+                                  Default
+                                </span>
+                              )}
+                              <span>
+                                {address.first_name} {address.last_name} - {address.address_line_1}, {address.city}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="manual">
+                          <div className="flex items-center gap-2">
+                            <Edit className="h-4 w-4" />
+                            Enter new address manually
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Address Preview for Selected Address */}
+                {!useManualEntry && selectedAddressId && getSelectedAddress() && (
+                  <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Selected Address Preview
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddressSelection("manual")}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit for this order
+                      </Button>
+                    </div>
+                    {(() => {
+                      const addr = getSelectedAddress()!;
+                      return (
+                        <div className="text-sm space-y-1">
+                          <p className="font-medium">{addr.first_name} {addr.last_name}</p>
+                          <p>{addr.address_line_1}</p>
+                          {addr.address_line_2 && <p>{addr.address_line_2}</p>}
+                          <p>{addr.city}, {addr.state} {addr.postal_code}</p>
+                          <p>{addr.country}</p>
+                          {addr.phone && <p className="text-muted-foreground">{addr.phone}</p>}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* Manual Entry Form */}
+                {(useManualEntry || addresses.length === 0) && (
+                  <>
+                    {addresses.length === 0 && !addressesLoading && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          No saved addresses found. Please enter your shipping details below.
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input
+                          id="firstName"
+                          value={shippingInfo.firstName}
+                          onChange={(e) => handleInputChange("firstName", e.target.value)}
+                          placeholder="John"
+                          disabled={!useManualEntry && selectedAddressId !== ""}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input
+                          id="lastName"
+                          value={shippingInfo.lastName}
+                          onChange={(e) => handleInputChange("lastName", e.target.value)}
+                          placeholder="Doe"
+                          disabled={!useManualEntry && selectedAddressId !== ""}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        value={shippingInfo.address}
+                        onChange={(e) => handleInputChange("address", e.target.value)}
+                        placeholder="123 Main Street"
+                        disabled={!useManualEntry && selectedAddressId !== ""}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          value={shippingInfo.city}
+                          onChange={(e) => handleInputChange("city", e.target.value)}
+                          placeholder="New York"
+                          disabled={!useManualEntry && selectedAddressId !== ""}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="state">State</Label>
+                        <Select 
+                          onValueChange={(value) => handleInputChange("state", value)}
+                          value={shippingInfo.state}
+                          disabled={!useManualEntry && selectedAddressId !== ""}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="AL">Alabama</SelectItem>
+                            <SelectItem value="CA">California</SelectItem>
+                            <SelectItem value="FL">Florida</SelectItem>
+                            <SelectItem value="IL">Illinois</SelectItem>
+                            <SelectItem value="NY">New York</SelectItem>
+                            <SelectItem value="TX">Texas</SelectItem>
+                            {/* Add more states as needed */}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="zip">ZIP Code</Label>
+                      <Input
+                        id="zip"
+                        value={shippingInfo.zip}
+                        onChange={(e) => handleInputChange("zip", e.target.value)}
+                        placeholder="10001"
+                        disabled={!useManualEntry && selectedAddressId !== ""}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Loading State */}
+                {addressesLoading && (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <span className="ml-2 text-muted-foreground">Loading addresses...</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Order Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Cart Items */}
+                <div className="space-y-3">
+                  {mockCartItems.map((item) => (
+                    <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm">{item.name}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Qty: {item.quantity} × ${item.price.toFixed(2)}
+                        </p>
+                      </div>
+                      <span className="font-semibold text-sm">
+                        ${(item.price * item.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <Separator />
+
+                {/* Totals */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span>${subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Tax:</span>
+                    <span>${tax.toFixed(2)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between font-bold">
+                    <span>Estimated Total:</span>
+                    <span>${total.toFixed(2)}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    *Final total may include additional convenience and delivery fees as determined by admin.
+                  </p>
+                </div>
+
+                {/* Submit Button */}
+                <div className="pt-4">
+                  <Button
+                    onClick={handleSubmitOrder}
+                    disabled={!isFormValid || isSubmitting}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Clock className="h-4 w-4 mr-2 animate-spin" />
+                        Submitting Order Request...
+                      </>
+                    ) : (
+                      <>
+                        <Package className="h-4 w-4 mr-2" />
+                        Submit Order Request
+                      </>
+                    )}
+                  </Button>
+                  
+                  {!isFormValid && (
+                    <p className="text-sm text-muted-foreground mt-2 text-center">
+                      Please complete all shipping details above
+                    </p>
+                  )}
+                </div>
+
+                {/* Info Box */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mt-4">
+                  <h4 className="font-semibold text-sm mb-2">What happens next?</h4>
+                  <ol className="text-sm text-muted-foreground space-y-1">
+                    <li>1. Admin reviews your order request</li>
+                    <li>2. You'll receive an invoice with final pricing</li>
+                    <li>3. Accept the invoice to proceed with payment</li>
+                    <li>4. Complete payment via external payment method</li>
+                    <li>5. Submit payment confirmation</li>
+                  </ol>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CheckoutDemo;
