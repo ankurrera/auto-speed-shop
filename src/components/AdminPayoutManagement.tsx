@@ -252,7 +252,7 @@ const PayoutManagement = ({ onBack }: PayoutManagementProps) => {
                         className="bg-green-600 hover:bg-green-700"
                       >
                         <CheckCircle className="h-4 w-4 mr-1" />
-                        Verify
+                        Accept
                       </Button>
                       <Button
                         size="sm"
@@ -435,7 +435,7 @@ const PayoutManagement = ({ onBack }: PayoutManagementProps) => {
                       className="bg-green-600 hover:bg-green-700"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Verify Payment
+                      Accept
                     </Button>
                     <Button
                       variant="destructive"
@@ -446,7 +446,7 @@ const PayoutManagement = ({ onBack }: PayoutManagementProps) => {
                       disabled={isVerifyingPayment}
                     >
                       <XCircle className="h-4 w-4 mr-2" />
-                      Reject Payment
+                      Reject
                     </Button>
                   </div>
                 )}
