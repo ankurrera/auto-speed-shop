@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CheckCircle, XCircle, Download, Eye, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
+import { subscribeToOrderStatusUpdates, OrderStatusUpdate } from "@/services/orderStatusService";
 import jsPDF from 'jspdf';
 
 interface PaymentData {
@@ -214,6 +215,31 @@ const ViewPayment = () => {
     }
   }, [orderId, navigate, toast, passedPaymentRecord]);
 
+  // Handle real-time status updates
+  const handleStatusUpdate = useCallback((update: OrderStatusUpdate) => {
+    console.log('[ViewPayment] Received real-time payment status update:', update);
+    
+    // Update order state
+    setOrder(prev => {
+      if (!prev || prev.id !== update.order_id) return prev;
+      return {
+        ...prev,
+        status: update.status,
+      };
+    });
+
+    // Update payment record state if applicable
+    setPaymentRecord(prev => {
+      if (!prev || prev.id !== update.order_id) return prev;
+      return {
+        ...prev,
+        status: update.status,
+        payment_status: update.payment_status || prev.payment_status,
+        updated_at: update.updated_at
+      };
+    });
+  }, []);
+
   useEffect(() => {
     if (!orderId) {
       navigate(-1);
@@ -221,7 +247,15 @@ const ViewPayment = () => {
     }
     
     fetchOrderDetails();
-  }, [orderId, navigate, fetchOrderDetails]);
+
+    // Set up real-time subscription for payment status updates
+    const unsubscribe = subscribeToOrderStatusUpdates(orderId, handleStatusUpdate);
+
+    // Cleanup subscription on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, [orderId, navigate, fetchOrderDetails, handleStatusUpdate]);
 
   const handleDownloadPDFReceipt = async () => {
     const orderNumber = activeOrder?.order_number || paymentRecord?.order_number || 'payment-receipt';
@@ -406,13 +440,24 @@ const ViewPayment = () => {
 
       if (error) throw error;
 
+      // Immediately update local state to reflect the change
+      const now = new Date().toISOString();
+      setOrder(prev => prev ? { ...prev, status: ORDER_STATUS.CONFIRMED } : null);
+      setPaymentRecord(prev => prev ? {
+        ...prev,
+        payment_status: PAYMENT_STATUS.VERIFIED,
+        status: ORDER_STATUS.CONFIRMED,
+        updated_at: now
+      } : null);
+
       toast({
         title: "Payment Accepted",
         description: "Payment has been verified and the order has been confirmed.",
       });
 
-      // Refresh the payment data
+      // Refresh the payment data to ensure consistency
       await fetchOrderDetails();
+      
       
     } catch (error) {
       console.error('Error accepting payment:', error);
@@ -454,6 +499,17 @@ const ViewPayment = () => {
 
       if (error) throw error;
 
+      // Immediately update local state to reflect the change
+      const now = new Date().toISOString();
+      setOrder(prev => prev ? { ...prev, status: ORDER_STATUS.CANCELLED } : null);
+      setPaymentRecord(prev => prev ? {
+        ...prev,
+        payment_status: PAYMENT_STATUS.FAILED,
+        status: ORDER_STATUS.CANCELLED,
+        updated_at: now,
+        rejection_reason: rejectionReason
+      } : null);
+
       toast({
         title: "Payment Rejected",
         description: "Payment has been rejected and the customer has been notified.",
@@ -463,7 +519,7 @@ const ViewPayment = () => {
       setShowRejectDialog(false);
       setRejectionReason("");
       
-      // Refresh the payment data
+      // Refresh the payment data to ensure consistency
       await fetchOrderDetails();
       
     } catch (error) {
