@@ -214,7 +214,9 @@ const OrderTracking = () => {
             {/* Track Order Progress */}
             <div className="md:col-span-2">
               <TrackOrderTimeline 
-                orderStatus={orderDetails.status} 
+                orderStatus={orderDetails.status}
+                orderId={orderDetails.id}
+                useEnhancedTracking={true}
               />
             </div>
 

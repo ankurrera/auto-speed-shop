@@ -32,6 +32,7 @@ import ViewPayment from "./pages/ViewPayment";
 import UserViewPayment from "./pages/UserViewPayment";
 import PaymentDetailsDemo from "./pages/PaymentDetailsDemo";
 import CheckoutDemo from "./pages/CheckoutDemo";
+import OrderProgressDemo from "./pages/OrderProgressDemo";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
@@ -77,6 +78,7 @@ const App = () => {
                     <Route path="/invoice-demo" element={<InvoiceDemo />} />
                     <Route path="/show-invoice-button-demo" element={<ShowInvoiceButtonDemo />} />
                     <Route path="/track-order-demo" element={<TrackOrderDemo />} />
+                    <Route path="/order-progress-demo" element={<OrderProgressDemo />} />
                     <Route path="/chat-demo" element={<MockChatDemo />} />
                     <Route path="/payment-details-demo" element={<PaymentDetailsDemo />} />
                     <Route path="/admin/view-payment/:orderId" element={<ViewPayment />} />
