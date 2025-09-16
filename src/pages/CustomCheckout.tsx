@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Package, Clock } from "lucide-react";
+import { Package, Clock, MapPin, Edit } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,21 @@ import { createCustomOrder } from "@/services/customOrderService";
 
 const TAX_RATE = 0.0825;
 
+interface Address {
+  id: string;
+  first_name: string;
+  last_name: string;
+  address_line_1: string;
+  address_line_2?: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+  phone: string;
+  type: string;
+  is_default: boolean;
+}
+
 const CustomCheckout = () => {
   const { cartItems, clearCart } = useCart();
   const navigate = useNavigate();
@@ -29,6 +44,12 @@ const CustomCheckout = () => {
   const queryClient = useQueryClient();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Address management state
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [useManualEntry, setUseManualEntry] = useState(false);
+  const [addressesLoading, setAddressesLoading] = useState(true);
   
   const [shippingInfo, setShippingInfo] = useState({
     firstName: "",
@@ -38,6 +59,50 @@ const CustomCheckout = () => {
     state: "",
     zip: "",
   });
+
+  // Fetch user addresses
+  const fetchUserAddresses = useCallback(async (userId: string) => {
+    try {
+      setAddressesLoading(true);
+      const { data, error } = await supabase
+        .from("addresses")
+        .select("*")
+        .eq("user_id", userId)
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: false });
+      
+      if (!error && data) {
+        setAddresses(data);
+        
+        // Auto-select default address if exists and no manual entry preference
+        const defaultAddress = data.find((addr) => addr.is_default);
+        if (defaultAddress && !useManualEntry) {
+          setSelectedAddressId(defaultAddress.id);
+          populateFromAddress(defaultAddress);
+        } else if (data.length === 0) {
+          // No saved addresses, enable manual entry
+          setUseManualEntry(true);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+      setUseManualEntry(true); // Fallback to manual entry
+    } finally {
+      setAddressesLoading(false);
+    }
+  }, [useManualEntry]);
+
+  // Populate shipping info from selected address
+  const populateFromAddress = (address: Address) => {
+    setShippingInfo({
+      firstName: address.first_name,
+      lastName: address.last_name,
+      address: address.address_line_1 + (address.address_line_2 ? ` ${address.address_line_2}` : ""),
+      city: address.city,
+      state: address.state,
+      zip: address.postal_code,
+    });
+  };
 
   // Check authentication status
   useEffect(() => {
@@ -52,14 +117,19 @@ const CustomCheckout = () => {
           variant: "destructive"
         });
         navigate("/account");
+      } else {
+        // Fetch user addresses after authentication
+        fetchUserAddresses(session.user.id);
       }
     };
     
     checkAuth();
-  }, [navigate, toast]);
+  }, [navigate, toast, fetchUserAddresses]);
 
-  // Check if form is valid
-  const isFormValid = Object.values(shippingInfo).every(value => value.trim() !== "");
+  // Check if form is valid (either selected address or complete manual entry)
+  const isFormValid = useManualEntry 
+    ? Object.values(shippingInfo).every(value => value.trim() !== "")
+    : selectedAddressId !== "" || Object.values(shippingInfo).every(value => value.trim() !== "");
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -68,6 +138,33 @@ const CustomCheckout = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setShippingInfo(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddressSelection = (addressId: string) => {
+    if (addressId === "manual") {
+      setUseManualEntry(true);
+      setSelectedAddressId("");
+      // Clear form for manual entry
+      setShippingInfo({
+        firstName: "",
+        lastName: "",
+        address: "",
+        city: "",
+        state: "",
+        zip: "",
+      });
+    } else {
+      setUseManualEntry(false);
+      setSelectedAddressId(addressId);
+      const selectedAddress = addresses.find(addr => addr.id === addressId);
+      if (selectedAddress) {
+        populateFromAddress(selectedAddress);
+      }
+    }
+  };
+
+  const getSelectedAddress = () => {
+    return addresses.find(addr => addr.id === selectedAddressId);
   };
 
   const handleSubmitOrder = async () => {
@@ -179,71 +276,171 @@ const CustomCheckout = () => {
                 <CardTitle>Shipping Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={shippingInfo.firstName}
-                      onChange={(e) => handleInputChange("firstName", e.target.value)}
-                      placeholder="John"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={shippingInfo.lastName}
-                      onChange={(e) => handleInputChange("lastName", e.target.value)}
-                      placeholder="Doe"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    value={shippingInfo.address}
-                    onChange={(e) => handleInputChange("address", e.target.value)}
-                    placeholder="123 Main Street"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      value={shippingInfo.city}
-                      onChange={(e) => handleInputChange("city", e.target.value)}
-                      placeholder="New York"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="state">State</Label>
-                    <Select onValueChange={(value) => handleInputChange("state", value)}>
+                {/* Address Selection */}
+                {!addressesLoading && addresses.length > 0 && (
+                  <div className="space-y-3">
+                    <Label>Choose Address</Label>
+                    <Select 
+                      value={useManualEntry ? "manual" : selectedAddressId} 
+                      onValueChange={handleAddressSelection}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select state" />
+                        <SelectValue placeholder="Select a saved address or enter manually" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="AL">Alabama</SelectItem>
-                        <SelectItem value="CA">California</SelectItem>
-                        <SelectItem value="FL">Florida</SelectItem>
-                        <SelectItem value="NY">New York</SelectItem>
-                        <SelectItem value="TX">Texas</SelectItem>
-                        {/* Add more states as needed */}
+                        {addresses.map((address) => (
+                          <SelectItem key={address.id} value={address.id}>
+                            <div className="flex items-center gap-2">
+                              {address.is_default && (
+                                <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
+                                  Default
+                                </span>
+                              )}
+                              <span>
+                                {address.first_name} {address.last_name} - {address.address_line_1}, {address.city}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="manual">
+                          <div className="flex items-center gap-2">
+                            <Edit className="h-4 w-4" />
+                            Enter new address manually
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="zip">ZIP Code</Label>
-                  <Input
-                    id="zip"
-                    value={shippingInfo.zip}
-                    onChange={(e) => handleInputChange("zip", e.target.value)}
-                    placeholder="10001"
-                  />
-                </div>
+                )}
+
+                {/* Address Preview for Selected Address */}
+                {!useManualEntry && selectedAddressId && getSelectedAddress() && (
+                  <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Selected Address Preview
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddressSelection("manual")}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit for this order
+                      </Button>
+                    </div>
+                    {(() => {
+                      const addr = getSelectedAddress()!;
+                      return (
+                        <div className="text-sm space-y-1">
+                          <p className="font-medium">{addr.first_name} {addr.last_name}</p>
+                          <p>{addr.address_line_1}</p>
+                          {addr.address_line_2 && <p>{addr.address_line_2}</p>}
+                          <p>{addr.city}, {addr.state} {addr.postal_code}</p>
+                          <p>{addr.country}</p>
+                          {addr.phone && <p className="text-muted-foreground">{addr.phone}</p>}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* Manual Entry Form */}
+                {(useManualEntry || addresses.length === 0) && (
+                  <>
+                    {addresses.length === 0 && !addressesLoading && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          No saved addresses found. Please enter your shipping details below.
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input
+                          id="firstName"
+                          value={shippingInfo.firstName}
+                          onChange={(e) => handleInputChange("firstName", e.target.value)}
+                          placeholder="John"
+                          disabled={!useManualEntry && selectedAddressId !== ""}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input
+                          id="lastName"
+                          value={shippingInfo.lastName}
+                          onChange={(e) => handleInputChange("lastName", e.target.value)}
+                          placeholder="Doe"
+                          disabled={!useManualEntry && selectedAddressId !== ""}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        value={shippingInfo.address}
+                        onChange={(e) => handleInputChange("address", e.target.value)}
+                        placeholder="123 Main Street"
+                        disabled={!useManualEntry && selectedAddressId !== ""}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          value={shippingInfo.city}
+                          onChange={(e) => handleInputChange("city", e.target.value)}
+                          placeholder="New York"
+                          disabled={!useManualEntry && selectedAddressId !== ""}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="state">State</Label>
+                        <Select 
+                          onValueChange={(value) => handleInputChange("state", value)}
+                          value={shippingInfo.state}
+                          disabled={!useManualEntry && selectedAddressId !== ""}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="AL">Alabama</SelectItem>
+                            <SelectItem value="CA">California</SelectItem>
+                            <SelectItem value="FL">Florida</SelectItem>
+                            <SelectItem value="NY">New York</SelectItem>
+                            <SelectItem value="TX">Texas</SelectItem>
+                            {/* Add more states as needed */}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="zip">ZIP Code</Label>
+                      <Input
+                        id="zip"
+                        value={shippingInfo.zip}
+                        onChange={(e) => handleInputChange("zip", e.target.value)}
+                        placeholder="10001"
+                        disabled={!useManualEntry && selectedAddressId !== ""}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Loading State */}
+                {addressesLoading && (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <span className="ml-2 text-muted-foreground">Loading addresses...</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
