@@ -12,7 +12,15 @@ export const ORDER_STATUS = {
   CONFIRMED: 'confirmed',
   CANCELLED: 'cancelled',
   SHIPPED: 'shipped',
-  DELIVERED: 'delivered'
+  DELIVERED: 'delivered',
+  
+  // Aliases for the problem statement requirements
+  CHECKOUT_REQUEST: 'pending_admin_review', // Maps to pending_admin_review
+  INVOICE_GENERATED: 'invoice_sent',         // Maps to invoice_sent
+  ACCEPTED: 'invoice_accepted',              // Maps to invoice_accepted  
+  DECLINED: 'invoice_declined',              // Maps to invoice_declined
+  PAYPAL_SHARED: 'paypal_credentials_shared', // Maps to paypal_credentials_shared
+  VERIFIED: 'payment_verified',              // Maps to payment_verified
 } as const;
 
 export const PAYMENT_STATUS = {
