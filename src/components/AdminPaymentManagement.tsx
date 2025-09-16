@@ -34,6 +34,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
+import { subscribeToAllOrderUpdates, OrderStatusUpdate } from "@/services/orderStatusService";
 
 interface PaymentRecord {
   id: string;
@@ -166,8 +167,26 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
 
       return paymentRecords;
     },
-    refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
+    // Remove polling in favor of real-time subscriptions
+    refetchInterval: false,
   });
+
+  // Handle real-time order updates
+  const handleOrderUpdate = useCallback((update: OrderStatusUpdate) => {
+    console.log('[AdminPaymentManagement] Received real-time order update:', update);
+    
+    // Invalidate and refetch payments data when any order is updated
+    queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
+  }, [queryClient]);
+
+  // Set up real-time subscription
+  useEffect(() => {
+    const unsubscribe = subscribeToAllOrderUpdates(handleOrderUpdate);
+    
+    return () => {
+      unsubscribe();
+    };
+  }, [handleOrderUpdate]);
 
   // Filter payments based on status and search term
   const filteredPayments = paymentsData?.filter((payment) => {
@@ -428,7 +447,6 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
                     <TableHead>Order</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Payment Status</TableHead>
                     <TableHead>Transaction ID</TableHead>
                     <TableHead>Submitted</TableHead>
                     <TableHead>Actions</TableHead>
@@ -437,7 +455,7 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
                 <TableBody>
                   {paginatedPayments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         No payments found matching your criteria
                       </TableCell>
                     </TableRow>
@@ -467,7 +485,6 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
                             </p>
                           )}
                         </TableCell>
-                        <TableCell>{getPaymentStatusBadge(payment)}</TableCell>
                         <TableCell>
                           {payment.payment_data?.transaction_id ? (
                             <p className="font-mono text-sm">{payment.payment_data.transaction_id}</p>

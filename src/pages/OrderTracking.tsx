@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { CheckCircle, Clock, Package, Truck, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import TrackOrderTimeline from "@/components/TrackOrderTimeline";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
+import { subscribeToOrderStatusUpdates, OrderStatusUpdate } from "@/services/orderStatusService";
 
 interface OrderDetails {
   id: string;
@@ -33,6 +34,67 @@ const OrderTracking = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchOrderDetails = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/account");
+        return;
+      }
+
+      // Fetch order details
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .select(`
+          id,
+          order_number,
+          total_amount,
+          status,
+          payment_status,
+          created_at,
+          shipped_at,
+          delivered_at,
+          shipping_address
+        `)
+        .eq("id", orderId)
+        .eq("user_id", session.user.id)
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Fetch order items
+      const { data: items, error: itemsError } = await supabase
+        .from("order_items")
+        .select("product_name, quantity, unit_price, total_price")
+        .eq("order_id", orderId);
+
+      if (itemsError) throw itemsError;
+
+      setOrderDetails({
+        ...order,
+        order_items: items || []
+      });
+    } catch (err: any) {
+      console.error("Error fetching order details:", err);
+      setError("Failed to load order details");
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId, navigate]);
+
+  const handleStatusUpdate = useCallback((update: OrderStatusUpdate) => {
+    console.log('[OrderTracking] Received real-time status update:', update);
+    setOrderDetails(prev => {
+      if (!prev || prev.id !== update.order_id) return prev;
+      
+      return {
+        ...prev,
+        status: update.status,
+        payment_status: update.payment_status || prev.payment_status
+      };
+    });
+  }, []);
+
   useEffect(() => {
     if (!orderId) {
       setError("No order ID provided");
@@ -40,56 +102,16 @@ const OrderTracking = () => {
       return;
     }
 
-    const fetchOrderDetails = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          navigate("/account");
-          return;
-        }
-
-        // Fetch order details
-        const { data: order, error: orderError } = await supabase
-          .from("orders")
-          .select(`
-            id,
-            order_number,
-            total_amount,
-            status,
-            payment_status,
-            created_at,
-            shipped_at,
-            delivered_at,
-            shipping_address
-          `)
-          .eq("id", orderId)
-          .eq("user_id", session.user.id)
-          .single();
-
-        if (orderError) throw orderError;
-
-        // Fetch order items
-        const { data: items, error: itemsError } = await supabase
-          .from("order_items")
-          .select("product_name, quantity, unit_price, total_price")
-          .eq("order_id", orderId);
-
-        if (itemsError) throw itemsError;
-
-        setOrderDetails({
-          ...order,
-          order_items: items || []
-        });
-      } catch (err: any) {
-        console.error("Error fetching order details:", err);
-        setError("Failed to load order details");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchOrderDetails();
-  }, [orderId, navigate]);
+
+    // Set up real-time subscription for order status updates
+    const unsubscribe = subscribeToOrderStatusUpdates(orderId, handleStatusUpdate);
+
+    // Cleanup subscription on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, [orderId, fetchOrderDetails, handleStatusUpdate]);
 
   if (loading) {
     return (
