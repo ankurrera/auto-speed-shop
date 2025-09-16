@@ -8,13 +8,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { ChatService } from '@/services/chatService';
 import { useToast } from '@/hooks/use-toast';
 
+interface Conversation {
+  id?: string;
+  user_id?: string;
+  last_message?: string;
+  last_message_at?: string;
+  unread_count?: number;
+}
+
+interface TestResults {
+  conversations?: Conversation[];
+  count?: number;
+  timestamp?: string;
+  error?: string;
+}
+
 const ChatTestHelper = () => {
   const [testUserId, setTestUserId] = useState('');
   const [testMessage, setTestMessage] = useState('');
   const [testUserName, setTestUserName] = useState('');
   const [testUserEmail, setTestUserEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<TestResults | null>(null);
   const { toast } = useToast();
 
   const createTestUser = async () => {

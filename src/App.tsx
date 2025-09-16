@@ -29,6 +29,9 @@ import TrackOrderDemo from "./pages/TrackOrderDemo";
 import SellerDashboard from "./pages/SellerDashboard";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import ViewPayment from "./pages/ViewPayment";
+import UserViewPayment from "./pages/UserViewPayment";
+import PaymentDetailsDemo from "./pages/PaymentDetailsDemo";
+import CheckoutDemo from "./pages/CheckoutDemo";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
@@ -68,13 +71,16 @@ const App = () => {
                     <Route path="/seller-dashboard" element={<SellerDashboard />} />
                     <Route path="/analytics" element={<AnalyticsDashboard />} />
                     <Route path="/checkout" element={<CustomCheckout />} />
+                    <Route path="/checkout-demo" element={<CheckoutDemo />} />
                     <Route path="/custom-checkout" element={<CustomCheckout />} />
                     <Route path="/custom-order-demo" element={<CustomOrderFlowDemo />} />
                     <Route path="/invoice-demo" element={<InvoiceDemo />} />
                     <Route path="/show-invoice-button-demo" element={<ShowInvoiceButtonDemo />} />
                     <Route path="/track-order-demo" element={<TrackOrderDemo />} />
                     <Route path="/chat-demo" element={<MockChatDemo />} />
+                    <Route path="/payment-details-demo" element={<PaymentDetailsDemo />} />
                     <Route path="/admin/view-payment/:orderId" element={<ViewPayment />} />
+                    <Route path="/user/view-payment/:orderId" element={<UserViewPayment />} />
                     <Route path="/order/:orderId" element={<OrderDetails />} />
                     <Route path="/products/:id" element={<ProductDetails />} />
                     <Route path="/new-arrivals" element={<NewArrivals />} />
