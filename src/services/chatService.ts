@@ -66,11 +66,11 @@ export class ChatService {
     // For messages, we need to distinguish between user and admin profile data
     const chatMessage: ChatMessage = {
       ...message,
-      user: {
+      user: !message.is_from_admin ? {
         first_name: message.first_name || '',
         last_name: message.last_name || '',
         email: message.email || ''
-      },
+      } : undefined,
       admin: message.is_from_admin ? {
         first_name: message.first_name || '',
         last_name: message.last_name || '',
@@ -118,11 +118,11 @@ export class ChatService {
     // Transform messages to maintain backward compatibility with existing UI components
     const chatMessages: ChatMessage[] = data.map(message => ({
       ...message,
-      user: {
+      user: !message.is_from_admin ? {
         first_name: message.first_name || '',
         last_name: message.last_name || '',
         email: message.email || ''
-      },
+      } : undefined,
       admin: message.is_from_admin ? {
         first_name: message.first_name || '',
         last_name: message.last_name || '',
@@ -277,11 +277,11 @@ export class ChatService {
             // Transform to maintain backward compatibility with existing UI components
             const chatMessage: ChatMessage = {
               ...message,
-              user: {
+              user: !message.is_from_admin ? {
                 first_name: message.first_name || '',
                 last_name: message.last_name || '',
                 email: message.email || ''
-              },
+              } : undefined,
               admin: message.is_from_admin ? {
                 first_name: message.first_name || '',
                 last_name: message.last_name || '',
@@ -424,11 +424,11 @@ export class ChatService {
           // Transform to maintain backward compatibility with existing UI components
           const chatMessage: ChatMessage = {
             ...message,
-            user: {
+            user: !message.is_from_admin ? {
               first_name: message.first_name || '',
               last_name: message.last_name || '',
               email: message.email || ''
-            },
+            } : undefined,
             admin: message.is_from_admin ? {
               first_name: message.first_name || '',
               last_name: message.last_name || '',
@@ -506,11 +506,11 @@ export class ChatService {
             // Transform to maintain backward compatibility with existing UI components
             const chatMessage: ChatMessage = {
               ...message,
-              user: {
+              user: !message.is_from_admin ? {
                 first_name: message.first_name || '',
                 last_name: message.last_name || '',
                 email: message.email || ''
-              },
+              } : undefined,
               admin: message.is_from_admin ? {
                 first_name: message.first_name || '',
                 last_name: message.last_name || '',
@@ -563,11 +563,11 @@ export class ChatService {
           // Transform to maintain backward compatibility with existing UI components
           const chatMessage: ChatMessage = {
             ...message,
-            user: {
+            user: !message.is_from_admin ? {
               first_name: message.first_name || '',
               last_name: message.last_name || '',
               email: message.email || ''
-            },
+            } : undefined,
             admin: message.is_from_admin ? {
               first_name: message.first_name || '',
               last_name: message.last_name || '',
