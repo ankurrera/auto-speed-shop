@@ -7,6 +7,11 @@ export type ChatMessage = Database['public']['Tables']['chat_messages']['Row'] &
     last_name: string;
     email: string;
   };
+  admin?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
 };
 
 export type ChatMessageInsert = Database['public']['Tables']['chat_messages']['Insert'];
@@ -39,14 +44,7 @@ export class ChatService {
     const { data: message, error } = await supabase
       .from('chat_messages')
       .insert(messageData)
-      .select(`
-        *,
-        user:profiles!chat_messages_user_id_fkey(
-          first_name,
-          last_name,
-          email
-        )
-      `)
+      .select('*')
       .single();
 
     if (error) {
@@ -56,10 +54,31 @@ export class ChatService {
 
     console.log('[ChatService] Message sent successfully:', {
       messageId: message.id,
-      senderType: message.sender_type
+      senderType: message.sender_type,
+      userInfo: {
+        first_name: message.first_name,
+        last_name: message.last_name,
+        email: message.email
+      }
     });
 
-    return message as ChatMessage;
+    // Create the response with proper structure to maintain backward compatibility
+    // For messages, we need to distinguish between user and admin profile data
+    const chatMessage: ChatMessage = {
+      ...message,
+      user: {
+        first_name: message.first_name || '',
+        last_name: message.last_name || '',
+        email: message.email || ''
+      },
+      admin: message.is_from_admin ? {
+        first_name: message.first_name || '',
+        last_name: message.last_name || '',
+        email: message.email || ''
+      } : undefined
+    };
+
+    return chatMessage;
   }
 
   /**
@@ -70,14 +89,7 @@ export class ChatService {
     
     const { data, error } = await supabase
       .from('chat_messages')
-      .select(`
-        *,
-        user:profiles!chat_messages_user_id_fkey(
-          first_name,
-          last_name,
-          email
-        )
-      `)
+      .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
       .limit(limit);
@@ -103,7 +115,22 @@ export class ChatService {
     
     console.log('[ChatService] Message breakdown for user', userId, ':', messageSummary);
 
-    return data as ChatMessage[];
+    // Transform messages to maintain backward compatibility with existing UI components
+    const chatMessages: ChatMessage[] = data.map(message => ({
+      ...message,
+      user: {
+        first_name: message.first_name || '',
+        last_name: message.last_name || '',
+        email: message.email || ''
+      },
+      admin: message.is_from_admin ? {
+        first_name: message.first_name || '',
+        last_name: message.last_name || '',
+        email: message.email || ''
+      } : undefined
+    }));
+
+    return chatMessages;
   }
 
   /**
@@ -154,7 +181,7 @@ export class ChatService {
         try {
           console.log('[ChatService] Processing conversation for user:', userId);
 
-          // Get user profile - be more lenient with missing profiles
+          // Get user profile from profiles table to check admin status and get latest info
           const { data: userProfile, error: profileError } = await supabase
             .from('profiles')
             .select('first_name, last_name, email, is_admin')
@@ -163,12 +190,6 @@ export class ChatService {
 
           if (profileError) {
             console.warn('[ChatService] Profile lookup failed for user:', userId, profileError.message);
-            // Create a fallback profile instead of returning null
-            const fallbackProfile = {
-              first_name: 'Unknown',
-              last_name: 'User',
-              email: `user-${userId.slice(0, 8)}@unknown.com`
-            };
             console.log('[ChatService] Using fallback profile for user:', userId);
           }
 
@@ -177,17 +198,6 @@ export class ChatService {
             console.log('[ChatService] Skipping admin profile:', userId);
             return null;
           }
-
-          // Use actual profile or fallback
-          const finalProfile = userProfile ? {
-            first_name: userProfile.first_name || 'Unknown',
-            last_name: userProfile.last_name || 'User', 
-            email: userProfile.email || `user-${userId.slice(0, 8)}@unknown.com`
-          } : {
-            first_name: 'Unknown',
-            last_name: 'User',
-            email: `user-${userId.slice(0, 8)}@unknown.com`
-          };
 
           // Get messages for this user
           console.log('[ChatService] Fetching messages for user:', userId);
@@ -198,7 +208,13 @@ export class ChatService {
             return null;
           }
 
+          // Use denormalized data from the most recent message, fallback to profiles table, then to defaults
           const lastMessage = messages[messages.length - 1];
+          const finalProfile = {
+            first_name: lastMessage.first_name || userProfile?.first_name || 'Unknown',
+            last_name: lastMessage.last_name || userProfile?.last_name || 'User',
+            email: lastMessage.email || userProfile?.email || `user-${userId.slice(0, 8)}@unknown.com`
+          };
           
           console.log('[ChatService] Conversation for user:', userId, {
             messageCount: messages.length,
@@ -250,22 +266,29 @@ export class ChatService {
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
-          // Fetch the complete message with user data
+          // Fetch the complete message using denormalized data
           const { data: message, error } = await supabase
             .from('chat_messages')
-            .select(`
-              *,
-              user:profiles!chat_messages_user_id_fkey(
-                first_name,
-                last_name,
-                email
-              )
-            `)
+            .select('*')
             .eq('id', payload.new.id)
             .single();
 
           if (!error && message) {
-            onMessage(message as ChatMessage);
+            // Transform to maintain backward compatibility with existing UI components
+            const chatMessage: ChatMessage = {
+              ...message,
+              user: {
+                first_name: message.first_name || '',
+                last_name: message.last_name || '',
+                email: message.email || ''
+              },
+              admin: message.is_from_admin ? {
+                first_name: message.first_name || '',
+                last_name: message.last_name || '',
+                email: message.email || ''
+              } : undefined
+            };
+            onMessage(chatMessage);
           }
         }
       )
@@ -383,17 +406,10 @@ export class ChatService {
           timestamp: payload.new.created_at
         });
 
-        // Fetch the complete message with user data immediately
+        // Fetch the complete message using denormalized data (now properly populated by our trigger)
         const { data: message, error } = await supabase
           .from('chat_messages')
-          .select(`
-            *,
-            user:profiles!chat_messages_user_id_fkey(
-              first_name,
-              last_name,
-              email
-            )
-          `)
+          .select('*')
           .eq('id', payload.new.id)
           .single();
 
@@ -402,9 +418,24 @@ export class ChatService {
             messageId: message.id,
             isFromAdmin: message.is_from_admin,
             senderType: message.sender_type,
-            userProfile: message.user ? 'present' : 'missing'
+            profileData: `${message.first_name} ${message.last_name}`.trim()
           });
-          onMessage(message as ChatMessage);
+          
+          // Transform to maintain backward compatibility with existing UI components
+          const chatMessage: ChatMessage = {
+            ...message,
+            user: {
+              first_name: message.first_name || '',
+              last_name: message.last_name || '',
+              email: message.email || ''
+            },
+            admin: message.is_from_admin ? {
+              first_name: message.first_name || '',
+              last_name: message.last_name || '',
+              email: message.email || ''
+            } : undefined
+          };
+          onMessage(chatMessage);
         } else {
           console.error('[ChatService] Error fetching complete message for instant messages:', error);
         }
@@ -464,22 +495,29 @@ export class ChatService {
           table: 'chat_messages',
         },
         async (payload) => {
-          // Fetch the complete message with user data
+          // Fetch the complete message using denormalized data
           const { data: message, error } = await supabase
             .from('chat_messages')
-            .select(`
-              *,
-              user:profiles!chat_messages_user_id_fkey(
-                first_name,
-                last_name,
-                email
-              )
-            `)
+            .select('*')
             .eq('id', payload.new.id)
             .single();
 
           if (!error && message) {
-            onMessage(message as ChatMessage);
+            // Transform to maintain backward compatibility with existing UI components
+            const chatMessage: ChatMessage = {
+              ...message,
+              user: {
+                first_name: message.first_name || '',
+                last_name: message.last_name || '',
+                email: message.email || ''
+              },
+              admin: message.is_from_admin ? {
+                first_name: message.first_name || '',
+                last_name: message.last_name || '',
+                email: message.email || ''
+              } : undefined
+            };
+            onMessage(chatMessage);
           }
         }
       )
@@ -513,24 +551,31 @@ export class ChatService {
           userId: payload.new.user_id
         });
 
-        // Fetch the complete message with user data
+        // Fetch the complete message using denormalized data
         const { data: message, error } = await supabase
           .from('chat_messages')
-          .select(`
-            *,
-            user:profiles!chat_messages_user_id_fkey(
-              first_name,
-              last_name,
-              email
-            )
-          `)
+          .select('*')
           .eq('id', payload.new.id)
           .single();
 
         if (!error && message) {
           console.log('[ChatService] Admin dashboard processing:', message.sender_type, 'message for user:', message.user_id);
+          // Transform to maintain backward compatibility with existing UI components
+          const chatMessage: ChatMessage = {
+            ...message,
+            user: {
+              first_name: message.first_name || '',
+              last_name: message.last_name || '',
+              email: message.email || ''
+            },
+            admin: message.is_from_admin ? {
+              first_name: message.first_name || '',
+              last_name: message.last_name || '',
+              email: message.email || ''
+            } : undefined
+          };
           // Call the callback with the message - NO FILTERING by sender_type
-          onNewMessage(message as ChatMessage);
+          onNewMessage(chatMessage);
           if (onConversationUpdate) {
             onConversationUpdate();
           }

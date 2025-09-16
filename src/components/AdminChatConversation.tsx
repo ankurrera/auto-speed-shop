@@ -99,9 +99,16 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
 
   // Auto-scroll to bottom
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+
+    // Use a slight delay to ensure the DOM has updated
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, [messages]);
 
   const handleSendMessage = useCallback(async () => {
@@ -165,9 +172,9 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 flex flex-col p-0">
+      <CardContent className="flex-1 flex flex-col p-0 min-h-0">
         {/* Messages area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -199,8 +206,16 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
                     <p className={`text-xs mt-1 ${
                       message.is_from_admin ? 'text-blue-100' : 'text-muted-foreground'
                     }`}>
-                      {/* Display sender type and name clearly */}
-                      {message.sender_type === 'admin' ? 'Admin' : userName} • {formatTime(message.created_at)}
+                      {/* Display sender type and name clearly with email */}
+                      {message.sender_type === 'admin' ? (
+                        message.admin ? 
+                          `Admin ${message.admin.first_name || 'Unknown'} ${message.admin.last_name || 'User'} (${message.admin.email || 'No email'})`.trim() :
+                          'Admin (Unknown)'
+                      ) : (
+                        message.user ? 
+                          `${message.user.first_name || 'Unknown'} ${message.user.last_name || 'User'} (${message.user.email || userEmail})`.trim() :
+                          `${userName} (${userEmail})`
+                      )} • {formatTime(message.created_at)}
                     </p>
                   </div>
                 </div>
@@ -211,7 +226,7 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
         </div>
         
         {/* Message input */}
-        <div className="border-t p-4">
+        <div className="border-t p-4 flex-shrink-0">
           <div className="flex gap-2">
             <Input
               value={newMessage}
