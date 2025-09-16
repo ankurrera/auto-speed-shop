@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import TrackOrderTimeline from "@/components/TrackOrderTimeline";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 import { subscribeToOrderStatusUpdates, OrderStatusUpdate } from "@/services/orderStatusService";
+import { getOrderDetails } from "@/services/customOrderService";
 
 interface OrderDetails {
   id: string;
@@ -19,7 +20,9 @@ interface OrderDetails {
   shipped_at?: string;
   delivered_at?: string;
   shipping_address: any;
+  user_id?: string;
   order_items?: Array<{
+    id: string;
     product_name: string;
     quantity: number;
     unit_price: number;
@@ -42,38 +45,16 @@ const OrderTracking = () => {
         return;
       }
 
-      // Fetch order details
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .select(`
-          id,
-          order_number,
-          total_amount,
-          status,
-          payment_status,
-          created_at,
-          shipped_at,
-          delivered_at,
-          shipping_address
-        `)
-        .eq("id", orderId)
-        .eq("user_id", session.user.id)
-        .single();
+      // Use the same service as OrderDetails page for consistency
+      const order = await getOrderDetails(orderId!);
+      
+      // Verify user owns this order
+      if (order.user_id !== session.user.id) {
+        setError("You don't have permission to view this order.");
+        return;
+      }
 
-      if (orderError) throw orderError;
-
-      // Fetch order items
-      const { data: items, error: itemsError } = await supabase
-        .from("order_items")
-        .select("product_name, quantity, unit_price, total_price")
-        .eq("order_id", orderId);
-
-      if (itemsError) throw itemsError;
-
-      setOrderDetails({
-        ...order,
-        order_items: items || []
-      });
+      setOrderDetails(order);
     } catch (err: any) {
       console.error("Error fetching order details:", err);
       setError("Failed to load order details");
@@ -222,7 +203,7 @@ const OrderTracking = () => {
             {/* Track Order Progress */}
             <div className="md:col-span-2">
               <TrackOrderTimeline 
-                orderStatus={orderDetails.payment_status || orderDetails.status} 
+                orderStatus={orderDetails.status} 
               />
             </div>
 
