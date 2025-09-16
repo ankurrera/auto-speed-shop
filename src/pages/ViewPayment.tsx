@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CheckCircle, XCircle, Download, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { verifyPayment } from "@/services/customOrderService";
+import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 import jsPDF from 'jspdf';
 
 interface PaymentData {
@@ -63,6 +65,29 @@ const ViewPayment = () => {
 
   // Check if payment data was passed from AdminPaymentManagement
   const passedPaymentRecord = location.state?.paymentRecord as PaymentRecord;
+
+  // Helper function to determine if payment is pending and needs action
+  const isPaymentPending = () => {
+    const paymentStatus = paymentRecord?.payment_status || order?.status;
+    
+    // Payment is pending if it's submitted but not yet verified or rejected
+    return paymentStatus === PAYMENT_STATUS.SUBMITTED || 
+           paymentStatus === ORDER_STATUS.PAYMENT_SUBMITTED;
+  };
+
+  // Helper function to get payment status badge
+  const getPaymentStatusBadge = () => {
+    const paymentStatus = paymentRecord?.payment_status || order?.status;
+    
+    if (paymentStatus === PAYMENT_STATUS.VERIFIED || paymentStatus === ORDER_STATUS.CONFIRMED) {
+      return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="w-4 h-4 mr-2" />Verified</Badge>;
+    } else if (paymentStatus === PAYMENT_STATUS.FAILED) {
+      return <Badge variant="destructive"><XCircle className="w-4 h-4 mr-2" />Rejected</Badge>;
+    } else if (paymentStatus === PAYMENT_STATUS.SUBMITTED || paymentStatus === ORDER_STATUS.PAYMENT_SUBMITTED) {
+      return <Badge variant="outline" className="border-yellow-500 text-yellow-700">Pending Review</Badge>;
+    }
+    return <Badge variant="secondary">Unknown Status</Badge>;
+  };
 
   const fetchOrderDetails = useCallback(async () => {
     try {
@@ -371,6 +396,13 @@ const ViewPayment = () => {
             <CardContent className="space-y-6">
               <div className="grid gap-4">
                 <div className="flex justify-between items-center py-3 border-b">
+                  <span className="font-medium text-muted-foreground">Status</span>
+                  <div>
+                    {getPaymentStatusBadge()}
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center py-3 border-b">
                   <span className="font-medium text-muted-foreground">Transaction ID</span>
                   <span className="font-mono text-sm bg-muted px-3 py-1 rounded">
                     {activePaymentData!.transaction_id}
@@ -476,36 +508,69 @@ const ViewPayment = () => {
         <div className="mt-8">
           <Card>
             <CardHeader>
-              <CardTitle>Payment Verification</CardTitle>
+              <CardTitle>Payment Status</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Review the payment details above and verify or reject the payment.
+                {isPaymentPending() 
+                  ? "Review the payment details above and verify or reject the payment."
+                  : "This payment has already been processed."
+                }
               </p>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Button
-                  size="lg"
-                  onClick={() => handleVerifyPayment(true)}
-                  disabled={isVerifyingPayment}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Verify Payment
-                </Button>
-                <Button
-                  size="lg"
-                  variant="destructive"
-                  onClick={() => handleVerifyPayment(false)}
-                  disabled={isVerifyingPayment}
-                >
-                  <XCircle className="h-5 w-5 mr-2" />
-                  Reject Payment
-                </Button>
-              </div>
-              
-              {isVerifyingPayment && (
-                <div className="mt-4 text-center text-sm text-muted-foreground">
-                  Processing payment verification...
+              {isPaymentPending() ? (
+                /* Show action buttons for pending payments */
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Button
+                      size="lg"
+                      onClick={() => handleVerifyPayment(true)}
+                      disabled={isVerifyingPayment}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      Verify Payment
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="destructive"
+                      onClick={() => handleVerifyPayment(false)}
+                      disabled={isVerifyingPayment}
+                    >
+                      <XCircle className="h-5 w-5 mr-2" />
+                      Reject Payment
+                    </Button>
+                  </div>
+                  
+                  {isVerifyingPayment && (
+                    <div className="text-center text-sm text-muted-foreground">
+                      Processing payment verification...
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Show status for already processed payments */
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center p-6 border-2 border-dashed rounded-lg">
+                    <div className="text-center space-y-3">
+                      <div className="flex justify-center">
+                        {getPaymentStatusBadge()}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {paymentRecord?.payment_status === PAYMENT_STATUS.VERIFIED || order?.status === ORDER_STATUS.CONFIRMED
+                          ? "This payment has been verified and the order is confirmed."
+                          : paymentRecord?.payment_status === PAYMENT_STATUS.FAILED
+                          ? "This payment has been rejected."
+                          : "Payment processing is complete."
+                        }
+                      </p>
+                      {paymentRecord?.rejection_reason && (
+                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
+                          <p className="text-sm text-red-700 mt-1">{paymentRecord.rejection_reason}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
