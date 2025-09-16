@@ -503,7 +503,7 @@ const Shop = () => {
                       id: item.id,
                       name: item.name,
                       price: Number(item.price),
-                      image: item.image_urls[0],
+                      image: item.image_urls && item.image_urls.length > 0 ? item.image_urls[0] : '/placeholder.svg',
                       is_part: item.type === "part",
                       brand: "brand" in item ? (item as Part).brand : undefined,
                       category: "category" in item ? (item as Product).category : undefined,
