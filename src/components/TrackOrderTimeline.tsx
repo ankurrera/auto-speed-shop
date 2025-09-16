@@ -35,10 +35,13 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
 }) => {
   // Map order status to tracking steps
   const getTrackingSteps = (status: string): TrackingStep[] => {
-    // Define all possible statuses that indicate cancellation
-    const isCancelled = status === ORDER_STATUS.CANCELLED || 
-                       status === ORDER_STATUS.INVOICE_DECLINED ||
-                       status === PAYMENT_STATUS.FAILED;
+    // Define different types of cancellation scenarios
+    const isFullyCancelled = status === ORDER_STATUS.CANCELLED;
+    const isInvoiceDeclined = status === ORDER_STATUS.INVOICE_DECLINED;
+    const isPaymentFailed = status === PAYMENT_STATUS.FAILED;
+    
+    // For backwards compatibility, keep the general isCancelled flag for other statuses
+    const isCancelled = isFullyCancelled;
     
     const steps: TrackingStep[] = [
       {
@@ -63,7 +66,7 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled),
+        ], isCancelled, undefined, 2, isInvoiceDeclined, isPaymentFailed),
         statusText: getStepStatusText(status, [
           ORDER_STATUS.INVOICE_SENT, 
           ORDER_STATUS.INVOICE_ACCEPTED, 
@@ -74,7 +77,7 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled),
+        ], isCancelled, undefined, 2, isInvoiceDeclined, isPaymentFailed),
         description: 'Admin is preparing your custom invoice'
       },
       {
@@ -90,7 +93,7 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled, ORDER_STATUS.INVOICE_DECLINED),
+        ], isCancelled, ORDER_STATUS.INVOICE_DECLINED, 3, isInvoiceDeclined, isPaymentFailed),
         statusText: getStepStatusText(status, [
           ORDER_STATUS.INVOICE_ACCEPTED, 
           ORDER_STATUS.PAYPAL_CREDENTIALS_SHARED,
@@ -100,7 +103,7 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled, ORDER_STATUS.INVOICE_DECLINED),
+        ], isCancelled, ORDER_STATUS.INVOICE_DECLINED, 3, isInvoiceDeclined, isPaymentFailed),
         description: 'Review and accept or decline the invoice'
       },
       {
@@ -115,7 +118,7 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled),
+        ], isCancelled, undefined, 4, isInvoiceDeclined, isPaymentFailed),
         statusText: getStepStatusText(status, [
           ORDER_STATUS.PAYPAL_CREDENTIALS_SHARED,
           ORDER_STATUS.PAYMENT_PENDING, 
@@ -124,7 +127,7 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled),
+        ], isCancelled, undefined, 4, isInvoiceDeclined, isPaymentFailed),
         description: 'Payment details and instructions provided'
       },
       {
@@ -137,14 +140,14 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled),
+        ], isCancelled, undefined, 5, isInvoiceDeclined, isPaymentFailed),
         statusText: getStepStatusText(status, [
           ORDER_STATUS.PAYMENT_SUBMITTED, 
           ORDER_STATUS.PAYMENT_VERIFIED, 
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled),
+        ], isCancelled, undefined, 5, isInvoiceDeclined, isPaymentFailed),
         description: 'Your payment has been submitted for verification'
       },
       {
@@ -156,13 +159,13 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled, PAYMENT_STATUS.FAILED),
+        ], isCancelled, PAYMENT_STATUS.FAILED, 6, isInvoiceDeclined, isPaymentFailed),
         statusText: getStepStatusText(status, [
           ORDER_STATUS.PAYMENT_VERIFIED, 
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled, PAYMENT_STATUS.FAILED),
+        ], isCancelled, PAYMENT_STATUS.FAILED, 6, isInvoiceDeclined, isPaymentFailed),
         description: 'Admin is verifying your payment details'
       },
       {
@@ -173,12 +176,12 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled),
+        ], isCancelled, undefined, 7, isInvoiceDeclined, isPaymentFailed),
         statusText: getStepStatusText(status, [
           ORDER_STATUS.CONFIRMED, 
           ORDER_STATUS.SHIPPED, 
           ORDER_STATUS.DELIVERED
-        ], isCancelled),
+        ], isCancelled, undefined, 7, isInvoiceDeclined, isPaymentFailed),
         description: 'Your order is confirmed and will be processed'
       }
     ];
@@ -191,8 +194,38 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
     currentStatus: string, 
     completedStatuses: string[], 
     isCancelled: boolean, 
-    declinedStatus?: string
+    declinedStatus?: string,
+    stepId?: number,
+    isInvoiceDeclined?: boolean,
+    isPaymentFailed?: boolean
   ): 'completed' | 'current' | 'pending' | 'cancelled' {
+    // Handle invoice declined scenario - steps 1 and 2 should remain completed
+    if (isInvoiceDeclined && stepId) {
+      if (stepId === 1) {
+        // Step 1 is always completed when we reach invoice declined status
+        return 'completed';
+      } else if (stepId === 2) {
+        // Step 2 is completed when invoice declined (invoice was generated before being declined)
+        return 'completed';
+      } else {
+        // Steps 3 and beyond are cancelled when invoice is declined
+        return 'cancelled';
+      }
+    }
+    
+    // Handle payment failed scenario - steps 1-5 should remain completed
+    if (isPaymentFailed && stepId) {
+      if (stepId === 1) {
+        return 'completed';
+      } else if (stepId <= 5 && completedStatuses.includes(currentStatus)) {
+        return 'completed';
+      } else if (stepId > 5) {
+        // Steps 6 and beyond are cancelled when payment fails
+        return 'cancelled';
+      }
+    }
+    
+    // Handle full cancellation (original logic)
     if (isCancelled) return 'cancelled';
     if (declinedStatus && currentStatus === declinedStatus) return 'cancelled';
     if (completedStatuses.includes(currentStatus)) return 'completed';
@@ -209,8 +242,36 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
     currentStatus: string, 
     completedStatuses: string[], 
     isCancelled: boolean, 
-    declinedStatus?: string
+    declinedStatus?: string,
+    stepId?: number,
+    isInvoiceDeclined?: boolean,
+    isPaymentFailed?: boolean
   ): string {
+    // Handle invoice declined scenario - steps 1 and 2 should remain completed
+    if (isInvoiceDeclined && stepId) {
+      if (stepId === 1) {
+        return 'Completed';
+      } else if (stepId === 2) {
+        return 'Completed';
+      } else {
+        // Steps 3 and beyond show declined status
+        return 'Invoice Declined';
+      }
+    }
+    
+    // Handle payment failed scenario - steps 1-5 should remain completed  
+    if (isPaymentFailed && stepId) {
+      if (stepId === 1) {
+        return 'Completed';
+      } else if (stepId <= 5 && completedStatuses.includes(currentStatus)) {
+        return 'Completed';
+      } else if (stepId > 5) {
+        // Steps 6 and beyond show payment failed status
+        return 'Payment Rejected';
+      }
+    }
+    
+    // Handle other cancellation scenarios (original logic)
     if (isCancelled) {
       if (currentStatus === PAYMENT_STATUS.FAILED) return 'Payment Rejected';
       if (currentStatus === ORDER_STATUS.CANCELLED) return 'Order Cancelled';
