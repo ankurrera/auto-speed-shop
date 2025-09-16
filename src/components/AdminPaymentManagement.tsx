@@ -218,7 +218,12 @@ const AdminPaymentManagement = ({ onBack }: { onBack: () => void }) => {
   };
 
   const handleViewPayment = (payment: PaymentRecord) => {
-    navigate(`/admin/view-payment/${payment.id}`);
+    // Pass payment data as state to avoid re-fetching issues
+    navigate(`/admin/view-payment/${payment.id}`, { 
+      state: { 
+        paymentRecord: payment 
+      } 
+    });
   };
 
   if (isLoading) {

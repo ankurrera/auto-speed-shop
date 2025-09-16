@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,28 @@ interface PaymentData {
   payment_amount: number;
   payment_screenshot_url: string;
   submitted_at: string;
+}
+
+interface PaymentRecord {
+  id: string;
+  order_number: string;
+  user_id: string;
+  status: string;
+  payment_status: string;
+  total_amount: number;
+  created_at: string;
+  updated_at: string;
+  notes?: string;
+  customer_first_name?: string;
+  customer_last_name?: string;
+  customer_email?: string;
+  payment_data?: {
+    transaction_id: string;
+    payment_amount: number;
+    payment_screenshot_url: string;
+    submitted_at: string;
+  };
+  rejection_reason?: string;
 }
 
 interface Order {
@@ -30,15 +52,44 @@ interface Order {
 const ViewPayment = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   
   const [order, setOrder] = useState<Order | null>(null);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  const [paymentRecord, setPaymentRecord] = useState<PaymentRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
+  // Check if payment data was passed from AdminPaymentManagement
+  const passedPaymentRecord = location.state?.paymentRecord as PaymentRecord;
+
   const fetchOrderDetails = useCallback(async () => {
     try {
+      // If we have payment data passed from AdminPaymentManagement, use it
+      if (passedPaymentRecord) {
+        setPaymentRecord(passedPaymentRecord);
+        if (passedPaymentRecord.payment_data) {
+          setPaymentData(passedPaymentRecord.payment_data);
+        }
+        
+        // Try to create a basic order object from payment record
+        const basicOrder: Order = {
+          id: passedPaymentRecord.id,
+          order_number: passedPaymentRecord.order_number,
+          status: passedPaymentRecord.status,
+          notes: passedPaymentRecord.notes,
+          profiles: passedPaymentRecord.customer_first_name || passedPaymentRecord.customer_last_name || passedPaymentRecord.customer_email ? {
+            email: passedPaymentRecord.customer_email || '',
+            first_name: passedPaymentRecord.customer_first_name || '',
+            last_name: passedPaymentRecord.customer_last_name || ''
+          } : undefined
+        };
+        setOrder(basicOrder);
+        setLoading(false);
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
@@ -82,17 +133,39 @@ const ViewPayment = () => {
       }
     } catch (error) {
       console.error('Error fetching order details:', error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to fetch order details";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      navigate(-1);
+      
+      // If we have payment record data but order fetch failed, still show payment details
+      if (passedPaymentRecord && passedPaymentRecord.payment_data) {
+        console.log('Order fetch failed but we have payment data from passed record, continuing...');
+        setPaymentRecord(passedPaymentRecord);
+        setPaymentData(passedPaymentRecord.payment_data);
+        
+        // Create a minimal order object for display
+        const minimalOrder: Order = {
+          id: passedPaymentRecord.id,
+          order_number: passedPaymentRecord.order_number,
+          status: passedPaymentRecord.status,
+          notes: passedPaymentRecord.notes,
+          profiles: passedPaymentRecord.customer_first_name || passedPaymentRecord.customer_last_name || passedPaymentRecord.customer_email ? {
+            email: passedPaymentRecord.customer_email || '',
+            first_name: passedPaymentRecord.customer_first_name || '',
+            last_name: passedPaymentRecord.customer_last_name || ''
+          } : undefined
+        };
+        setOrder(minimalOrder);
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "Failed to fetch order details";
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+        navigate(-1);
+      }
     } finally {
       setLoading(false);
     }
-  }, [orderId, navigate, toast]);
+  }, [orderId, navigate, toast, passedPaymentRecord]);
 
   useEffect(() => {
     if (!orderId) {
@@ -132,7 +205,8 @@ const ViewPayment = () => {
   };
 
   const handleDownloadScreenshot = async () => {
-    if (!paymentData?.payment_screenshot_url || !order?.order_number) {
+    const orderNumber = activeOrder?.order_number || paymentRecord?.order_number || 'payment-receipt';
+    if (!activePaymentData?.payment_screenshot_url || !orderNumber) {
       toast({
         title: "Error",
         description: "Screenshot or Order ID not available",
@@ -143,7 +217,7 @@ const ViewPayment = () => {
 
     try {
       // Fetch the image
-      const response = await fetch(paymentData.payment_screenshot_url);
+      const response = await fetch(activePaymentData.payment_screenshot_url);
       if (!response.ok) {
         throw new Error('Failed to fetch screenshot');
       }
@@ -201,24 +275,24 @@ const ViewPayment = () => {
       // Add header text
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Payment Screenshot - Order ${order.order_number}`, pageWidth / 2, 15, { align: 'center' });
+      pdf.text(`Payment Screenshot - Order ${orderNumber}`, pageWidth / 2, 15, { align: 'center' });
       
       // Add transaction ID if available
-      if (paymentData.transaction_id) {
+      if (activePaymentData.transaction_id) {
         pdf.setFontSize(10);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(`Transaction ID: ${paymentData.transaction_id}`, margin, pageHeight - 10);
+        pdf.text(`Transaction ID: ${activePaymentData.transaction_id}`, margin, pageHeight - 10);
       }
       
       // Save the PDF with Order ID as filename
-      pdf.save(`${order.order_number}.pdf`);
+      pdf.save(`${orderNumber}.pdf`);
       
       // Cleanup
       URL.revokeObjectURL(img.src);
       
       toast({
         title: "Download Complete",
-        description: `Payment screenshot saved as ${order.order_number}.pdf`
+        description: `Payment screenshot saved as ${orderNumber}.pdf`
       });
     } catch (error) {
       console.error('Download error:', error);
@@ -245,7 +319,8 @@ const ViewPayment = () => {
     );
   }
 
-  if (!order || !paymentData) {
+  // Only show error if we have no payment data at all
+  if (!loading && !paymentData && !paymentRecord?.payment_data) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
@@ -264,6 +339,10 @@ const ViewPayment = () => {
     );
   }
 
+  // Use payment data from either source
+  const activePaymentData = paymentData || paymentRecord?.payment_data;
+  const activeOrder = order;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -276,7 +355,9 @@ const ViewPayment = () => {
             </Button>
             <div>
               <h1 className="text-3xl font-bold">Payment Details</h1>
-              <p className="text-muted-foreground">Order #{order.order_number}</p>
+              <p className="text-muted-foreground">
+                {activeOrder?.order_number ? `Order #${activeOrder.order_number}` : 'Payment Record'}
+              </p>
             </div>
           </div>
         </div>
@@ -292,34 +373,43 @@ const ViewPayment = () => {
                 <div className="flex justify-between items-center py-3 border-b">
                   <span className="font-medium text-muted-foreground">Transaction ID</span>
                   <span className="font-mono text-sm bg-muted px-3 py-1 rounded">
-                    {paymentData.transaction_id}
+                    {activePaymentData!.transaction_id}
                   </span>
                 </div>
                 
                 <div className="flex justify-between items-center py-3 border-b">
                   <span className="font-medium text-muted-foreground">Payment Amount</span>
                   <span className="text-xl font-bold text-green-600">
-                    ${paymentData.payment_amount.toFixed(2)}
+                    ${activePaymentData!.payment_amount.toFixed(2)}
                   </span>
                 </div>
                 
                 <div className="flex justify-between items-center py-3 border-b">
                   <span className="font-medium text-muted-foreground">Submitted At</span>
                   <span className="text-sm">
-                    {new Date(paymentData.submitted_at).toLocaleString()}
+                    {new Date(activePaymentData!.submitted_at).toLocaleString()}
                   </span>
                 </div>
                 
                 <div className="flex justify-between items-center py-3">
                   <span className="font-medium text-muted-foreground">Customer</span>
                   <div className="text-right">
-                    {order.profiles ? (
+                    {activeOrder?.profiles ? (
                       <>
                         <p className="font-medium">
-                          {order.profiles.first_name} {order.profiles.last_name}
+                          {activeOrder.profiles.first_name} {activeOrder.profiles.last_name}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {order.profiles.email}
+                          {activeOrder.profiles.email}
+                        </p>
+                      </>
+                    ) : paymentRecord ? (
+                      <>
+                        <p className="font-medium">
+                          {paymentRecord.customer_first_name} {paymentRecord.customer_last_name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {paymentRecord.customer_email}
                         </p>
                       </>
                     ) : (
@@ -337,11 +427,11 @@ const ViewPayment = () => {
               <CardTitle>Payment Screenshot</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {paymentData.payment_screenshot_url ? (
+              {activePaymentData?.payment_screenshot_url ? (
                 <div className="space-y-4">
                   <div className="border rounded-lg overflow-hidden bg-muted/50">
                     <img
-                      src={paymentData.payment_screenshot_url}
+                      src={activePaymentData.payment_screenshot_url}
                       alt="Payment Screenshot"
                       className="w-full h-auto max-h-96 object-contain"
                       onError={(e) => {
@@ -357,7 +447,7 @@ const ViewPayment = () => {
                   <div className="flex gap-3">
                     <Button
                       variant="outline"
-                      onClick={() => window.open(paymentData.payment_screenshot_url, '_blank')}
+                      onClick={() => window.open(activePaymentData.payment_screenshot_url, '_blank')}
                       className="flex-1"
                     >
                       <Eye className="h-4 w-4 mr-2" />
