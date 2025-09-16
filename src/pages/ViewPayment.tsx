@@ -3,17 +3,6 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CheckCircle, XCircle, Download, Eye, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,8 +62,6 @@ const ViewPayment = () => {
   const [paymentRecord, setPaymentRecord] = useState<PaymentRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
 
   // Check if payment data was passed from AdminPaymentManagement
   const passedPaymentRecord = location.state?.paymentRecord as PaymentRecord;
@@ -472,16 +459,9 @@ const ViewPayment = () => {
     }
   };
 
-  // Handle payment rejection
+  // Handle payment rejection (streamlined without remarks requirement)
   const handleRejectPayment = async () => {
-    if (!orderId || !rejectionReason.trim()) {
-      toast({
-        title: "Error",
-        description: "Please provide a reason for rejection.",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!orderId) return;
     
     setIsProcessing(true);
     try {
@@ -494,7 +474,7 @@ const ViewPayment = () => {
         requesting_user_id: user.id,
         target_order_id: orderId,
         verified: false,
-        rejection_reason: rejectionReason
+        rejection_reason: "Payment rejected by admin"
       });
 
       if (error) throw error;
@@ -507,17 +487,13 @@ const ViewPayment = () => {
         payment_status: PAYMENT_STATUS.FAILED,
         status: ORDER_STATUS.CANCELLED,
         updated_at: now,
-        rejection_reason: rejectionReason
+        rejection_reason: "Payment rejected by admin"
       } : null);
 
       toast({
         title: "Payment Rejected",
         description: "Payment has been rejected and the customer has been notified.",
       });
-
-      // Reset rejection dialog state
-      setShowRejectDialog(false);
-      setRejectionReason("");
       
       // Refresh the payment data to ensure consistency
       await fetchOrderDetails();
@@ -593,84 +569,7 @@ const ViewPayment = () => {
           </div>
         </div>
 
-        {/* Accept/Reject Actions for Pending Payments */}
-        {isPaymentPending() && !isPaymentProcessed() && (
-          <Card className="mb-8 border-yellow-200 bg-yellow-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-yellow-800">
-                <Clock className="h-5 w-5" />
-                Payment Pending Review
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-yellow-700 mb-4">
-                This payment is awaiting admin verification. Please review the payment details and take appropriate action.
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleAcceptPayment}
-                  disabled={isProcessing}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  {isProcessing ? "Processing..." : "Accept Payment"}
-                </Button>
-                
-                <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      disabled={isProcessing}
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Reject Payment
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Reject Payment</DialogTitle>
-                      <DialogDescription>
-                        Please provide a reason for rejecting this payment. This reason will be shared with the customer.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="rejection-reason">Rejection Reason</Label>
-                        <Textarea
-                          id="rejection-reason"
-                          placeholder="e.g., Payment amount doesn't match order total, invalid transaction details, etc."
-                          value={rejectionReason}
-                          onChange={(e) => setRejectionReason(e.target.value)}
-                          className="mt-2"
-                          rows={4}
-                        />
-                      </div>
-                      <div className="flex gap-3 justify-end">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setShowRejectDialog(false);
-                            setRejectionReason("");
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={handleRejectPayment}
-                          disabled={isProcessing || !rejectionReason.trim()}
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          {isProcessing ? "Rejecting..." : "Reject Payment"}
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
 
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Payment Information */}
@@ -749,6 +648,36 @@ const ViewPayment = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Accept/Reject Actions for Pending Payments - Moved from header to Payment Information section */}
+              {isPaymentPending() && !isPaymentProcessed() && (
+                <div className="mt-6 pt-4 border-t">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="h-4 w-4 text-yellow-600" />
+                    <span className="text-sm font-medium text-yellow-800">Payment Awaiting Review</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleAcceptPayment}
+                      disabled={isProcessing}
+                      className="bg-green-600 hover:bg-green-700 flex-1"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      {isProcessing ? "Processing..." : "Accept Payment"}
+                    </Button>
+                    
+                    <Button
+                      onClick={handleRejectPayment}
+                      variant="destructive"
+                      disabled={isProcessing}
+                      className="flex-1"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      {isProcessing ? "Processing..." : "Reject Payment"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
