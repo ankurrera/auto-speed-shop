@@ -3038,18 +3038,7 @@ const Account = () => {
                         </Link>
                       </Button>
                     )}
-                    {/* Add Payment Action button for orders with payment data */}
-                    {(order.status === ORDER_STATUS.PAYMENT_SUBMITTED ||
-                      order.status === ORDER_STATUS.PAYMENT_VERIFIED ||
-                      order.status === ORDER_STATUS.CONFIRMED ||
-                      order.status === PAYMENT_STATUS.FAILED) && (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/account/payments`}>
-                          <CreditCard className="h-3 w-3 mr-1" />
-                          View Payment
-                        </Link>
-                      </Button>
-                    )}
+
                     <Button variant="outline" size="sm" asChild>
                       <Link to={`/orders/${order.id}/tracking`}>
                         Track Order
