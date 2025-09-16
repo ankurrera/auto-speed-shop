@@ -48,6 +48,7 @@ import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
 import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
 import AdminPaymentManagement from "@/components/AdminPaymentManagement";
+import UserPaymentManagement from "@/components/UserPaymentManagement";
 import { DraggableImageList } from "@/components/DraggableImageList";
 import AdminPayoutManagement from "@/components/AdminPayoutManagement";
 import AdminInventoryManagement from "@/components/AdminInventoryManagement";
@@ -104,6 +105,7 @@ const Account = () => {
   const [showOrderManagement, setShowOrderManagement] = useState(false);
   const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
   const [showPaymentManagement, setShowPaymentManagement] = useState(false);
+  const [showUserPaymentManagement, setShowUserPaymentManagement] = useState(false);
   const [showPayoutManagement, setShowPayoutManagement] = useState(false);
   const [showInventoryManagement, setShowInventoryManagement] = useState(false);
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
@@ -2373,6 +2375,9 @@ const Account = () => {
     if (showPaymentManagement) {
       return <AdminPaymentManagement onBack={() => setShowPaymentManagement(false)} />;
     }
+    if (showUserPaymentManagement) {
+      return <UserPaymentManagement onBack={() => setShowUserPaymentManagement(false)} />;
+    }
     if (showPayoutManagement) {
       return <AdminPayoutManagement onBack={() => setShowPayoutManagement(false)} />;
     }
@@ -2395,6 +2400,8 @@ const Account = () => {
         return renderAddressesContent();
       case "orders":
         return renderOrdersContent();
+      case "payments":
+        return renderUserPaymentsContent();
       case "admin-dashboard":
         return renderAdminDashboardContent();
       case "analytics-dashboard":
@@ -3030,6 +3037,18 @@ const Account = () => {
                         </Link>
                       </Button>
                     )}
+                    {/* Add Payment Action button for orders with payment data */}
+                    {(order.status === ORDER_STATUS.PAYMENT_SUBMITTED ||
+                      order.status === ORDER_STATUS.PAYMENT_VERIFIED ||
+                      order.status === ORDER_STATUS.CONFIRMED ||
+                      order.status === PAYMENT_STATUS.FAILED) && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to={`/account/payments`}>
+                          <CreditCard className="h-3 w-3 mr-1" />
+                          View Payment
+                        </Link>
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" asChild>
                       <Link to={`/orders/${order.id}/tracking`}>
                         Track Order
@@ -3048,6 +3067,35 @@ const Account = () => {
       </CardContent>
     </Card>
   );
+
+  // User Payments Content
+  const renderUserPaymentsContent = () => {
+    if (showUserPaymentManagement) {
+      return <UserPaymentManagement onBack={() => setShowUserPaymentManagement(false)} />;
+    }
+    
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Payment Management
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">
+              View and manage your payment history and transaction details
+            </p>
+            <Button onClick={() => setShowUserPaymentManagement(true)}>
+              <CreditCard className="h-4 w-4 mr-2" />
+              View My Payments
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   // Filter & display inside Manage Products modal
   const lowercasedQuery = searchQuery.toLowerCase();

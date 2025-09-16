@@ -11,7 +11,7 @@ import {
   DollarSign,
   XCircle
 } from "lucide-react";
-import { ORDER_STATUS } from "@/types/order";
+import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 
 interface TrackingStep {
   id: number;
@@ -32,8 +32,13 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
 }) => {
   // Map order status to tracking steps
   const getTrackingSteps = (status: string): TrackingStep[] => {
-    const isCancelled = status === ORDER_STATUS.CANCELLED || status === ORDER_STATUS.INVOICE_DECLINED;
-    const isCompleted = status === ORDER_STATUS.CONFIRMED || status === ORDER_STATUS.SHIPPED || status === ORDER_STATUS.DELIVERED;
+    // Add payment failure status to cancellation check
+    const isCancelled = status === ORDER_STATUS.CANCELLED || 
+                       status === ORDER_STATUS.INVOICE_DECLINED ||
+                       status === PAYMENT_STATUS.FAILED;
+    const isCompleted = status === ORDER_STATUS.CONFIRMED || 
+                       status === ORDER_STATUS.SHIPPED || 
+                       status === ORDER_STATUS.DELIVERED;
     
     const steps: TrackingStep[] = [
       {
@@ -73,10 +78,10 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
       },
       {
         id: 6,
-        title: "Admin Verification",
+        title: "Admin Payment Verification",
         icon: <CheckCircle className="h-5 w-5" />,
-        status: getStepStatus(status, [ORDER_STATUS.PAYMENT_VERIFIED, ORDER_STATUS.CONFIRMED], isCancelled),
-        statusText: getStepStatusText(status, [ORDER_STATUS.PAYMENT_VERIFIED, ORDER_STATUS.CONFIRMED], isCancelled)
+        status: getStepStatus(status, [ORDER_STATUS.PAYMENT_VERIFIED, ORDER_STATUS.CONFIRMED], isCancelled, PAYMENT_STATUS.FAILED),
+        statusText: getStepStatusText(status, [ORDER_STATUS.PAYMENT_VERIFIED, ORDER_STATUS.CONFIRMED], isCancelled, PAYMENT_STATUS.FAILED)
       },
       {
         id: 7,
@@ -115,8 +120,16 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
     isCancelled: boolean, 
     declinedStatus?: string
   ): string {
-    if (isCancelled) return 'Cancelled';
-    if (declinedStatus && currentStatus === declinedStatus) return 'Declined';
+    if (isCancelled) {
+      if (currentStatus === PAYMENT_STATUS.FAILED) return 'Payment Rejected';
+      if (currentStatus === ORDER_STATUS.CANCELLED) return 'Order Cancelled';
+      if (currentStatus === ORDER_STATUS.INVOICE_DECLINED) return 'Invoice Declined';
+      return 'Cancelled';
+    }
+    if (declinedStatus && currentStatus === declinedStatus) {
+      if (declinedStatus === PAYMENT_STATUS.FAILED) return 'Payment Rejected';
+      return 'Declined';
+    }
     if (completedStatuses.includes(currentStatus)) return 'Completed';
     
     const stepsBefore = getStepsBeforeThisOne(completedStatuses);
@@ -209,8 +222,12 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
         <div className="mt-6 p-4 bg-muted rounded-lg md:hidden">
           <h5 className="font-medium mb-2">Order Status Summary</h5>
           <p className="text-sm text-muted-foreground">
-            {orderStatus === ORDER_STATUS.CANCELLED || orderStatus === ORDER_STATUS.INVOICE_DECLINED
+            {orderStatus === ORDER_STATUS.CANCELLED
               ? "This order has been cancelled."
+              : orderStatus === ORDER_STATUS.INVOICE_DECLINED
+              ? "The invoice for this order was declined."
+              : orderStatus === PAYMENT_STATUS.FAILED
+              ? "The payment for this order was rejected."
               : orderStatus === ORDER_STATUS.CONFIRMED
               ? "Your order has been confirmed and will be processed."
               : "Your order is being processed. Check back for updates."
