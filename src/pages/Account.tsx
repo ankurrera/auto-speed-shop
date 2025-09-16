@@ -26,7 +26,8 @@ import {
   FileText,
   Star,
   DollarSign,
-  MessageCircle
+  MessageCircle,
+  CreditCard
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
