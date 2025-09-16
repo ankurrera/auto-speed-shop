@@ -253,9 +253,12 @@ const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({
         return 'Completed';
       } else if (stepId === 2) {
         return 'Completed';
-      } else {
-        // Steps 3 and beyond show declined status
+      } else if (stepId === 3) {
+        // Step 3 shows the actual decline status
         return 'Invoice Declined';
+      } else {
+        // Steps 4 and beyond are cancelled as a result of the decline
+        return 'Cancelled';
       }
     }
     
