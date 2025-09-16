@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, Package, Truck, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import TrackOrderTimeline from "@/components/TrackOrderTimeline";
+import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 
 interface OrderDetails {
   id: string;
@@ -130,10 +131,51 @@ const OrderTracking = () => {
       case "shipped":
       case "in transit":
         return "secondary";
+      case "confirmed":
+        return "default";
+      case "cancelled":
+      case "invoice_declined":
+        return "destructive";
+      case "failed":
+        return "destructive";
       case "processing":
+      case "pending_admin_review":
+      case "payment_pending":
+      case "payment_submitted":
         return "outline";
       default:
         return "outline";
+    }
+  };
+
+  const getDisplayStatus = (status: string, paymentStatus?: string) => {
+    // Prioritize payment status for display if it provides more specific information
+    const statusToDisplay = paymentStatus || status;
+    
+    switch (statusToDisplay) {
+      case ORDER_STATUS.CANCELLED:
+        return "Cancelled";
+      case ORDER_STATUS.INVOICE_DECLINED:
+        return "Declined";
+      case PAYMENT_STATUS.FAILED:
+        return "Payment Rejected";
+      case ORDER_STATUS.CONFIRMED:
+        return "Confirmed";
+      case ORDER_STATUS.SHIPPED:
+        return "Shipped";
+      case ORDER_STATUS.DELIVERED:
+        return "Delivered";
+      case ORDER_STATUS.PAYMENT_SUBMITTED:
+        return "Payment Submitted";
+      case ORDER_STATUS.PAYMENT_VERIFIED:
+      case PAYMENT_STATUS.VERIFIED:
+        return "Payment Verified";
+      case ORDER_STATUS.PENDING_ADMIN_REVIEW:
+        return "Pending Review";
+      case PAYMENT_STATUS.SUBMITTED:
+        return "Payment Submitted";
+      default:
+        return statusToDisplay.charAt(0).toUpperCase() + statusToDisplay.slice(1).replace(/_/g, ' ');
     }
   };
 
@@ -145,8 +187,8 @@ const OrderTracking = () => {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl font-bold">Order Tracking</h1>
-              <Badge variant={getStatusBadgeVariant(orderDetails.status)}>
-                {orderDetails.status.charAt(0).toUpperCase() + orderDetails.status.slice(1)}
+              <Badge variant={getStatusBadgeVariant(orderDetails.payment_status || orderDetails.status)}>
+                {getDisplayStatus(orderDetails.status, orderDetails.payment_status)}
               </Badge>
             </div>
             <p className="text-muted-foreground">
@@ -157,7 +199,9 @@ const OrderTracking = () => {
           <div className="grid md:grid-cols-3 gap-6">
             {/* Track Order Progress */}
             <div className="md:col-span-2">
-              <TrackOrderTimeline orderStatus={orderDetails.status} />
+              <TrackOrderTimeline 
+                orderStatus={orderDetails.payment_status || orderDetails.status} 
+              />
             </div>
 
             {/* Order Summary */}

@@ -75,6 +75,16 @@ const ViewPayment = () => {
            paymentStatus === ORDER_STATUS.PAYMENT_SUBMITTED;
   };
 
+  // Helper function to determine if payment has been processed (accepted or rejected)
+  const isPaymentProcessed = () => {
+    const paymentStatus = paymentRecord?.payment_status || order?.status;
+    
+    // Payment is processed if it's verified (accepted) or failed (rejected)
+    return paymentStatus === PAYMENT_STATUS.VERIFIED || 
+           paymentStatus === PAYMENT_STATUS.FAILED ||
+           paymentStatus === ORDER_STATUS.CONFIRMED;
+  };
+
   // Helper function to get payment status badge
   const getPaymentStatusBadge = () => {
     const paymentStatus = paymentRecord?.payment_status || order?.status;
@@ -229,104 +239,168 @@ const ViewPayment = () => {
     }
   };
 
-  const handleDownloadScreenshot = async () => {
+  const handleDownloadPDFReceipt = async () => {
     const orderNumber = activeOrder?.order_number || paymentRecord?.order_number || 'payment-receipt';
     if (!activePaymentData?.payment_screenshot_url || !orderNumber) {
       toast({
         title: "Error",
-        description: "Screenshot or Order ID not available",
+        description: "Transaction details not available for download",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      // Fetch the image
-      const response = await fetch(activePaymentData.payment_screenshot_url);
-      if (!response.ok) {
-        throw new Error('Failed to fetch screenshot');
-      }
-      
-      const blob = await response.blob();
-      
-      // Create an image element to get dimensions
-      const img = new Image();
-      const imageLoadPromise = new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error('Failed to load image'));
-      });
-      
-      img.src = URL.createObjectURL(blob);
-      await imageLoadPromise;
-      
       // Create PDF with jsPDF
       const pdf = new jsPDF({
-        orientation: img.width > img.height ? 'landscape' : 'portrait',
+        orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
       
-      // Calculate dimensions to fit the image on the page
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20; // 20mm margin
+      const margin = 20;
       
-      const maxWidth = pageWidth - (2 * margin);
-      const maxHeight = pageHeight - (2 * margin);
-      
-      let imgWidth = img.width * 0.264583; // Convert pixels to mm (assuming 96 DPI)
-      let imgHeight = img.height * 0.264583;
-      
-      // Scale down if image is too large
-      if (imgWidth > maxWidth) {
-        const ratio = maxWidth / imgWidth;
-        imgWidth = maxWidth;
-        imgHeight = imgHeight * ratio;
-      }
-      
-      if (imgHeight > maxHeight) {
-        const ratio = maxHeight / imgHeight;
-        imgHeight = maxHeight;
-        imgWidth = imgWidth * ratio;
-      }
-      
-      // Center the image on the page
-      const x = (pageWidth - imgWidth) / 2;
-      const y = (pageHeight - imgHeight) / 2;
-      
-      // Add the image to PDF
-      pdf.addImage(img.src, 'JPEG', x, y, imgWidth, imgHeight);
-      
-      // Add header text
-      pdf.setFontSize(14);
+      // Add header
+      pdf.setFontSize(20);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Payment Screenshot - Order ${orderNumber}`, pageWidth / 2, 15, { align: 'center' });
+      pdf.text('Transaction Receipt', pageWidth / 2, 30, { align: 'center' });
       
-      // Add transaction ID if available
-      if (activePaymentData.transaction_id) {
-        pdf.setFontSize(10);
+      // Add order details
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      let yPosition = 50;
+      
+      const addLine = (label: string, value: string) => {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${label}:`, margin, yPosition);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(`Transaction ID: ${activePaymentData.transaction_id}`, margin, pageHeight - 10);
+        pdf.text(value, margin + 40, yPosition);
+        yPosition += 8;
+      };
+      
+      // Transaction details
+      addLine('Order Number', orderNumber);
+      addLine('Transaction ID', activePaymentData.transaction_id);
+      addLine('Payment Amount', `$${activePaymentData.payment_amount.toFixed(2)}`);
+      addLine('Payment Status', getPaymentStatusText());
+      addLine('Submitted At', new Date(activePaymentData.submitted_at).toLocaleString());
+      
+      // Add accept/reject timestamp if available
+      if (isPaymentProcessed() && (paymentRecord?.updated_at || order?.updated_at)) {
+        const statusText = paymentRecord?.payment_status === PAYMENT_STATUS.VERIFIED || order?.status === ORDER_STATUS.CONFIRMED 
+          ? "Accepted At" : "Rejected At";
+        addLine(statusText, new Date(paymentRecord?.updated_at || order?.updated_at || '').toLocaleString());
       }
       
-      // Save the PDF with Order ID as filename
-      pdf.save(`${orderNumber}.pdf`);
+      yPosition += 5;
       
-      // Cleanup
-      URL.revokeObjectURL(img.src);
+      // Customer details
+      const customerName = activeOrder?.profiles 
+        ? `${activeOrder.profiles.first_name} ${activeOrder.profiles.last_name}`
+        : paymentRecord 
+        ? `${paymentRecord.customer_first_name} ${paymentRecord.customer_last_name}`
+        : 'Unknown Customer';
+      
+      const customerEmail = activeOrder?.profiles?.email || paymentRecord?.customer_email || 'No email';
+      
+      addLine('Customer Name', customerName);
+      addLine('Customer Email', customerEmail);
+      
+      yPosition += 10;
+      
+      // Screenshot section
+      if (activePaymentData.payment_screenshot_url) {
+        try {
+          const response = await fetch(activePaymentData.payment_screenshot_url);
+          if (response.ok) {
+            const blob = await response.blob();
+            const img = new Image();
+            
+            const imageLoadPromise = new Promise<void>((resolve, reject) => {
+              img.onload = () => resolve();
+              img.onerror = () => reject(new Error('Failed to load image'));
+            });
+            
+            img.src = URL.createObjectURL(blob);
+            await imageLoadPromise;
+            
+            // Add screenshot section header
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Payment Screenshot:', margin, yPosition);
+            yPosition += 10;
+            
+            // Calculate image dimensions to fit on page
+            const maxWidth = pageWidth - (2 * margin);
+            const maxHeight = pageHeight - yPosition - 30; // Leave space for footer
+            
+            let imgWidth = img.width * 0.264583; // Convert pixels to mm
+            let imgHeight = img.height * 0.264583;
+            
+            // Scale down if too large
+            if (imgWidth > maxWidth) {
+              const ratio = maxWidth / imgWidth;
+              imgWidth = maxWidth;
+              imgHeight = imgHeight * ratio;
+            }
+            
+            if (imgHeight > maxHeight) {
+              const ratio = maxHeight / imgHeight;
+              imgHeight = maxHeight;
+              imgWidth = imgWidth * ratio;
+            }
+            
+            // Center the image
+            const x = (pageWidth - imgWidth) / 2;
+            
+            // Add the image
+            pdf.addImage(img.src, 'JPEG', x, yPosition, imgWidth, imgHeight);
+            
+            // Cleanup
+            URL.revokeObjectURL(img.src);
+          }
+        } catch (imageError) {
+          console.warn('Could not include screenshot in PDF:', imageError);
+          pdf.setFont('helvetica', 'italic');
+          pdf.text('Screenshot unavailable', margin, yPosition);
+        }
+      }
+      
+      // Add footer
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Generated on ${new Date().toLocaleString()}`, margin, pageHeight - 10);
+      
+      // Save the PDF
+      pdf.save(`${orderNumber}-receipt.pdf`);
       
       toast({
         title: "Download Complete",
-        description: `Payment screenshot saved as ${orderNumber}.pdf`
+        description: `Transaction receipt saved as ${orderNumber}-receipt.pdf`
       });
     } catch (error) {
-      console.error('Download error:', error);
+      console.error('PDF generation error:', error);
       toast({
         title: "Download Failed",
-        description: "Unable to download screenshot as PDF. Please try again.",
+        description: "Unable to generate PDF receipt. Please try again.",
         variant: "destructive"
       });
     }
+  };
+
+  // Helper function to get payment status as text
+  const getPaymentStatusText = () => {
+    const paymentStatus = paymentRecord?.payment_status || order?.status;
+    
+    if (paymentStatus === PAYMENT_STATUS.VERIFIED || paymentStatus === ORDER_STATUS.CONFIRMED) {
+      return "Verified";
+    } else if (paymentStatus === PAYMENT_STATUS.FAILED) {
+      return "Rejected";
+    } else if (paymentStatus === PAYMENT_STATUS.SUBMITTED || paymentStatus === ORDER_STATUS.PAYMENT_SUBMITTED) {
+      return "Pending Review";
+    }
+    return "Unknown";
   };
 
   if (loading) {
@@ -422,6 +496,20 @@ const ViewPayment = () => {
                     {new Date(activePaymentData!.submitted_at).toLocaleString()}
                   </span>
                 </div>
+
+                {/* Show accept/reject timestamp if payment has been processed */}
+                {isPaymentProcessed() && (paymentRecord?.updated_at || order?.updated_at) && (
+                  <div className="flex justify-between items-center py-3 border-b">
+                    <span className="font-medium text-muted-foreground">
+                      {paymentRecord?.payment_status === PAYMENT_STATUS.VERIFIED || order?.status === ORDER_STATUS.CONFIRMED 
+                        ? "Accepted At" 
+                        : "Rejected At"}
+                    </span>
+                    <span className="text-sm">
+                      {new Date(paymentRecord?.updated_at || order?.updated_at || '').toLocaleString()}
+                    </span>
+                  </div>
+                )}
                 
                 <div className="flex justify-between items-center py-3">
                   <span className="font-medium text-muted-foreground">Customer</span>
@@ -487,11 +575,11 @@ const ViewPayment = () => {
                     </Button>
                     <Button
                       variant="default"
-                      onClick={handleDownloadScreenshot}
+                      onClick={handleDownloadPDFReceipt}
                       className="flex-1"
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      Download as PDF
+                      Download Receipt
                     </Button>
                   </div>
                 </div>
@@ -512,7 +600,9 @@ const ViewPayment = () => {
               <p className="text-sm text-muted-foreground">
                 {isPaymentPending() 
                   ? "Review the payment details above and verify or reject the payment."
-                  : "This payment has already been processed."
+                  : isPaymentProcessed()
+                  ? "This payment has already been processed. No further action is required."
+                  : "Payment status is being processed."
                 }
               </p>
             </CardHeader>
@@ -557,9 +647,9 @@ const ViewPayment = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {paymentRecord?.payment_status === PAYMENT_STATUS.VERIFIED || order?.status === ORDER_STATUS.CONFIRMED
-                          ? "This payment has been verified and the order is confirmed."
+                          ? "This payment has been verified and the order is confirmed. Payment decisions cannot be changed once processed."
                           : paymentRecord?.payment_status === PAYMENT_STATUS.FAILED
-                          ? "This payment has been rejected."
+                          ? "This payment has been rejected. Payment decisions cannot be changed once processed."
                           : "Payment processing is complete."
                         }
                       </p>
@@ -567,6 +657,20 @@ const ViewPayment = () => {
                         <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                           <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
                           <p className="text-sm text-red-700 mt-1">{paymentRecord.rejection_reason}</p>
+                        </div>
+                      )}
+
+                      {/* Always show download receipt option for processed payments */}
+                      {isPaymentProcessed() && (
+                        <div className="mt-4">
+                          <Button
+                            variant="outline"
+                            onClick={handleDownloadPDFReceipt}
+                            className="flex items-center gap-2"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download Transaction Receipt
+                          </Button>
                         </div>
                       )}
                     </div>
