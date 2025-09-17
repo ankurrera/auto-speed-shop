@@ -63,7 +63,7 @@ const MessageList = ({ messages, loading, currentUserId, isTyping, typingInfo }:
   };
 
   const getUserName = (message: ChatMessage) => {
-    if (message.is_from_admin) return 'Admin';
+    // Always show user information, never admin info
     if (message.user && (message.user.first_name || message.user.last_name)) {
       return `${message.user.first_name || ''} ${message.user.last_name || ''}`.trim() || 'User';
     }
@@ -105,7 +105,7 @@ const MessageList = ({ messages, loading, currentUserId, isTyping, typingInfo }:
                   {(!isOwn || message.is_from_admin) && (
                     <Avatar className="w-8 h-8 flex-shrink-0">
                       <AvatarFallback className={message.is_from_admin ? 'bg-blue-100 text-blue-600' : 'bg-muted'}>
-                        {message.is_from_admin ? 'A' : userInitials}
+                        {userInitials}
                       </AvatarFallback>
                     </Avatar>
                   )}

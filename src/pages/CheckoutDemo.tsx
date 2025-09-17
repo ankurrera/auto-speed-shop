@@ -6,11 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Package, Clock, MapPin, Edit } from "lucide-react";
-import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   Select,
   SelectContent,
@@ -18,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createCustomOrder } from "@/services/customOrderService";
 
 const TAX_RATE = 0.0825;
 
@@ -37,12 +32,75 @@ interface Address {
   is_default: boolean;
 }
 
-const CustomCheckout = () => {
-  const { cartItems, clearCart } = useCart();
+// Mock data for demonstration
+const mockAddresses: Address[] = [
+  {
+    id: "1",
+    first_name: "John",
+    last_name: "Doe",
+    address_line_1: "123 Main Street",
+    address_line_2: "Apt 4B",
+    city: "New York",
+    state: "NY",
+    postal_code: "10001",
+    country: "US",
+    phone: "555-123-4567",
+    type: "shipping",
+    is_default: true,
+  },
+  {
+    id: "2",
+    first_name: "John",
+    last_name: "Doe",
+    address_line_1: "456 Oak Avenue",
+    city: "Los Angeles", 
+    state: "CA",
+    postal_code: "90210",
+    country: "US",
+    phone: "555-987-6543",
+    type: "shipping",
+    is_default: false,
+  },
+  {
+    id: "3",
+    first_name: "John",
+    last_name: "Doe",
+    address_line_1: "789 Business Blvd",
+    address_line_2: "Suite 200",
+    city: "Chicago",
+    state: "IL",
+    postal_code: "60601",
+    country: "US",
+    phone: "555-456-7890",
+    type: "shipping",
+    is_default: false,
+  },
+];
+
+const mockCartItems = [
+  {
+    id: "1",
+    name: "High Performance Brake Pads",
+    price: 89.99,
+    quantity: 2,
+  },
+  {
+    id: "2", 
+    name: "Oil Filter - Premium Grade",
+    price: 15.99,
+    quantity: 1,
+  },
+  {
+    id: "3",
+    name: "Air Filter Replacement",
+    price: 24.99,
+    quantity: 1,
+  },
+];
+
+const CheckoutDemo = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Address management state
@@ -60,29 +118,20 @@ const CustomCheckout = () => {
     zip: "",
   });
 
-  // Fetch user addresses
-  const fetchUserAddresses = useCallback(async (userId: string) => {
+  // Simulate fetching user addresses
+  const fetchUserAddresses = useCallback(async () => {
     try {
       setAddressesLoading(true);
-      const { data, error } = await supabase
-        .from("addresses")
-        .select("*")
-        .eq("user_id", userId)
-        .order("is_default", { ascending: false })
-        .order("created_at", { ascending: false });
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (!error && data) {
-        setAddresses(data);
-        
-        // Auto-select default address if exists and no manual entry preference
-        const defaultAddress = data.find((addr) => addr.is_default);
-        if (defaultAddress && !useManualEntry) {
-          setSelectedAddressId(defaultAddress.id);
-          populateFromAddress(defaultAddress);
-        } else if (data.length === 0) {
-          // No saved addresses, enable manual entry
-          setUseManualEntry(true);
-        }
+      setAddresses(mockAddresses);
+      
+      // Auto-select default address if exists and no manual entry preference
+      const defaultAddress = mockAddresses.find((addr) => addr.is_default);
+      if (defaultAddress && !useManualEntry) {
+        setSelectedAddressId(defaultAddress.id);
+        populateFromAddress(defaultAddress);
       }
     } catch (error) {
       console.error("Error fetching addresses:", error);
@@ -104,27 +153,10 @@ const CustomCheckout = () => {
     });
   };
 
-  // Check authentication status
+  // Initialize demo
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-      
-      if (!session) {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to continue with checkout.",
-          variant: "destructive"
-        });
-        navigate("/account");
-      } else {
-        // Fetch user addresses after authentication
-        fetchUserAddresses(session.user.id);
-      }
-    };
-    
-    checkAuth();
-  }, [navigate, toast, fetchUserAddresses]);
+    fetchUserAddresses();
+  }, [fetchUserAddresses]);
 
   // Check if form is valid (either selected address or complete manual entry)
   const isFormValid = useManualEntry 
@@ -132,7 +164,7 @@ const CustomCheckout = () => {
     : selectedAddressId !== "" || Object.values(shippingInfo).every(value => value.trim() !== "");
 
   // Calculate totals
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = mockCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const tax = +(subtotal * TAX_RATE).toFixed(2);
   const total = +(subtotal + tax).toFixed(2);
 
@@ -177,52 +209,25 @@ const CustomCheckout = () => {
       return;
     }
 
-    if (cartItems.length === 0) {
-      toast({
-        title: "Empty Cart",
-        description: "Your cart is empty.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
-
-      const shippingAddress = {
-        first_name: shippingInfo.firstName,
-        last_name: shippingInfo.lastName,
-        line1: shippingInfo.address,
-        city: shippingInfo.city,
-        state: shippingInfo.state,
-        postal_code: shippingInfo.zip,
-        country: "US",
-      };
-
-      const result = await createCustomOrder(cartItems, shippingAddress, userId);
-
-      // Clear cart and show success message
-      clearCart();
-      
-      // Invalidate admin orders cache so AdminOrderManagement shows the new order
-      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      // Simulate order submission
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       toast({
         title: "Order Request Submitted!",
-        description: `Your order ${result.orderNumber} has been submitted for admin review. You will receive an invoice soon.`,
+        description: "Your order #DEMO-12345 has been submitted for admin review. You will receive an invoice soon.",
       });
 
-      // Navigate to order details page
-      navigate(`/order/${result.orderId}`);
+      // Navigate to a demo success page
+      navigate("/");
       
-    } catch (error: unknown) {
+    } catch (error) {
       console.error("Order submission error:", error);
       toast({
         title: "Order Failed",
-        description: error instanceof Error ? error.message : "Failed to submit order request. Please try again.",
+        description: "Failed to submit order request. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -230,42 +235,14 @@ const CustomCheckout = () => {
     }
   };
 
-  if (cartItems.length === 0) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto">
-          <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
-          <p className="text-muted-foreground mb-8">
-            Add some items to your cart before checking out.
-          </p>
-          <Button asChild>
-            <Link to="/shop">Continue Shopping</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (isAuthenticated === null) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 pt-24">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-4">Checkout</h1>
+            <h1 className="text-3xl font-bold mb-4">Checkout Demo</h1>
             <p className="text-muted-foreground">
-              Submit your order request. Our admin will review and send you an invoice.
+              Address Selection Feature Demonstration - Submit your order request. Our admin will review and send you an invoice.
             </p>
           </div>
 
@@ -414,6 +391,7 @@ const CustomCheckout = () => {
                             <SelectItem value="AL">Alabama</SelectItem>
                             <SelectItem value="CA">California</SelectItem>
                             <SelectItem value="FL">Florida</SelectItem>
+                            <SelectItem value="IL">Illinois</SelectItem>
                             <SelectItem value="NY">New York</SelectItem>
                             <SelectItem value="TX">Texas</SelectItem>
                             {/* Add more states as needed */}
@@ -452,7 +430,7 @@ const CustomCheckout = () => {
               <CardContent className="space-y-4">
                 {/* Cart Items */}
                 <div className="space-y-3">
-                  {cartItems.map((item) => (
+                  {mockCartItems.map((item) => (
                     <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
                       <div className="flex-1">
                         <h4 className="font-medium text-sm">{item.name}</h4>
@@ -537,4 +515,4 @@ const CustomCheckout = () => {
   );
 };
 
-export default CustomCheckout;
+export default CheckoutDemo;

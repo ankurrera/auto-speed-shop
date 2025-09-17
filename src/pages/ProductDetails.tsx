@@ -116,7 +116,7 @@ const ProductDetails = () => {
     id: product.id,
     name: product.name,
     price: product.price,
-    image: product.image_urls[0],
+    image: product.image_urls && product.image_urls.length > 0 ? product.image_urls[0] : '/placeholder.svg',
     is_part: product.type === 'part',
     brand: 'brand' in product ? product.brand : undefined,
     category: 'category' in product ? product.category : undefined,
@@ -133,7 +133,7 @@ const ProductDetails = () => {
       name: product.name,
       brand: 'brand' in product ? product.brand || '' : '',
       price: product.price,
-      image: product.image_urls[0],
+      image: product.image_urls && product.image_urls.length > 0 ? product.image_urls[0] : '/placeholder.svg',
       is_part: product.type === 'part'
     };
     toggleWishlist(wishlistData);

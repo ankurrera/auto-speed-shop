@@ -206,16 +206,11 @@ const AdminChatConversation = ({ userId, userName, userEmail, onBack }: AdminCha
                     <p className={`text-xs mt-1 ${
                       message.is_from_admin ? 'text-blue-100' : 'text-muted-foreground'
                     }`}>
-                      {/* Display sender type and name clearly */}
-                      {message.sender_type === 'admin' ? (
-                        message.admin ? 
-                          `Admin (${message.admin.first_name || 'Unknown'} ${message.admin.last_name || 'User'}`.trim() + ')' :
-                          'Admin'
-                      ) : (
-                        message.user ? 
-                          `${message.user.first_name || 'Unknown'} ${message.user.last_name || 'User'}`.trim() :
-                          userName
-                      )} • {formatTime(message.created_at)}
+                      {/* Display only user information regardless of sender */}
+                      {message.user ? 
+                        `${message.user.first_name || 'Unknown'} ${message.user.last_name || 'User'} (${message.user.email || userEmail})`.trim() :
+                        `${userName} (${userEmail})`
+                      } • {formatTime(message.created_at)}
                     </p>
                   </div>
                 </div>

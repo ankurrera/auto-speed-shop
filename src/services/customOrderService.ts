@@ -259,7 +259,7 @@ export async function verifyPayment(orderId: string, verified: boolean) {
     
     if (isDevelopment && isSampleOrder) {
       // For sample orders in development mode, simulate successful payment verification
-      const newStatus = verified ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PAYMENT_PENDING;
+      const newStatus = verified ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.CANCELLED;
       const paymentStatus = verified ? PAYMENT_STATUS.VERIFIED : PAYMENT_STATUS.FAILED;
       console.log(`[DEV MODE] Simulating payment verification for sample order: ${orderId}, verified: ${verified}`);
       return {

@@ -3,8 +3,37 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
+interface ChatMessage {
+  id?: string;
+  sender_type?: string;
+  is_from_admin?: boolean;
+  message?: string;
+  created_at?: string;
+  user_id?: string;
+}
+
+interface UserProfile {
+  user_id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  is_admin?: boolean;
+}
+
+interface DebugInfo {
+  allMessages: ChatMessage[];
+  messagesError: unknown;
+  allProfiles: UserProfile[];
+  profilesError: unknown;
+  distinctUsers: string[];
+  distinctError: unknown;
+  totalMessages: number;
+  totalProfiles: number;
+  messageSummary: Record<string, number>;
+}
+
 const ChatDebugHelper = () => {
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [loading, setLoading] = useState(false);
 
   const runDebugQueries = async () => {

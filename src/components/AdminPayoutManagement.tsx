@@ -26,6 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 
 interface Order {
   id: string;
@@ -108,9 +109,9 @@ const PayoutManagement = ({ onBack }: PayoutManagementProps) => {
       );
 
       // Categorize orders based on payment status
-      setPendingPayments(allOrders.filter(order => order.status === 'payment_submitted'));
-      setVerifiedPayments(allOrders.filter(order => order.payment_status === 'verified'));
-      setRejectedPayments(allOrders.filter(order => order.payment_status === 'failed'));
+      setPendingPayments(allOrders.filter(order => order.status === ORDER_STATUS.PAYMENT_SUBMITTED));
+      setVerifiedPayments(allOrders.filter(order => order.payment_status === PAYMENT_STATUS.VERIFIED));
+      setRejectedPayments(allOrders.filter(order => order.payment_status === PAYMENT_STATUS.FAILED));
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Failed to fetch payments";
@@ -180,13 +181,13 @@ const PayoutManagement = ({ onBack }: PayoutManagementProps) => {
   };
 
   const getStatusBadge = (status: string, paymentStatus?: string) => {
-    if (paymentStatus === 'verified') {
+    if (paymentStatus === PAYMENT_STATUS.VERIFIED) {
       return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />Verified</Badge>;
     }
-    if (paymentStatus === 'failed') {
+    if (paymentStatus === PAYMENT_STATUS.FAILED) {
       return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
     }
-    if (status === 'payment_submitted') {
+    if (status === ORDER_STATUS.PAYMENT_SUBMITTED) {
       return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending Verification</Badge>;
     }
     return <Badge variant="outline">{status}</Badge>;
@@ -251,7 +252,7 @@ const PayoutManagement = ({ onBack }: PayoutManagementProps) => {
                         className="bg-green-600 hover:bg-green-700"
                       >
                         <CheckCircle className="h-4 w-4 mr-1" />
-                        Verify
+                        Accept
                       </Button>
                       <Button
                         size="sm"
@@ -421,7 +422,9 @@ const PayoutManagement = ({ onBack }: PayoutManagementProps) => {
                   </div>
                 )}
                 
-                {selectedPayment.status === 'payment_submitted' && (
+                {selectedPayment.status === ORDER_STATUS.PAYMENT_SUBMITTED && 
+                 selectedPayment.payment_status !== PAYMENT_STATUS.VERIFIED && 
+                 selectedPayment.payment_status !== PAYMENT_STATUS.FAILED && (
                   <div className="flex gap-3 pt-4 border-t">
                     <Button
                       onClick={() => {
@@ -432,7 +435,7 @@ const PayoutManagement = ({ onBack }: PayoutManagementProps) => {
                       className="bg-green-600 hover:bg-green-700"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Verify Payment
+                      Accept
                     </Button>
                     <Button
                       variant="destructive"
@@ -443,7 +446,7 @@ const PayoutManagement = ({ onBack }: PayoutManagementProps) => {
                       disabled={isVerifyingPayment}
                     >
                       <XCircle className="h-4 w-4 mr-2" />
-                      Reject Payment
+                      Reject
                     </Button>
                   </div>
                 )}

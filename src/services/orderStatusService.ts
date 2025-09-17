@@ -1,4 +1,4 @@
-// API endpoint for order status history
+// API endpoint for order status history with real-time updates
 import { supabase } from "@/integrations/supabase/client";
 
 export interface OrderStatusHistoryEntry {
@@ -6,6 +6,13 @@ export interface OrderStatusHistoryEntry {
   timestamp: string;
   description: string;
   updatedBy?: string;
+}
+
+export interface OrderStatusUpdate {
+  order_id: string;
+  status: string;
+  payment_status?: string;
+  updated_at: string;
 }
 
 export async function getOrderStatusHistory(orderId: string): Promise<OrderStatusHistoryEntry[]> {
@@ -96,4 +103,103 @@ function getStatusDescription(status: string): string {
     default:
       return `Order status updated to ${status}`;
   }
+}
+
+/**
+ * Subscribe to real-time order status updates for a specific order
+ * Similar pattern to ChatService for consistency
+ */
+export function subscribeToOrderStatusUpdates(
+  orderId: string,
+  onStatusUpdate: (update: OrderStatusUpdate) => void
+) {
+  console.log('[OrderStatusService] Setting up order status subscription for order:', orderId);
+  const channelName = `order_status:${orderId}:${Date.now()}`;
+  const channel = supabase.channel(channelName);
+
+  // Subscribe to order status changes
+  channel.on(
+    'postgres_changes',
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'orders',
+      filter: `id=eq.${orderId}`,
+    },
+    async (payload) => {
+      console.log('[OrderStatusService] Order status update received:', {
+        orderId: payload.new.id,
+        newStatus: payload.new.status,
+        paymentStatus: payload.new.payment_status
+      });
+
+      const update: OrderStatusUpdate = {
+        order_id: payload.new.id,
+        status: payload.new.status,
+        payment_status: payload.new.payment_status,
+        updated_at: payload.new.updated_at
+      };
+
+      onStatusUpdate(update);
+    }
+  );
+
+  // Subscribe the channel
+  channel.subscribe((status) => {
+    console.log('[OrderStatusService] Order status subscription status:', status, 'for order:', orderId);
+  });
+
+  // Return unsubscribe function
+  return () => {
+    console.log('[OrderStatusService] Unsubscribing from order status updates for order:', orderId);
+    supabase.removeChannel(channel);
+  };
+}
+
+/**
+ * Subscribe to real-time order updates for all orders (admin dashboard)
+ */
+export function subscribeToAllOrderUpdates(
+  onOrderUpdate: (update: OrderStatusUpdate) => void
+) {
+  console.log('[OrderStatusService] Setting up subscription for all order updates');
+  const channelName = `all_orders:${Date.now()}`;
+  const channel = supabase.channel(channelName);
+
+  // Subscribe to all order status changes
+  channel.on(
+    'postgres_changes',
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'orders',
+    },
+    async (payload) => {
+      console.log('[OrderStatusService] Order update received:', {
+        orderId: payload.new.id,
+        newStatus: payload.new.status,
+        paymentStatus: payload.new.payment_status
+      });
+
+      const update: OrderStatusUpdate = {
+        order_id: payload.new.id,
+        status: payload.new.status,
+        payment_status: payload.new.payment_status,
+        updated_at: payload.new.updated_at
+      };
+
+      onOrderUpdate(update);
+    }
+  );
+
+  // Subscribe the channel
+  channel.subscribe((status) => {
+    console.log('[OrderStatusService] All orders subscription status:', status);
+  });
+
+  // Return unsubscribe function
+  return () => {
+    console.log('[OrderStatusService] Unsubscribing from all order updates');
+    supabase.removeChannel(channel);
+  };
 }

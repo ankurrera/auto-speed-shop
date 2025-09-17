@@ -5,13 +5,24 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, Package, Clock, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+interface ShippingAddress {
+  first_name: string;
+  last_name: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country?: string;
+}
+
 interface OrderDetails {
   id: string;
   order_number: string;
   total_amount: number;
   status: string;
   created_at: string;
-  shipping_address: any;
+  shipping_address: ShippingAddress | null;
   order_items?: Array<{
     product_name: string;
     quantity: number;
@@ -73,7 +84,7 @@ const OrderConfirmation = () => {
           ...order,
           order_items: items || []
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching order details:", err);
         setError("Failed to load order details");
       } finally {
