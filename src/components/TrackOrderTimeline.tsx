@@ -14,6 +14,7 @@ import {
   Share
 } from "lucide-react";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
+import OrderProgressTracker from "@/components/OrderProgressTracker";
 
 interface TrackingStep {
   id: number;
@@ -26,13 +27,29 @@ interface TrackingStep {
 
 interface TrackOrderTimelineProps {
   orderStatus: string;
+  orderId?: string; // New prop for enhanced progress tracking
   className?: string;
+  useEnhancedTracking?: boolean; // Flag to use new 7-step system
 }
 
 const TrackOrderTimeline: React.FC<TrackOrderTimelineProps> = ({ 
   orderStatus, 
-  className = "" 
+  orderId,
+  className = "",
+  useEnhancedTracking = false
 }) => {
+  // If enhanced tracking is enabled and orderId is provided, use the new system
+  if (useEnhancedTracking && orderId) {
+    return (
+      <OrderProgressTracker 
+        orderId={orderId}
+        className={className}
+        showRefresh={true}
+      />
+    );
+  }
+
+  // Otherwise, use the legacy tracking system (existing code)
   // Map order status to tracking steps
   const getTrackingSteps = (status: string): TrackingStep[] => {
     // Define different types of cancellation scenarios

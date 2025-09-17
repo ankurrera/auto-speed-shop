@@ -348,6 +348,53 @@ export type Database = {
         }
         Relationships: []
       }
+      order_progress_steps: {
+        Row: {
+          id: string
+          order_id: string
+          step_number: number
+          title: string
+          description: string | null
+          status: string
+          created_at: string
+          updated_at: string
+          completed_at: string | null
+          canceled_at: string | null
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          step_number: number
+          title: string
+          description?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+          completed_at?: string | null
+          canceled_at?: string | null
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          step_number?: number
+          title?: string
+          description?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+          completed_at?: string | null
+          canceled_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_progress_steps_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       otp_codes: {
         Row: {
           created_at: string | null
@@ -865,6 +912,26 @@ export type Database = {
           p_year: number
         }
         Returns: string
+      }
+      initialize_order_progress_steps: {
+        Args: {
+          order_id: string
+        }
+        Returns: undefined
+      }
+      update_order_progress_step: {
+        Args: {
+          p_order_id: string
+          p_step_number: number
+          p_status: string
+        }
+        Returns: undefined
+      }
+      sync_order_progress_with_status: {
+        Args: {
+          p_order_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

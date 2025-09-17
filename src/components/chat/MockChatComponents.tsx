@@ -52,7 +52,7 @@ const mockConversations: MockConversation[] = [
         message: 'Hello John! I\'d be happy to help you find the right brake pads. Could you provide me with your VIN number for the most accurate match?',
         isFromAdmin: true,
         timestamp: '10:32 AM',
-        userName: 'Admin'
+        userName: 'John Smith'  // Show user info even for admin messages
       },
       {
         id: '3',
@@ -66,7 +66,7 @@ const mockConversations: MockConversation[] = [
         message: 'Perfect! Based on your VIN, I found the exact brake pads you need. I\'ll send you a link with compatible options.',
         isFromAdmin: true,
         timestamp: '10:37 AM',
-        userName: 'Admin'
+        userName: 'John Smith'  // Show user info even for admin messages
       }
     ]
   },
@@ -89,7 +89,7 @@ const mockConversations: MockConversation[] = [
         message: 'Let me check on your order status. Please give me a moment.',
         isFromAdmin: true,
         timestamp: '9:16 AM',
-        userName: 'Admin'
+        userName: 'Sarah Johnson'  // Show user info even for admin messages
       }
     ]
   },
@@ -112,7 +112,7 @@ const mockConversations: MockConversation[] = [
         message: 'You\'re welcome! Feel free to reach out if you need anything else.',
         isFromAdmin: true,
         timestamp: 'Yesterday',
-        userName: 'Admin'
+        userName: 'Mike Wilson'  // Show user info even for admin messages
       }
     ]
   }
@@ -361,7 +361,7 @@ const MockAdminDashboard = ({ onBack }: { onBack: () => void }) => {
       message: newMessage,
       isFromAdmin: true,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      userName: 'Admin'
+      userName: selectedConversation.userName  // Show user info even for new admin messages
     };
 
     setMessages(prev => [...prev, adminMessage]);
@@ -405,7 +405,7 @@ const MockAdminDashboard = ({ onBack }: { onBack: () => void }) => {
                   <p className={`text-xs mt-1 ${
                     message.isFromAdmin ? 'text-blue-100' : 'text-muted-foreground'
                   }`}>
-                    {message.isFromAdmin ? 'Admin' : selectedConversation.userName} • {message.timestamp}
+                    {selectedConversation.userName} • {message.timestamp}
                   </p>
                 </div>
               </div>
