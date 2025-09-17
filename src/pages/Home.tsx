@@ -49,8 +49,7 @@ const Home = () => {
         .from('products')
         .select('*')
         .eq('is_featured', true)
-        .eq('is_active', true)
-        .limit(2);
+        .eq('is_active', true);
       
       if (productsError) throw productsError;
 
@@ -59,8 +58,7 @@ const Home = () => {
         .from('parts')
         .select('*')
         .eq('is_featured', true)
-        .eq('is_active', true)
-        .limit(2);
+        .eq('is_active', true);
       
       if (partsError) throw partsError;
       
@@ -94,8 +92,8 @@ const Home = () => {
         className: "hover:scale-105 transition-transform duration-300 animate-fade-in-up"
       }));
 
-      // Combine and return up to 4 items
-      return [...transformedProducts, ...transformedParts].slice(0, 4);
+      // Combine and return all featured items
+      return [...transformedProducts, ...transformedParts];
     }
   });
 
