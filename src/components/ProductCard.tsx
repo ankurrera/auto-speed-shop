@@ -59,7 +59,7 @@ const ProductCard = ({
       id, 
       name, 
       price, 
-      image: image_urls[0], 
+      image: image_urls && image_urls.length > 0 ? image_urls[0] : '/placeholder.svg', 
       is_part: isPart,
       brand,
       category 
@@ -71,7 +71,7 @@ const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevents the Link from navigating
     e.stopPropagation();
     const isPart = !!brand && !category; // Determine if the item is a part
-    toggleWishlist({ id, name, brand, price, image: image_urls[0], is_part: isPart }); // Pass the is_part flag
+    toggleWishlist({ id, name, brand, price, image: image_urls && image_urls.length > 0 ? image_urls[0] : '/placeholder.svg', is_part: isPart }); // Pass the is_part flag
 };
   
   // Choose the image to display. Default to the first one if the array is valid.
@@ -111,9 +111,9 @@ const handleWishlist = (e: React.MouseEvent) => {
   }, [displayImage]);
 
   return (
-    <Link to={`/products/${id}`} className={cn("block", className)}>
-      <Card className={cn("group hover:shadow-md transition-all duration-300 border-border")}>
-        <CardContent className="p-0">
+    <Link to={`/products/${id}`} className={cn("block h-full", className)}>
+      <Card className={cn("group hover:shadow-md transition-all duration-300 border-border h-full flex flex-col")}>
+        <CardContent className="p-0 flex-1 flex flex-col">
           <div 
             className="relative aspect-square overflow-hidden rounded-t-lg transition-colors duration-300"
             style={{ backgroundColor: dominantColor }}
@@ -157,15 +157,15 @@ const handleWishlist = (e: React.MouseEvent) => {
             
           </div>
 
-          <div className="p-4">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground font-medium">{brand}</p>
-              <h3 className="font-medium text-foreground line-clamp-2 leading-tight">
+          <div className="p-4 flex-1 flex flex-col">
+            <div className="space-y-2 flex-1">
+              <p className="text-sm text-muted-foreground font-medium truncate">{brand}</p>
+              <h3 className="font-medium text-foreground line-clamp-2 leading-tight min-h-[2.5rem]">
                 {name}
               </h3>
-              {category && <p className="text-sm text-muted-foreground">{category}</p>}
+              {category && <p className="text-sm text-muted-foreground truncate">{category}</p>}
               
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-1 mt-auto">
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
                     <Star
@@ -197,30 +197,31 @@ const handleWishlist = (e: React.MouseEvent) => {
           </div>
         </CardContent>
 
-        <CardFooter className="p-4 pt-0 flex gap-2">
+        <CardFooter className="p-4 pt-0 flex gap-2 mt-auto">
           {/* New Wishlist button placed next to the "Add to Cart" button */}
           <Button
             variant="outline"
             size="icon"
             onClick={handleWishlist}
             className={cn(
-              "w-12 h-12 flex-shrink-0",
+              "w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0",
               isWishlisted(id) ? "bg-red-500 text-white hover:bg-red-600" : "hover:bg-accent hover:text-accent-foreground"
             )}
             title={isWishlisted(id) ? "Remove from Wishlist" : "Add to Wishlist"}
           >
-            <Heart className={cn("h-5 w-5", isWishlisted(id) ? "fill-white" : "fill-none")} />
+            <Heart className={cn("h-4 w-4 sm:h-5 sm:w-5", isWishlisted(id) ? "fill-white" : "fill-none")} />
             <span className="sr-only">Toggle Wishlist</span>
           </Button>
 
           {/* Existing "Add to Cart" button */}
           <Button
-            className="flex-1 h-12"
+            className="flex-1 h-10 sm:h-12 text-sm sm:text-base"
             onClick={onAddToCart ? onAddToCart : handleAddToCart}
             disabled={!inStock}
           >
-            <ShoppingCart className="h-5 w-5 mr-2" />
-            {inStock ? "Add to Cart" : "Out of Stock"}
+            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">{inStock ? "Add to Cart" : "Out of Stock"}</span>
+            <span className="sm:hidden">{inStock ? "Add" : "Out"}</span>
           </Button>
         </CardFooter>
       </Card>
