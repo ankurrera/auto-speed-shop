@@ -92,6 +92,21 @@ const ProductDetails = () => {
   useEffect(() => {
     if (product && product.image_urls && product.image_urls.length > 0) {
       getDominantColor(product.image_urls[0]);
+      
+      // Preload the first product image for faster LCP
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = product.image_urls[0];
+      link.setAttribute('fetchpriority', 'high');
+      document.head.appendChild(link);
+      
+      // Cleanup function to remove the preload link
+      return () => {
+        if (document.head.contains(link)) {
+          document.head.removeChild(link);
+        }
+      };
     }
   }, [product]);
 
@@ -153,8 +168,13 @@ const ProductDetails = () => {
                       <div className="relative aspect-square w-full" style={{ backgroundColor: dominantColor }}>
                         <img
                           src={url}
-                          alt={product.name}
+                          alt={`${product.name} - Image ${index + 1}`}
                           className="w-full h-full object-contain"
+                          loading={index === 0 ? "eager" : "lazy"}
+                          decoding="async"
+                          width="800"
+                          height="800"
+                          fetchpriority={index === 0 ? "high" : "low"}
                         />
                       </div>
                     </CardContent>

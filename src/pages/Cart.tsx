@@ -50,6 +50,10 @@ const Cart = () => {
                       src={item.image}
                       alt={item.name}
                       className="w-full h-full object-cover rounded-md"
+                      loading="lazy"
+                      decoding="async"
+                      width="96"
+                      height="96"
                     />
                   </div>
                   <div className="flex-1 space-y-1">

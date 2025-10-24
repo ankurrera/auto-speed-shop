@@ -124,6 +124,9 @@ const handleWishlist = (e: React.MouseEvent) => {
               alt={name}
               className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
+              decoding="async"
+              width="400"
+              height="400"
             />
             
             {/* Gallery thumbnails on hover */}

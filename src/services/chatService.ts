@@ -62,20 +62,27 @@ export class ChatService {
       }
     });
 
-    // Create the response with proper structure to maintain backward compatibility
-    // For messages, we need to distinguish between user and admin profile data
+    // Get the conversation user's profile information to ensure consistent user data
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('user_id', data.userId)
+      .single();
+
+    if (profileError) {
+      console.warn('[ChatService] Could not fetch user profile for user:', data.userId, profileError);
+    }
+
+    // Create the response with proper structure - always show conversation user info
     const chatMessage: ChatMessage = {
       ...message,
       user: {
-        first_name: message.first_name || '',
-        last_name: message.last_name || '',
-        email: message.email || ''
+        first_name: userProfile?.first_name || '',
+        last_name: userProfile?.last_name || '',
+        email: userProfile?.email || ''
       },
-      admin: message.is_from_admin ? {
-        first_name: message.first_name || '',
-        last_name: message.last_name || '',
-        email: message.email || ''
-      } : undefined
+      // Never populate admin field to prevent admin info from being displayed
+      admin: undefined
     };
 
     return chatMessage;
@@ -115,19 +122,29 @@ export class ChatService {
     
     console.log('[ChatService] Message breakdown for user', userId, ':', messageSummary);
 
-    // Transform messages to maintain backward compatibility with existing UI components
+    // For user conversations, we need to get the conversation user's profile information
+    // First, get the user profile for this conversation
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileError) {
+      console.warn('[ChatService] Could not fetch user profile for user:', userId, profileError);
+    }
+
+    // Transform messages to always show the conversation user's information
+    // regardless of who sent the message (user or admin)
     const chatMessages: ChatMessage[] = data.map(message => ({
       ...message,
       user: {
-        first_name: message.first_name || '',
-        last_name: message.last_name || '',
-        email: message.email || ''
+        first_name: userProfile?.first_name || '',
+        last_name: userProfile?.last_name || '',
+        email: userProfile?.email || ''
       },
-      admin: message.is_from_admin ? {
-        first_name: message.first_name || '',
-        last_name: message.last_name || '',
-        email: message.email || ''
-      } : undefined
+      // Never populate admin field to prevent admin info from being displayed
+      admin: undefined
     }));
 
     return chatMessages;
@@ -274,19 +291,27 @@ export class ChatService {
             .single();
 
           if (!error && message) {
-            // Transform to maintain backward compatibility with existing UI components
+            // Get the conversation user's profile information to ensure consistent user data
+            const { data: userProfile, error: profileError } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, email')
+              .eq('user_id', userId)
+              .single();
+
+            if (profileError) {
+              console.warn('[ChatService] Could not fetch user profile for user:', userId, profileError);
+            }
+
+            // Transform to always show conversation user information
             const chatMessage: ChatMessage = {
               ...message,
               user: {
-                first_name: message.first_name || '',
-                last_name: message.last_name || '',
-                email: message.email || ''
+                first_name: userProfile?.first_name || '',
+                last_name: userProfile?.last_name || '',
+                email: userProfile?.email || ''
               },
-              admin: message.is_from_admin ? {
-                first_name: message.first_name || '',
-                last_name: message.last_name || '',
-                email: message.email || ''
-              } : undefined
+              // Never populate admin field to prevent admin info from being displayed
+              admin: undefined
             };
             onMessage(chatMessage);
           }
@@ -421,19 +446,27 @@ export class ChatService {
             profileData: `${message.first_name} ${message.last_name}`.trim()
           });
           
-          // Transform to maintain backward compatibility with existing UI components
+          // Get the conversation user's profile information to ensure consistent user data
+          const { data: userProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('user_id', userId)
+            .single();
+
+          if (profileError) {
+            console.warn('[ChatService] Could not fetch user profile for user:', userId, profileError);
+          }
+
+          // Transform to always show conversation user information
           const chatMessage: ChatMessage = {
             ...message,
             user: {
-              first_name: message.first_name || '',
-              last_name: message.last_name || '',
-              email: message.email || ''
+              first_name: userProfile?.first_name || '',
+              last_name: userProfile?.last_name || '',
+              email: userProfile?.email || ''
             },
-            admin: message.is_from_admin ? {
-              first_name: message.first_name || '',
-              last_name: message.last_name || '',
-              email: message.email || ''
-            } : undefined
+            // Never populate admin field to prevent admin info from being displayed
+            admin: undefined
           };
           onMessage(chatMessage);
         } else {
@@ -503,19 +536,27 @@ export class ChatService {
             .single();
 
           if (!error && message) {
-            // Transform to maintain backward compatibility with existing UI components
+            // Get the conversation user's profile information for this specific message
+            const { data: userProfile, error: profileError } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, email')
+              .eq('user_id', message.user_id)
+              .single();
+
+            if (profileError) {
+              console.warn('[ChatService] Could not fetch user profile for user:', message.user_id, profileError);
+            }
+
+            // Transform to always show conversation user information
             const chatMessage: ChatMessage = {
               ...message,
               user: {
-                first_name: message.first_name || '',
-                last_name: message.last_name || '',
-                email: message.email || ''
+                first_name: userProfile?.first_name || '',
+                last_name: userProfile?.last_name || '',
+                email: userProfile?.email || ''
               },
-              admin: message.is_from_admin ? {
-                first_name: message.first_name || '',
-                last_name: message.last_name || '',
-                email: message.email || ''
-              } : undefined
+              // Never populate admin field to prevent admin info from being displayed
+              admin: undefined
             };
             onMessage(chatMessage);
           }
@@ -560,19 +601,28 @@ export class ChatService {
 
         if (!error && message) {
           console.log('[ChatService] Admin dashboard processing:', message.sender_type, 'message for user:', message.user_id);
-          // Transform to maintain backward compatibility with existing UI components
+          
+          // Get the conversation user's profile information for this specific message
+          const { data: userProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('user_id', message.user_id)
+            .single();
+
+          if (profileError) {
+            console.warn('[ChatService] Could not fetch user profile for user:', message.user_id, profileError);
+          }
+
+          // Transform to always show conversation user information
           const chatMessage: ChatMessage = {
             ...message,
             user: {
-              first_name: message.first_name || '',
-              last_name: message.last_name || '',
-              email: message.email || ''
+              first_name: userProfile?.first_name || '',
+              last_name: userProfile?.last_name || '',
+              email: userProfile?.email || ''
             },
-            admin: message.is_from_admin ? {
-              first_name: message.first_name || '',
-              last_name: message.last_name || '',
-              email: message.email || ''
-            } : undefined
+            // Never populate admin field to prevent admin info from being displayed
+            admin: undefined
           };
           // Call the callback with the message - NO FILTERING by sender_type
           onNewMessage(chatMessage);
