@@ -46,7 +46,7 @@ const BrandCarousel: React.FC = () => {
                 className="inline-block flex-shrink-0 cursor-pointer transition-transform duration-300 hover:scale-110 mx-6"
                 onClick={() => handleBrandClick(logo.alt)}
               >
-                <img src={logo.src} alt={logo.alt} className="h-16" />
+                <img src={logo.src} alt={logo.alt} className="h-16" loading="lazy" decoding="async" width="auto" height="64" />
               </div>
             ))}
           </div>

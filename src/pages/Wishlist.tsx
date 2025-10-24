@@ -55,6 +55,10 @@ const Wishlist = () => {
                   src={item.image}
                   alt={item.name}
                   className="w-24 h-24 object-cover rounded-md"
+                  loading="lazy"
+                  decoding="async"
+                  width="96"
+                  height="96"
                 />
                 <div className="flex-1">
                   <h2 className="text-lg font-semibold">{item.name}</h2>

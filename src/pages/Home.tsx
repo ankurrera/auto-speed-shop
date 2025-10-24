@@ -184,6 +184,22 @@ const Home = () => {
     }
   };
 
+  // Preload the hero image for faster LCP
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = heroImage;
+    link.fetchPriority = 'high';
+    document.head.appendChild(link);
+    
+    return () => {
+      if (document.head.contains(link)) {
+        document.head.removeChild(link);
+      }
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero Section */}
@@ -192,7 +208,12 @@ const Home = () => {
           <img
             src={heroImage}
             alt="Auto Parts Hero"
-            className="w-full h-full object-cover opacity-80" 
+            className="w-full h-full object-cover opacity-80"
+            loading="eager"
+            decoding="async"
+            fetchpriority="high"
+            width="1920"
+            height="1080"
           />
           {/* Semi-transparent overlay for text contrast */}
           <div className="absolute inset-0 bg-black bg-opacity-40"></div>
