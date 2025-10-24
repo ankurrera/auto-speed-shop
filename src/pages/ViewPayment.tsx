@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, CheckCircle, XCircle, Download, Eye } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, Download, Eye, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { verifyPayment } from "@/services/customOrderService";
+import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
+import { subscribeToOrderStatusUpdates, OrderStatusUpdate } from "@/services/orderStatusService";
 import jsPDF from 'jspdf';
 
 interface PaymentData {
@@ -13,6 +15,28 @@ interface PaymentData {
   payment_amount: number;
   payment_screenshot_url: string;
   submitted_at: string;
+}
+
+interface PaymentRecord {
+  id: string;
+  order_number: string;
+  user_id: string;
+  status: string;
+  payment_status: string;
+  total_amount: number;
+  created_at: string;
+  updated_at: string;
+  notes?: string;
+  customer_first_name?: string;
+  customer_last_name?: string;
+  customer_email?: string;
+  payment_data?: {
+    transaction_id: string;
+    payment_amount: number;
+    payment_screenshot_url: string;
+    submitted_at: string;
+  };
+  rejection_reason?: string;
 }
 
 interface Order {
@@ -30,15 +54,77 @@ interface Order {
 const ViewPayment = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   
   const [order, setOrder] = useState<Order | null>(null);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  const [paymentRecord, setPaymentRecord] = useState<PaymentRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Check if payment data was passed from AdminPaymentManagement
+  const passedPaymentRecord = location.state?.paymentRecord as PaymentRecord;
+
+  // Helper function to determine if payment is pending and needs action
+  const isPaymentPending = () => {
+    const paymentStatus = paymentRecord?.payment_status || order?.status;
+    
+    // Payment is pending if it's submitted but not yet verified or rejected
+    return paymentStatus === PAYMENT_STATUS.SUBMITTED || 
+           paymentStatus === ORDER_STATUS.PAYMENT_SUBMITTED;
+  };
+
+  // Helper function to determine if payment has been processed (accepted or rejected)
+  const isPaymentProcessed = () => {
+    const paymentStatus = paymentRecord?.payment_status || order?.status;
+    
+    // Payment is processed if it's verified (accepted) or failed (rejected)
+    return paymentStatus === PAYMENT_STATUS.VERIFIED || 
+           paymentStatus === PAYMENT_STATUS.FAILED ||
+           paymentStatus === ORDER_STATUS.CONFIRMED;
+  };
+
+  // Helper function to get payment status badge
+  const getPaymentStatusBadge = () => {
+    const paymentStatus = paymentRecord?.payment_status || order?.status;
+    
+    if (paymentStatus === PAYMENT_STATUS.VERIFIED || paymentStatus === ORDER_STATUS.CONFIRMED) {
+      return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="w-4 h-4 mr-2" />Verified</Badge>;
+    } else if (paymentStatus === PAYMENT_STATUS.FAILED) {
+      return <Badge variant="destructive"><XCircle className="w-4 h-4 mr-2" />Rejected</Badge>;
+    } else if (paymentStatus === PAYMENT_STATUS.SUBMITTED || paymentStatus === ORDER_STATUS.PAYMENT_SUBMITTED) {
+      return <Badge variant="outline" className="border-yellow-500 text-yellow-700">Pending Review</Badge>;
+    }
+    return <Badge variant="secondary">Unknown Status</Badge>;
+  };
 
   const fetchOrderDetails = useCallback(async () => {
     try {
+      // If we have payment data passed from AdminPaymentManagement, use it
+      if (passedPaymentRecord) {
+        setPaymentRecord(passedPaymentRecord);
+        if (passedPaymentRecord.payment_data) {
+          setPaymentData(passedPaymentRecord.payment_data);
+        }
+        
+        // Try to create a basic order object from payment record
+        const basicOrder: Order = {
+          id: passedPaymentRecord.id,
+          order_number: passedPaymentRecord.order_number,
+          status: passedPaymentRecord.status,
+          notes: passedPaymentRecord.notes,
+          profiles: passedPaymentRecord.customer_first_name || passedPaymentRecord.customer_last_name || passedPaymentRecord.customer_email ? {
+            email: passedPaymentRecord.customer_email || '',
+            first_name: passedPaymentRecord.customer_first_name || '',
+            last_name: passedPaymentRecord.customer_last_name || ''
+          } : undefined
+        };
+        setOrder(basicOrder);
+        setLoading(false);
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
@@ -82,17 +168,64 @@ const ViewPayment = () => {
       }
     } catch (error) {
       console.error('Error fetching order details:', error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to fetch order details";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      navigate(-1);
+      
+      // If we have payment record data but order fetch failed, still show payment details
+      if (passedPaymentRecord && passedPaymentRecord.payment_data) {
+        console.log('Order fetch failed but we have payment data from passed record, continuing...');
+        setPaymentRecord(passedPaymentRecord);
+        setPaymentData(passedPaymentRecord.payment_data);
+        
+        // Create a minimal order object for display
+        const minimalOrder: Order = {
+          id: passedPaymentRecord.id,
+          order_number: passedPaymentRecord.order_number,
+          status: passedPaymentRecord.status,
+          notes: passedPaymentRecord.notes,
+          profiles: passedPaymentRecord.customer_first_name || passedPaymentRecord.customer_last_name || passedPaymentRecord.customer_email ? {
+            email: passedPaymentRecord.customer_email || '',
+            first_name: passedPaymentRecord.customer_first_name || '',
+            last_name: passedPaymentRecord.customer_last_name || ''
+          } : undefined
+        };
+        setOrder(minimalOrder);
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "Failed to fetch order details";
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+        navigate(-1);
+      }
     } finally {
       setLoading(false);
     }
-  }, [orderId, navigate, toast]);
+  }, [orderId, navigate, toast, passedPaymentRecord]);
+
+  // Handle real-time status updates
+  const handleStatusUpdate = useCallback((update: OrderStatusUpdate) => {
+    console.log('[ViewPayment] Received real-time payment status update:', update);
+    
+    // Update order state
+    setOrder(prev => {
+      if (!prev || prev.id !== update.order_id) return prev;
+      return {
+        ...prev,
+        status: update.status,
+      };
+    });
+
+    // Update payment record state if applicable
+    setPaymentRecord(prev => {
+      if (!prev || prev.id !== update.order_id) return prev;
+      return {
+        ...prev,
+        status: update.status,
+        payment_status: update.payment_status || prev.payment_status,
+        updated_at: update.updated_at
+      };
+    });
+  }, []);
 
   useEffect(() => {
     if (!orderId) {
@@ -101,132 +234,280 @@ const ViewPayment = () => {
     }
     
     fetchOrderDetails();
-  }, [orderId, navigate, fetchOrderDetails]);
 
-  const handleVerifyPayment = async (verified: boolean) => {
-    if (!orderId) return;
-    
-    setIsVerifyingPayment(true);
-    try {
-      await verifyPayment(orderId, verified);
-      
-      toast({
-        title: verified ? "Payment Verified" : "Payment Rejected",
-        description: verified 
-          ? "Order has been confirmed and customer notified"
-          : "Payment verification failed, customer will be notified"
-      });
-      
-      // Navigate back to invoice management
-      navigate(-1);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to verify payment";
+    // Set up real-time subscription for payment status updates
+    const unsubscribe = subscribeToOrderStatusUpdates(orderId, handleStatusUpdate);
+
+    // Cleanup subscription on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, [orderId, navigate, fetchOrderDetails, handleStatusUpdate]);
+
+  const handleDownloadPDFReceipt = async () => {
+    const orderNumber = activeOrder?.order_number || paymentRecord?.order_number || 'payment-receipt';
+    if (!activePaymentData?.payment_screenshot_url || !orderNumber) {
       toast({
         title: "Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    } finally {
-      setIsVerifyingPayment(false);
-    }
-  };
-
-  const handleDownloadScreenshot = async () => {
-    if (!paymentData?.payment_screenshot_url || !order?.order_number) {
-      toast({
-        title: "Error",
-        description: "Screenshot or Order ID not available",
+        description: "Transaction details not available for download",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      // Fetch the image
-      const response = await fetch(paymentData.payment_screenshot_url);
-      if (!response.ok) {
-        throw new Error('Failed to fetch screenshot');
-      }
-      
-      const blob = await response.blob();
-      
-      // Create an image element to get dimensions
-      const img = new Image();
-      const imageLoadPromise = new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error('Failed to load image'));
-      });
-      
-      img.src = URL.createObjectURL(blob);
-      await imageLoadPromise;
-      
       // Create PDF with jsPDF
       const pdf = new jsPDF({
-        orientation: img.width > img.height ? 'landscape' : 'portrait',
+        orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
       
-      // Calculate dimensions to fit the image on the page
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20; // 20mm margin
+      const margin = 20;
       
-      const maxWidth = pageWidth - (2 * margin);
-      const maxHeight = pageHeight - (2 * margin);
-      
-      let imgWidth = img.width * 0.264583; // Convert pixels to mm (assuming 96 DPI)
-      let imgHeight = img.height * 0.264583;
-      
-      // Scale down if image is too large
-      if (imgWidth > maxWidth) {
-        const ratio = maxWidth / imgWidth;
-        imgWidth = maxWidth;
-        imgHeight = imgHeight * ratio;
-      }
-      
-      if (imgHeight > maxHeight) {
-        const ratio = maxHeight / imgHeight;
-        imgHeight = maxHeight;
-        imgWidth = imgWidth * ratio;
-      }
-      
-      // Center the image on the page
-      const x = (pageWidth - imgWidth) / 2;
-      const y = (pageHeight - imgHeight) / 2;
-      
-      // Add the image to PDF
-      pdf.addImage(img.src, 'JPEG', x, y, imgWidth, imgHeight);
-      
-      // Add header text
-      pdf.setFontSize(14);
+      // Add header
+      pdf.setFontSize(20);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Payment Screenshot - Order ${order.order_number}`, pageWidth / 2, 15, { align: 'center' });
+      pdf.text('Transaction Receipt', pageWidth / 2, 30, { align: 'center' });
       
-      // Add transaction ID if available
-      if (paymentData.transaction_id) {
-        pdf.setFontSize(10);
+      // Add order details
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      let yPosition = 50;
+      
+      const addLine = (label: string, value: string) => {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${label}:`, margin, yPosition);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(`Transaction ID: ${paymentData.transaction_id}`, margin, pageHeight - 10);
+        pdf.text(value, margin + 40, yPosition);
+        yPosition += 8;
+      };
+      
+      // Transaction details
+      addLine('Order Number', orderNumber);
+      addLine('Transaction ID', activePaymentData.transaction_id);
+      addLine('Payment Amount', `$${activePaymentData.payment_amount.toFixed(2)}`);
+      addLine('Payment Status', getPaymentStatusText());
+      addLine('Submitted At', new Date(activePaymentData.submitted_at).toLocaleString());
+      
+      // Add accept/reject timestamp if available
+      if (isPaymentProcessed() && (paymentRecord?.updated_at || order?.updated_at)) {
+        const statusText = paymentRecord?.payment_status === PAYMENT_STATUS.VERIFIED || order?.status === ORDER_STATUS.CONFIRMED 
+          ? "Accepted At" : "Rejected At";
+        addLine(statusText, new Date(paymentRecord?.updated_at || order?.updated_at || '').toLocaleString());
       }
       
-      // Save the PDF with Order ID as filename
-      pdf.save(`${order.order_number}.pdf`);
+      yPosition += 5;
       
-      // Cleanup
-      URL.revokeObjectURL(img.src);
+      // Customer details
+      const customerName = activeOrder?.profiles 
+        ? `${activeOrder.profiles.first_name} ${activeOrder.profiles.last_name}`
+        : paymentRecord 
+        ? `${paymentRecord.customer_first_name} ${paymentRecord.customer_last_name}`
+        : 'Unknown Customer';
+      
+      const customerEmail = activeOrder?.profiles?.email || paymentRecord?.customer_email || 'No email';
+      
+      addLine('Customer Name', customerName);
+      addLine('Customer Email', customerEmail);
+      
+      yPosition += 10;
+      
+      // Screenshot section
+      if (activePaymentData.payment_screenshot_url) {
+        try {
+          const response = await fetch(activePaymentData.payment_screenshot_url);
+          if (response.ok) {
+            const blob = await response.blob();
+            const img = new Image();
+            
+            const imageLoadPromise = new Promise<void>((resolve, reject) => {
+              img.onload = () => resolve();
+              img.onerror = () => reject(new Error('Failed to load image'));
+            });
+            
+            img.src = URL.createObjectURL(blob);
+            await imageLoadPromise;
+            
+            // Add screenshot section header
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Payment Screenshot:', margin, yPosition);
+            yPosition += 10;
+            
+            // Calculate image dimensions to fit on page
+            const maxWidth = pageWidth - (2 * margin);
+            const maxHeight = pageHeight - yPosition - 30; // Leave space for footer
+            
+            let imgWidth = img.width * 0.264583; // Convert pixels to mm
+            let imgHeight = img.height * 0.264583;
+            
+            // Scale down if too large
+            if (imgWidth > maxWidth) {
+              const ratio = maxWidth / imgWidth;
+              imgWidth = maxWidth;
+              imgHeight = imgHeight * ratio;
+            }
+            
+            if (imgHeight > maxHeight) {
+              const ratio = maxHeight / imgHeight;
+              imgHeight = maxHeight;
+              imgWidth = imgWidth * ratio;
+            }
+            
+            // Center the image
+            const x = (pageWidth - imgWidth) / 2;
+            
+            // Add the image
+            pdf.addImage(img.src, 'JPEG', x, yPosition, imgWidth, imgHeight);
+            
+            // Cleanup
+            URL.revokeObjectURL(img.src);
+          }
+        } catch (imageError) {
+          console.warn('Could not include screenshot in PDF:', imageError);
+          pdf.setFont('helvetica', 'italic');
+          pdf.text('Screenshot unavailable', margin, yPosition);
+        }
+      }
+      
+      // Add footer
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Generated on ${new Date().toLocaleString()}`, margin, pageHeight - 10);
+      
+      // Save the PDF
+      pdf.save(`${orderNumber}-receipt.pdf`);
       
       toast({
         title: "Download Complete",
-        description: `Payment screenshot saved as ${order.order_number}.pdf`
+        description: `Transaction receipt saved as ${orderNumber}-receipt.pdf`
       });
     } catch (error) {
-      console.error('Download error:', error);
+      console.error('PDF generation error:', error);
       toast({
         title: "Download Failed",
-        description: "Unable to download screenshot as PDF. Please try again.",
+        description: "Unable to generate PDF receipt. Please try again.",
         variant: "destructive"
       });
+    }
+  };
+
+  // Helper function to get payment status as text
+  const getPaymentStatusText = () => {
+    const paymentStatus = paymentRecord?.payment_status || order?.status;
+    
+    if (paymentStatus === PAYMENT_STATUS.VERIFIED || paymentStatus === ORDER_STATUS.CONFIRMED) {
+      return "Verified";
+    } else if (paymentStatus === PAYMENT_STATUS.FAILED) {
+      return "Rejected";
+    } else if (paymentStatus === PAYMENT_STATUS.SUBMITTED || paymentStatus === ORDER_STATUS.PAYMENT_SUBMITTED) {
+      return "Pending Review";
+    }
+    return "Unknown";
+  };
+
+  // Handle payment acceptance
+  const handleAcceptPayment = async () => {
+    if (!orderId) return;
+    
+    setIsProcessing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase.rpc('admin_verify_payment', {
+        requesting_user_id: user.id,
+        target_order_id: orderId,
+        verified: true
+      });
+
+      if (error) throw error;
+
+      // Immediately update local state to reflect the change
+      const now = new Date().toISOString();
+      setOrder(prev => prev ? { ...prev, status: ORDER_STATUS.CONFIRMED } : null);
+      setPaymentRecord(prev => prev ? {
+        ...prev,
+        payment_status: PAYMENT_STATUS.VERIFIED,
+        status: ORDER_STATUS.CONFIRMED,
+        updated_at: now
+      } : null);
+
+      toast({
+        title: "Payment Accepted",
+        description: "Payment has been verified and the order has been confirmed.",
+      });
+
+      // Refresh the payment data to ensure consistency
+      await fetchOrderDetails();
+      
+      
+    } catch (error) {
+      console.error('Error accepting payment:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to accept payment";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle payment rejection (streamlined without remarks requirement)
+  const handleRejectPayment = async () => {
+    if (!orderId) return;
+    
+    setIsProcessing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase.rpc('admin_verify_payment', {
+        requesting_user_id: user.id,
+        target_order_id: orderId,
+        verified: false,
+        rejection_reason: "Payment rejected by admin"
+      });
+
+      if (error) throw error;
+
+      // Immediately update local state to reflect the change
+      const now = new Date().toISOString();
+      setOrder(prev => prev ? { ...prev, status: ORDER_STATUS.CANCELLED } : null);
+      setPaymentRecord(prev => prev ? {
+        ...prev,
+        payment_status: PAYMENT_STATUS.FAILED,
+        status: ORDER_STATUS.CANCELLED,
+        updated_at: now,
+        rejection_reason: "Payment rejected by admin"
+      } : null);
+
+      toast({
+        title: "Payment Rejected",
+        description: "Payment has been rejected and the customer has been notified.",
+      });
+      
+      // Refresh the payment data to ensure consistency
+      await fetchOrderDetails();
+      
+    } catch (error) {
+      console.error('Error rejecting payment:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to reject payment";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -245,7 +526,8 @@ const ViewPayment = () => {
     );
   }
 
-  if (!order || !paymentData) {
+  // Only show error if we have no payment data at all
+  if (!loading && !paymentData && !paymentRecord?.payment_data) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
@@ -264,6 +546,10 @@ const ViewPayment = () => {
     );
   }
 
+  // Use payment data from either source
+  const activePaymentData = paymentData || paymentRecord?.payment_data;
+  const activeOrder = order;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -276,10 +562,14 @@ const ViewPayment = () => {
             </Button>
             <div>
               <h1 className="text-3xl font-bold">Payment Details</h1>
-              <p className="text-muted-foreground">Order #{order.order_number}</p>
+              <p className="text-muted-foreground">
+                {activeOrder?.order_number ? `Order #${activeOrder.order_number}` : 'Payment Record'}
+              </p>
             </div>
           </div>
         </div>
+
+
 
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Payment Information */}
@@ -290,36 +580,66 @@ const ViewPayment = () => {
             <CardContent className="space-y-6">
               <div className="grid gap-4">
                 <div className="flex justify-between items-center py-3 border-b">
+                  <span className="font-medium text-muted-foreground">Status</span>
+                  <div>
+                    {getPaymentStatusBadge()}
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center py-3 border-b">
                   <span className="font-medium text-muted-foreground">Transaction ID</span>
                   <span className="font-mono text-sm bg-muted px-3 py-1 rounded">
-                    {paymentData.transaction_id}
+                    {activePaymentData!.transaction_id}
                   </span>
                 </div>
                 
                 <div className="flex justify-between items-center py-3 border-b">
                   <span className="font-medium text-muted-foreground">Payment Amount</span>
                   <span className="text-xl font-bold text-green-600">
-                    ${paymentData.payment_amount.toFixed(2)}
+                    ${activePaymentData!.payment_amount.toFixed(2)}
                   </span>
                 </div>
                 
                 <div className="flex justify-between items-center py-3 border-b">
                   <span className="font-medium text-muted-foreground">Submitted At</span>
                   <span className="text-sm">
-                    {new Date(paymentData.submitted_at).toLocaleString()}
+                    {new Date(activePaymentData!.submitted_at).toLocaleString()}
                   </span>
                 </div>
+
+                {/* Show accept/reject timestamp if payment has been processed */}
+                {isPaymentProcessed() && (paymentRecord?.updated_at || order?.updated_at) && (
+                  <div className="flex justify-between items-center py-3 border-b">
+                    <span className="font-medium text-muted-foreground">
+                      {paymentRecord?.payment_status === PAYMENT_STATUS.VERIFIED || order?.status === ORDER_STATUS.CONFIRMED 
+                        ? "Accepted At" 
+                        : "Rejected At"}
+                    </span>
+                    <span className="text-sm">
+                      {new Date(paymentRecord?.updated_at || order?.updated_at || '').toLocaleString()}
+                    </span>
+                  </div>
+                )}
                 
                 <div className="flex justify-between items-center py-3">
                   <span className="font-medium text-muted-foreground">Customer</span>
                   <div className="text-right">
-                    {order.profiles ? (
+                    {activeOrder?.profiles ? (
                       <>
                         <p className="font-medium">
-                          {order.profiles.first_name} {order.profiles.last_name}
+                          {activeOrder.profiles.first_name} {activeOrder.profiles.last_name}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {order.profiles.email}
+                          {activeOrder.profiles.email}
+                        </p>
+                      </>
+                    ) : paymentRecord ? (
+                      <>
+                        <p className="font-medium">
+                          {paymentRecord.customer_first_name} {paymentRecord.customer_last_name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {paymentRecord.customer_email}
                         </p>
                       </>
                     ) : (
@@ -328,6 +648,36 @@ const ViewPayment = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Accept/Reject Actions for Pending Payments - Moved from header to Payment Information section */}
+              {isPaymentPending() && !isPaymentProcessed() && (
+                <div className="mt-6 pt-4 border-t">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="h-4 w-4 text-yellow-600" />
+                    <span className="text-sm font-medium text-yellow-800">Payment Awaiting Review</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleAcceptPayment}
+                      disabled={isProcessing}
+                      className="bg-green-600 hover:bg-green-700 flex-1"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      {isProcessing ? "Processing..." : "Accept Payment"}
+                    </Button>
+                    
+                    <Button
+                      onClick={handleRejectPayment}
+                      variant="destructive"
+                      disabled={isProcessing}
+                      className="flex-1"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      {isProcessing ? "Processing..." : "Reject Payment"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -337,11 +687,11 @@ const ViewPayment = () => {
               <CardTitle>Payment Screenshot</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {paymentData.payment_screenshot_url ? (
+              {activePaymentData?.payment_screenshot_url ? (
                 <div className="space-y-4">
                   <div className="border rounded-lg overflow-hidden bg-muted/50">
                     <img
-                      src={paymentData.payment_screenshot_url}
+                      src={activePaymentData.payment_screenshot_url}
                       alt="Payment Screenshot"
                       className="w-full h-auto max-h-96 object-contain"
                       onError={(e) => {
@@ -357,7 +707,7 @@ const ViewPayment = () => {
                   <div className="flex gap-3">
                     <Button
                       variant="outline"
-                      onClick={() => window.open(paymentData.payment_screenshot_url, '_blank')}
+                      onClick={() => window.open(activePaymentData.payment_screenshot_url, '_blank')}
                       className="flex-1"
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -365,57 +715,17 @@ const ViewPayment = () => {
                     </Button>
                     <Button
                       variant="default"
-                      onClick={handleDownloadScreenshot}
+                      onClick={handleDownloadPDFReceipt}
                       className="flex-1"
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      Download as PDF
+                      Download Receipt
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
                   <p>No screenshot available</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Verification</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Review the payment details above and verify or reject the payment.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Button
-                  size="lg"
-                  onClick={() => handleVerifyPayment(true)}
-                  disabled={isVerifyingPayment}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Verify Payment
-                </Button>
-                <Button
-                  size="lg"
-                  variant="destructive"
-                  onClick={() => handleVerifyPayment(false)}
-                  disabled={isVerifyingPayment}
-                >
-                  <XCircle className="h-5 w-5 mr-2" />
-                  Reject Payment
-                </Button>
-              </div>
-              
-              {isVerifyingPayment && (
-                <div className="mt-4 text-center text-sm text-muted-foreground">
-                  Processing payment verification...
                 </div>
               )}
             </CardContent>

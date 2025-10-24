@@ -26,7 +26,8 @@ import {
   FileText,
   Star,
   DollarSign,
-  MessageCircle
+  MessageCircle,
+  CreditCard
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,10 +49,12 @@ import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminOrderManagement from "@/components/AdminOrderManagement";
 import AdminInvoiceManagement from "@/components/AdminInvoiceManagement";
 import AdminPaymentManagement from "@/components/AdminPaymentManagement";
+import UserPaymentManagement from "@/components/UserPaymentManagement";
+import { DraggableImageList } from "@/components/DraggableImageList";
 import AdminPayoutManagement from "@/components/AdminPayoutManagement";
 import AdminInventoryManagement from "@/components/AdminInventoryManagement";
 import AdminCustomerSupport from "@/components/AdminCustomerSupport";
-import { ORDER_STATUS } from "@/types/order";
+import { ORDER_STATUS, PAYMENT_STATUS } from "@/types/order";
 import { EmailSubscriptionService } from "@/services/emailSubscriptionService";
 import EmailNotificationService from "../services/emailNotificationService";
 
@@ -103,6 +106,7 @@ const Account = () => {
   const [showOrderManagement, setShowOrderManagement] = useState(false);
   const [showInvoiceManagement, setShowInvoiceManagement] = useState(false);
   const [showPaymentManagement, setShowPaymentManagement] = useState(false);
+  const [showUserPaymentManagement, setShowUserPaymentManagement] = useState(false);
   const [showPayoutManagement, setShowPayoutManagement] = useState(false);
   const [showInventoryManagement, setShowInventoryManagement] = useState(false);
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
@@ -185,6 +189,21 @@ const Account = () => {
     vin: "",
   });
   const [productFiles, setProductFiles] = useState<File[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]); // Track existing DB images separately
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    total: number;
+    completed: number;
+    currentFile: string;
+    failedFiles: string[];
+    successfulFiles: string[];
+  }>({
+    total: 0,
+    completed: 0,
+    currentFile: '',
+    failedFiles: [],
+    successfulFiles: []
+  });
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [showManageProducts, setShowManageProducts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -959,32 +978,114 @@ const Account = () => {
       });
 
       const uploadedImageUrls: string[] = [];
+      const failedUploads: string[] = [];
+      
       if (productFiles.length > 0) {
+        // Show upload progress
+        setIsUploadingImages(true);
+        setUploadProgress({
+          total: productFiles.length,
+          completed: 0,
+          currentFile: '',
+          failedFiles: [],
+          successfulFiles: []
+        });
+        
         const bucketName =
           listingType === "part" ? "part_images" : "products_images";
-        for (const f of productFiles) {
-          const ext = f.name.split(".").pop();
-          const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
-          const { error: uploadError } = await supabase.storage
-            .from(bucketName)
-            .upload(filePath, f, { upsert: true });
-          if (uploadError) {
+        
+        for (let i = 0; i < productFiles.length; i++) {
+          const f = productFiles[i];
+          
+          // Update progress for current file
+          setUploadProgress(prev => ({
+            ...prev,
+            currentFile: f.name,
+            completed: i
+          }));
+          
+          try {
+            const ext = f.name.split(".").pop();
+            const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
+            const { error: uploadError } = await supabase.storage
+              .from(bucketName)
+              .upload(filePath, f, { upsert: true });
+              
+            if (uploadError) {
+              console.error(`Failed to upload ${f.name}:`, uploadError);
+              failedUploads.push(f.name);
+              setUploadProgress(prev => ({
+                ...prev,
+                failedFiles: [...prev.failedFiles, f.name]
+              }));
+              continue; // Continue processing other images
+            }
+            
+            // Only get public URL and add to array if upload was successful
+            const { data: publicUrlData } = supabase.storage
+              .from(bucketName)
+              .getPublicUrl(filePath);
+            uploadedImageUrls.push(publicUrlData.publicUrl);
+            
+            setUploadProgress(prev => ({
+              ...prev,
+              successfulFiles: [...prev.successfulFiles, f.name]
+            }));
+          } catch (error) {
+            console.error(`Error processing ${f.name}:`, error);
+            failedUploads.push(f.name);
+            setUploadProgress(prev => ({
+              ...prev,
+              failedFiles: [...prev.failedFiles, f.name]
+            }));
+            continue; // Continue processing other images
+          }
+        }
+        
+        // Final progress update
+        setUploadProgress(prev => ({
+          ...prev,
+          completed: productFiles.length,
+          currentFile: failedUploads.length > 0 ? 'Upload completed with errors' : 'All uploads successful!'
+        }));
+        
+        // Hide upload progress after showing final status
+        setTimeout(() => {
+          setIsUploadingImages(false);
+        }, 2000);
+        
+        // Show detailed feedback about upload results
+        if (failedUploads.length > 0) {
+          const successCount = uploadedImageUrls.length;
+          const failedCount = failedUploads.length;
+          
+          if (successCount === 0) {
+            // All uploads failed
             toast({
-              title: "Error",
-              description: "Image upload failed.",
+              title: "Upload Failed",
+              description: `All ${failedCount} image(s) failed to upload. Please try again.`,
               variant: "destructive",
             });
             return;
+          } else {
+            // Some uploads failed
+            toast({
+              title: "Partial Upload Success",
+              description: `${successCount} image(s) uploaded successfully. ${failedCount} failed: ${failedUploads.join(", ")}`,
+              variant: "default",
+            });
           }
-          const { data: publicUrlData } = supabase.storage
-            .from(bucketName)
-            .getPublicUrl(filePath);
-          uploadedImageUrls.push(publicUrlData.publicUrl);
+        } else if (uploadedImageUrls.length > 0) {
+          // All uploads successful
+          toast({
+            title: "Upload Successful",
+            description: `${uploadedImageUrls.length} image(s) uploaded successfully.`,
+          });
         }
       }
 
       const finalImageUrls = editingProductId
-        ? [...productInfo.image_urls, ...uploadedImageUrls]
+        ? [...existingImageUrls, ...uploadedImageUrls] // Use tracked existing images, not all image_urls
         : uploadedImageUrls;
 
       // Vehicle compatibility (optional)
@@ -1209,6 +1310,7 @@ const Account = () => {
       vin: "",
     });
     setProductFiles([]);
+    setExistingImageUrls([]); // Clear existing images tracking
     queryClient.invalidateQueries({ queryKey: ["seller-products"] });
     queryClient.invalidateQueries({ queryKey: ["seller-parts"] });
   };
@@ -1228,12 +1330,15 @@ const Account = () => {
         specs = product.specifications as PartSpecifications;
       }
     }
+    
+    const existingUrls = product.image_urls || [];
+    setExistingImageUrls(existingUrls); // Store existing DB images separately
     setProductInfo({
       name: product.name,
       description: product.description || "",
       price: product.price?.toString() || "",
       stock_quantity: product.stock_quantity || 0,
-      image_urls: product.image_urls || [],
+      image_urls: existingUrls, // Only existing images for display
       specifications: specs.additional || "",
       category: product.category || specs.category || "",
       make: specs.make || "",
@@ -1248,12 +1353,15 @@ const Account = () => {
     setEditingProductId(part.id);
     const specs = part.specifications;
     setListingType("part");
+    
+    const existingUrls = part.image_urls || [];
+    setExistingImageUrls(existingUrls); // Store existing DB images separately
     setProductInfo({
       name: part.name,
       description: part.description || "",
       price: part.price?.toString() || "",
       stock_quantity: part.stock_quantity || 0,
-      image_urls: part.image_urls || [],
+      image_urls: existingUrls, // Only existing images for display
       specifications: specs?.additional || "",
       category: specs?.category || "",
       make: part.brand || specs?.make || "",
@@ -1645,24 +1753,230 @@ const Account = () => {
   // Image handling
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    // Show loading state immediately
+    setIsUploadingImages(true);
+    setUploadProgress({
+      total: files.length,
+      completed: 0,
+      currentFile: 'Validating files...',
+      failedFiles: [],
+      successfulFiles: []
+    });
+    
+    // Validate file types
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const invalidFiles = files.filter(file => !validTypes.includes(file.type));
+    
+    if (invalidFiles.length > 0) {
+      setIsUploadingImages(false);
+      toast({
+        title: "Invalid File Types",
+        description: `Please select only image files (JPG, PNG, GIF, WebP). Invalid files: ${invalidFiles.map(f => f.name).join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate file sizes (max 5MB per file)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const oversizedFiles = files.filter(file => file.size > maxSize);
+    
+    if (oversizedFiles.length > 0) {
+      setIsUploadingImages(false);
+      toast({
+        title: "Files Too Large",
+        description: `Maximum file size is 5MB. Large files: ${oversizedFiles.map(f => f.name).join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Update progress to show files are being processed
+    setUploadProgress(prev => ({
+      ...prev,
+      currentFile: 'Creating preview images...'
+    }));
+    
     setProductFiles(files);
     const previewUrls = files.map((f) => URL.createObjectURL(f));
     setProductInfo((prev) => ({
       ...prev,
-      image_urls: [...prev.image_urls, ...previewUrls],
+      image_urls: [...existingImageUrls, ...previewUrls], // Combine existing DB images with new previews
     }));
+    
+    // Update progress to show completion and hide loading
+    setUploadProgress(prev => ({
+      ...prev,
+      currentFile: 'Images ready for upload',
+      completed: files.length
+    }));
+    
+    // Hide loading after a brief moment to show "ready" state
+    setTimeout(() => {
+      setIsUploadingImages(false);
+    }, 1000);
   };
+  // Handle image reordering
+  const handleImageReorder = (newOrder: string[]) => {
+    setProductInfo((prev) => ({
+      ...prev,
+      image_urls: newOrder,
+    }));
+    
+    // Update the existing images and product files arrays to match the new order
+    const existingImagesCount = existingImageUrls.length;
+    const newExistingImages: string[] = [];
+    const newProductFiles: File[] = [];
+    
+    newOrder.forEach((url, newIndex) => {
+      const oldIndex = productInfo.image_urls.indexOf(url);
+      
+      if (oldIndex < existingImagesCount) {
+        // This is an existing image
+        newExistingImages.push(url);
+      } else {
+        // This is a new file
+        const fileIndex = oldIndex - existingImagesCount;
+        if (fileIndex >= 0 && fileIndex < productFiles.length) {
+          newProductFiles.push(productFiles[fileIndex]);
+        }
+      }
+    });
+    
+    setExistingImageUrls(newExistingImages);
+    setProductFiles(newProductFiles);
+  };
+
   const removeImage = (index: number) => {
     setProductInfo((prev) => {
       const nu = [...prev.image_urls];
+      
+      // Revoke object URL if it's a blob URL to prevent memory leaks
+      const urlToRemove = nu[index];
+      if (urlToRemove && urlToRemove.startsWith('blob:')) {
+        URL.revokeObjectURL(urlToRemove);
+      }
+      
       nu.splice(index, 1);
       return { ...prev, image_urls: nu };
     });
-    setProductFiles((prev) => {
-      const nf = [...prev];
-      nf.splice(index, 1);
-      return nf;
+    
+    // Calculate if this is an existing image or new file being removed
+    const existingImagesCount = existingImageUrls.length;
+    if (index < existingImagesCount) {
+      // Removing an existing image - update the existingImageUrls array
+      setExistingImageUrls(prev => {
+        const updated = [...prev];
+        updated.splice(index, 1);
+        return updated;
+      });
+    } else {
+      // Removing a new file - update the productFiles array
+      const fileIndex = index - existingImagesCount;
+      setProductFiles((prev) => {
+        const nf = [...prev];
+        if (fileIndex >= 0 && fileIndex < nf.length) {
+          nf.splice(fileIndex, 1);
+        }
+        return nf;
+      });
+    }
+  };
+
+  // Retry failed uploads
+  const retryFailedUploads = async (failedFileNames: string[]) => {
+    if (!session?.user) return;
+    
+    const failedFiles = productFiles.filter(file => failedFileNames.includes(file.name));
+    if (failedFiles.length === 0) return;
+    
+    setIsUploadingImages(true);
+    setUploadProgress({
+      total: failedFiles.length,
+      completed: 0,
+      currentFile: 'Retrying failed uploads...',
+      failedFiles: [],
+      successfulFiles: []
     });
+    
+    const bucketName = listingType === "part" ? "part_images" : "products_images";
+    const retryUploadedUrls: string[] = [];
+    const retryFailedUploads: string[] = [];
+    
+    for (let i = 0; i < failedFiles.length; i++) {
+      const f = failedFiles[i];
+      
+      setUploadProgress(prev => ({
+        ...prev,
+        currentFile: `Retrying: ${f.name}`,
+        completed: i
+      }));
+      
+      try {
+        const ext = f.name.split(".").pop();
+        const filePath = `${session.user.id}/${uuidv4()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, f, { upsert: true });
+          
+        if (uploadError) {
+          console.error(`Retry failed to upload ${f.name}:`, uploadError);
+          retryFailedUploads.push(f.name);
+          setUploadProgress(prev => ({
+            ...prev,
+            failedFiles: [...prev.failedFiles, f.name]
+          }));
+          continue;
+        }
+        
+        const { data: publicUrlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+        retryUploadedUrls.push(publicUrlData.publicUrl);
+        
+        setUploadProgress(prev => ({
+          ...prev,
+          successfulFiles: [...prev.successfulFiles, f.name]
+        }));
+      } catch (error) {
+        console.error(`Error retrying ${f.name}:`, error);
+        retryFailedUploads.push(f.name);
+        setUploadProgress(prev => ({
+          ...prev,
+          failedFiles: [...prev.failedFiles, f.name]
+        }));
+      }
+    }
+    
+    setUploadProgress(prev => ({
+      ...prev,
+      completed: failedFiles.length,
+      currentFile: retryFailedUploads.length > 0 ? 'Retry completed with some failures' : 'All retries successful!'
+    }));
+    
+    // Show results
+    if (retryUploadedUrls.length > 0) {
+      toast({
+        title: "Retry Successful",
+        description: `${retryUploadedUrls.length} image(s) uploaded successfully on retry.`,
+      });
+    }
+    
+    if (retryFailedUploads.length > 0) {
+      toast({
+        title: "Some Retries Failed",
+        description: `${retryFailedUploads.length} image(s) still failed: ${retryFailedUploads.join(", ")}`,
+        variant: "destructive",
+      });
+    }
+    
+    setTimeout(() => {
+      setIsUploadingImages(false);
+    }, 2000);
+    
+    return retryUploadedUrls;
   };
 
   // Logout
@@ -2062,6 +2376,9 @@ const Account = () => {
     if (showPaymentManagement) {
       return <AdminPaymentManagement onBack={() => setShowPaymentManagement(false)} />;
     }
+    if (showUserPaymentManagement) {
+      return <UserPaymentManagement onBack={() => setShowUserPaymentManagement(false)} />;
+    }
     if (showPayoutManagement) {
       return <AdminPayoutManagement onBack={() => setShowPayoutManagement(false)} />;
     }
@@ -2084,6 +2401,8 @@ const Account = () => {
         return renderAddressesContent();
       case "orders":
         return renderOrdersContent();
+      case "payments":
+        return renderUserPaymentsContent();
       case "admin-dashboard":
         return renderAdminDashboardContent();
       case "analytics-dashboard":
@@ -2231,12 +2550,6 @@ const Account = () => {
                     icon={<Package className="h-5 w-5" />}
                     onClick={() => setShowInventoryManagement(true)}
                   />
-                  <ActionCard
-                    title="Customer Support"
-                    description="Manage customer support messages and conversations"
-                    icon={<MessageCircle className="h-5 w-5" />}
-                    onClick={() => setShowCustomerSupport(true)}
-                  />
                 </div>
                 
                 {/* Seller Management Section */}
@@ -2249,6 +2562,12 @@ const Account = () => {
                         description="Manage your seller profile and information"
                         icon={<Car className="h-5 w-5" />}
                         onClick={() => navigate("/seller-dashboard")}
+                      />
+                      <ActionCard
+                        title="Customer Support"
+                        description="Manage customer support messages and conversations"
+                        icon={<MessageCircle className="h-5 w-5" />}
+                        onClick={() => setShowCustomerSupport(true)}
                       />
                     </div>
                   </div>
@@ -2719,6 +3038,7 @@ const Account = () => {
                         </Link>
                       </Button>
                     )}
+
                     <Button variant="outline" size="sm" asChild>
                       <Link to={`/orders/${order.id}/tracking`}>
                         Track Order
@@ -2737,6 +3057,35 @@ const Account = () => {
       </CardContent>
     </Card>
   );
+
+  // User Payments Content
+  const renderUserPaymentsContent = () => {
+    if (showUserPaymentManagement) {
+      return <UserPaymentManagement onBack={() => setShowUserPaymentManagement(false)} />;
+    }
+    
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Payment Management
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">
+              View and manage your payment history and transaction details
+            </p>
+            <Button onClick={() => setShowUserPaymentManagement(true)}>
+              <CreditCard className="h-4 w-4 mr-2" />
+              View My Payments
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   // Filter & display inside Manage Products modal
   const lowercasedQuery = searchQuery.toLowerCase();
@@ -2972,34 +3321,85 @@ const Account = () => {
                         <Input
                           type="file"
                           multiple
+                          accept="image/*"
                           onChange={handleImageUpload}
+                          disabled={isUploadingImages}
                         />
+                        
+                        {/* Image Upload Loading Overlay */}
+                        {isUploadingImages && (
+                          <div className="mt-4 p-4 border border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-950 dark:border-blue-400">
+                            <div className="flex items-center space-x-3">
+                              <RefreshCcw className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                  Uploading Images...
+                                </div>
+                                <div className="text-xs text-blue-700 dark:text-blue-300">
+                                  {uploadProgress.currentFile}
+                                </div>
+                              </div>
+                              <div className="text-sm text-blue-600 dark:text-blue-400">
+                                {uploadProgress.completed}/{uploadProgress.total}
+                              </div>
+                            </div>
+                            
+                            {/* Progress bar */}
+                            <div className="mt-3">
+                              <div className="flex justify-between text-xs text-blue-700 dark:text-blue-300 mb-1">
+                                <span>Progress</span>
+                                <span>{Math.round((uploadProgress.completed / uploadProgress.total) * 100)}%</span>
+                              </div>
+                              <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                            
+                            {/* Success/Failed files summary */}
+                            {(uploadProgress.successfulFiles.length > 0 || uploadProgress.failedFiles.length > 0) && (
+                              <div className="mt-3 space-y-1">
+                                {uploadProgress.successfulFiles.length > 0 && (
+                                  <div className="text-xs text-green-600 dark:text-green-400">
+                                    ✅ Successful: {uploadProgress.successfulFiles.join(", ")}
+                                  </div>
+                                )}
+                                {uploadProgress.failedFiles.length > 0 && (
+                                  <div className="text-xs text-red-600 dark:text-red-400">
+                                    ❌ Failed: {uploadProgress.failedFiles.join(", ")}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Retry button for failed uploads */}
+                            {uploadProgress.failedFiles.length > 0 && uploadProgress.completed === uploadProgress.total && (
+                              <div className="mt-3">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => retryFailedUploads(uploadProgress.failedFiles)}
+                                  className="text-xs"
+                                >
+                                  <RefreshCcw className="h-3 w-3 mr-1" />
+                                  Retry Failed Uploads
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {productInfo.image_urls.length > 0 && (
-                      <div className="flex flex-wrap gap-3">
-                        {productInfo.image_urls.map((url, idx) => (
-                          <div
-                            key={idx}
-                            className="relative group w-24 h-24 rounded border border-neutral-700 overflow-hidden"
-                          >
-                            <img
-                              src={url}
-                              alt=""
-                              className="object-cover w-full h-full"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeImage(idx)}
-                              className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs text-red-400 transition"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {/* Draggable Image Preview */}
+                    <DraggableImageList
+                      images={productInfo.image_urls}
+                      onReorder={handleImageReorder}
+                      onRemove={removeImage}
+                    />
 
                     {listingType === "part" && (
                       <div className="space-y-4 border rounded-lg p-4 border-neutral-700">
