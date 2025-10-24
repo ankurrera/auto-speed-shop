@@ -85,6 +85,10 @@ function DraggableImageItem({
           alt=""
           className="object-cover w-full h-full"
           draggable={false}
+          loading="lazy"
+          decoding="async"
+          width="96"
+          height="96"
         />
       </div>
 
