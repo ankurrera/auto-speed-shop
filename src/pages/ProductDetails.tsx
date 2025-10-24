@@ -98,7 +98,7 @@ const ProductDetails = () => {
       link.rel = 'preload';
       link.as = 'image';
       link.href = product.image_urls[0];
-      link.fetchPriority = 'high';
+      link.setAttribute('fetchpriority', 'high');
       document.head.appendChild(link);
       
       // Cleanup function to remove the preload link

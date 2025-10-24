@@ -190,7 +190,7 @@ const Home = () => {
     link.rel = 'preload';
     link.as = 'image';
     link.href = heroImage;
-    link.fetchPriority = 'high';
+    link.setAttribute('fetchpriority', 'high');
     document.head.appendChild(link);
     
     return () => {
